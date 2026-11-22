@@ -5129,6 +5129,7 @@ name = "voice-client"
 version = "0.1.0"
 dependencies = [
  "futures-util",
+ "log",
  "reqwest",
  "serde",
  "serde_json",
