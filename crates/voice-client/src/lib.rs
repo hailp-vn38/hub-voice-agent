@@ -4,6 +4,12 @@ mod connection;
 mod protocol;
 
 use serde_json::Value;
+use std::{
+    collections::VecDeque,
+    collections::hash_map::RandomState,
+    hash::{BuildHasher, Hasher},
+    time::Duration,
+};
 use tokio::sync::{mpsc, oneshot, watch};
 use url::Url;
 
@@ -15,29 +21,133 @@ const EVENT_CAPACITY: usize = 256;
 pub fn spawn(
     config: watch::Receiver<VoiceConfig>,
 ) -> (mpsc::Sender<VoiceCommand>, mpsc::Receiver<VoiceEvent>) {
+    spawn_with_jitter(config, random_jitter)
+}
+
+fn spawn_with_jitter(
+    config: watch::Receiver<VoiceConfig>,
+    jitter: impl FnMut(Duration) -> Duration + Send + 'static,
+) -> (mpsc::Sender<VoiceCommand>, mpsc::Receiver<VoiceEvent>) {
     let (commands_tx, commands_rx) = mpsc::channel(COMMAND_CAPACITY);
     let (events_tx, events_rx) = mpsc::channel(EVENT_CAPACITY);
     tokio::spawn(async move {
-        let mut commands_rx = commands_rx;
-        let _ = events_tx
-            .send(VoiceEvent::Connection(ConnectionState::Connecting))
-            .await;
-        let config = config.borrow().clone();
-        let result = async {
-            let (url, token) = discover_websocket(&config).await?;
-            connection::connect_and_wait(url, token, config.device, &events_tx, &mut commands_rx)
-                .await
-        }
-        .await;
-        if result.is_err() {
-            let _ = events_tx
-                .send(VoiceEvent::Connection(ConnectionState::Offline {
-                    retry_in: std::time::Duration::from_secs(1),
-                }))
-                .await;
-        }
+        client_loop(config, commands_rx, events_tx, jitter).await;
     });
     (commands_tx, events_rx)
+}
+
+async fn client_loop(
+    mut config: watch::Receiver<VoiceConfig>,
+    mut commands: mpsc::Receiver<VoiceCommand>,
+    events: mpsc::Sender<VoiceEvent>,
+    mut jitter: impl FnMut(Duration) -> Duration,
+) {
+    let mut active_config = config.borrow_and_update().clone();
+    let mut backoff = Duration::from_secs(1);
+    let mut pending_commands = VecDeque::new();
+    loop {
+        if events.is_closed() {
+            return;
+        }
+        if events
+            .send(VoiceEvent::Connection(ConnectionState::Connecting))
+            .await
+            .is_err()
+        {
+            return;
+        }
+        let discovery = connection::await_operation(
+            discover_websocket(&active_config),
+            &mut config,
+            &active_config,
+            &mut commands,
+            &events,
+        )
+        .await;
+        let connection = match discovery {
+            connection::Operation::Complete((url, token)) => {
+                connection::connect_and_wait(
+                    url,
+                    token,
+                    active_config.device.clone(),
+                    connection::ClientIo {
+                        events: &events,
+                        commands: &mut commands,
+                        pending_commands: &mut pending_commands,
+                        config: &mut config,
+                        active_config: &mut active_config,
+                    },
+                )
+                .await
+            }
+            connection::Operation::Reconfigured(updated) => {
+                pending_commands.clear();
+                active_config = updated;
+                backoff = Duration::from_secs(1);
+                continue;
+            }
+            connection::Operation::Stopped => return,
+            connection::Operation::Failed => connection::ConnectionEnd::Failed {
+                became_ready: false,
+            },
+        };
+        match connection {
+            connection::ConnectionEnd::Stopped => return,
+            connection::ConnectionEnd::Reconfigured(updated) => {
+                pending_commands.clear();
+                active_config = updated;
+                backoff = Duration::from_secs(1);
+                continue;
+            }
+            connection::ConnectionEnd::Failed { became_ready } => {
+                pending_commands.clear();
+                if became_ready {
+                    backoff = Duration::from_secs(1);
+                }
+            }
+        }
+        let retry_in = jitter(backoff);
+        if events
+            .send(VoiceEvent::Connection(ConnectionState::Offline {
+                retry_in,
+            }))
+            .await
+            .is_err()
+        {
+            return;
+        }
+        backoff = backoff.saturating_mul(2).min(Duration::from_secs(60));
+        match connection::await_operation(
+            async {
+                tokio::time::sleep(retry_in).await;
+                Ok(())
+            },
+            &mut config,
+            &active_config,
+            &mut commands,
+            &events,
+        )
+        .await
+        {
+            connection::Operation::Complete(()) => {}
+            connection::Operation::Reconfigured(updated) => {
+                active_config = updated;
+                backoff = Duration::from_secs(1);
+            }
+            connection::Operation::Stopped | connection::Operation::Failed => return,
+        }
+    }
+}
+
+fn random_jitter(nominal: Duration) -> Duration {
+    static SEED: std::sync::LazyLock<RandomState> = std::sync::LazyLock::new(RandomState::new);
+    static COUNTER: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+    let mut hasher = SEED.build_hasher();
+    hasher.write_u64(COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed));
+    let percent = (hasher.finish() % 41) as i128 - 20;
+    let nanos = nominal.as_nanos() as i128;
+    let jittered = (nanos + nanos * percent / 100).max(0) as u128;
+    Duration::from_nanos(jittered.min(u64::MAX as u128) as u64)
 }
 
 async fn discover_websocket(config: &VoiceConfig) -> Result<(Url, String), ()> {
@@ -183,3 +293,6 @@ pub struct ToolError {
 #[cfg(test)]
 #[path = "connection_tests.rs"]
 mod connection_tests;
+#[cfg(test)]
+#[path = "reconnect_tests/mod.rs"]
+mod reconnect_tests;

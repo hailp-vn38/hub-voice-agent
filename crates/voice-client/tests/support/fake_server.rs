@@ -18,6 +18,7 @@ use tokio_tungstenite::{
 pub enum ServerAction {
     SendHello,
     CloseProtocolError,
+    HoldOpen,
 }
 
 pub struct ReceivedHandshake {
@@ -30,6 +31,7 @@ pub struct ReceivedHandshake {
 pub struct FakeServer {
     pub url: String,
     pub received: oneshot::Receiver<ReceivedHandshake>,
+    pub closed: oneshot::Receiver<()>,
 }
 
 pub struct ReceivedOtaRequest {
@@ -105,6 +107,7 @@ impl FakeServer {
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let address = listener.local_addr().unwrap();
         let (received_tx, received) = oneshot::channel();
+        let (closed_tx, closed) = oneshot::channel();
 
         tokio::spawn(async move {
             let (stream, _) = listener.accept().await.unwrap();
@@ -147,12 +150,22 @@ impl FakeServer {
                     .await
                     .unwrap();
                 }
+                ServerAction::HoldOpen => {
+                    sink.send(Message::Text(json!({
+                        "type": "hello", "transport": "websocket", "session_id": "session-1",
+                        "audio_params": { "format": "opus", "sample_rate": 24000, "channels": 1, "frame_duration": 60 }
+                    }).to_string().into())).await.unwrap();
+                    if matches!(stream.next().await, Some(Ok(Message::Close(_)))) {
+                        let _ = closed_tx.send(());
+                    }
+                }
             }
         });
 
         Self {
             url: format!("ws://{address}"),
             received,
+            closed,
         }
     }
 }

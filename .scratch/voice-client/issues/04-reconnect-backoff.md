@@ -1,6 +1,6 @@
 # 04 — Reconnect có backoff, đổi config
 
-Status: ready-for-agent
+Status: ready-for-human
 Blocked by: 02
 Spec: [../spec.md](../spec.md)
 
@@ -14,8 +14,14 @@ Spec: [../spec.md](../spec.md)
 
 ## Nghiệm thu
 
-- [ ] Test (`tokio::time::pause`): server từ chối liên tiếp → `retry_in` tăng 1, 2, 4… tới trần 60 s trong biên jitter.
-- [ ] Test: sau một lần `Ready` rồi đứt → `retry_in` quay về ~1 s.
-- [ ] Test: đổi `ota_url` → kết nối tới server giả thứ hai.
-- [ ] Test: gửi lại cùng giá trị config → không kết nối lại.
-- [ ] Test: drop cả hai đầu channel → task kết thúc, server giả thấy close.
+- [x] Test (`tokio::time::pause`): server từ chối liên tiếp → `retry_in` tăng 1, 2, 4… tới trần 60 s trong biên jitter.
+- [x] Test: sau một lần `Ready` rồi đứt → `retry_in` quay về ~1 s.
+- [x] Test: đổi `ota_url` → kết nối tới server giả thứ hai.
+- [x] Test: gửi lại cùng giá trị config → không kết nối lại.
+- [x] Test: drop cả hai đầu channel → task kết thúc, server giả thấy close.
+
+## Comments
+
+- Không phát hiện khác biệt giữa wire source của vela-server và ticket 04.
+- Verification: `cargo test -p voice-client` (13 passed), `cargo fmt --check`, `cargo clippy -p voice-client --all-targets -- -D warnings`, `scripts/test.sh -p voice-client` (14 passed).
+- Đổi config bằng giá trị khác khi đang kết nối đóng WebSocket hiện tại rồi chuyển ngay; config bằng nhau không ngắt attempt đang chạy. DirectSpeech nhận được trước Ready bị trả `Offline`, còn lệnh listen/audio trước Ready bị bỏ theo spec.
