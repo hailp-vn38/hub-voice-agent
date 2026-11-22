@@ -1,5 +1,7 @@
 # AI Hub — Tài liệu ý tưởng
 
+> Hướng dẫn phát triển trên máy Mac: [development.md](development.md).
+>
 > Trạng thái: **ý tưởng**, chưa triển khai. Cập nhật: 2026-11-22.
 
 ## 1. Mục tiêu
