@@ -1,0 +1,13 @@
+[Unit]
+Description=AI Hub
+After=multi-user.target
+
+[Service]
+User=hub
+SupplementaryGroups=video input render audio
+ExecStart=/opt/ai-hub/ai-hub
+Restart=always
+StateDirectory=ai-hub
+
+[Install]
+WantedBy=multi-user.target
