@@ -1,6 +1,6 @@
 # 06 — Device MCP và tool status
 
-Status: ready-for-agent
+Status: ready-for-human
 Blocked by: 01
 Spec: [../spec.md](../spec.md)
 
@@ -16,8 +16,13 @@ Theo `docs/flows/07-device-mcp.md` của vela-server: server là JSON-RPC client
 
 ## Nghiệm thu
 
-- [ ] Test: server giả gửi `initialize` rồi `tools/list` → nhận đủ tool trong config.
-- [ ] Test: `tools/call` → `ToolCall` có đúng `name`, `arguments`; `reply(Ok)` → server nhận `result` cùng `id`.
-- [ ] Test: drop `ToolCall` → server nhận lỗi cùng `id`.
-- [ ] Test: reply sau khi socket cũ đứt và đã reconnect → socket mới không nhận gì.
-- [ ] Test: `type:"tool"` `started`/`completed` → hai `ServerTool`.
+- [x] Test: server giả gửi `initialize` rồi `tools/list` → nhận đủ tool trong config, gồm phân trang.
+- [x] Test: `tools/call` → `ToolCall` có đúng `name`, `arguments`; `reply(Ok)` → server nhận `result` cùng `id`.
+- [x] Test: drop `ToolCall` → server nhận lỗi cùng `id`.
+- [x] Test: reply sau khi socket cũ đứt và đã reconnect → socket mới không nhận gì.
+- [x] Test: `type:"tool"` `started`/`completed` → hai `ServerTool`.
+
+## Comments
+
+- Đã đối chiếu actor, `device_mcp::wire`, `protocol::downlink` và flow 07: không có khác biệt wire cần sửa. Server gửi JSON-RPC numeric ID trong wrapper `type:"mcp"` và chỉ cần result từ `initialize` trước khi yêu cầu `tools/list`; client trả trang tối đa 100 tool với cursor offset. Server đọc lỗi `tools/call` như JSON-RPC error nhưng chuyển mọi code/message thành lỗi Device chung.
+- Đã chạy `cargo test -p voice-client`, `cargo clippy -p voice-client --all-targets -- -D warnings`, `cargo fmt --all -- --check` và `scripts/test.sh -p voice-client`.
