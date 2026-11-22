@@ -1,0 +1,7 @@
+[package]
+name = "hub-core"
+edition.workspace = true
+version.workspace = true
+
+[dependencies]
+voice-client = { path = "../voice-client" }
