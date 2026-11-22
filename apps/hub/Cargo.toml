@@ -20,3 +20,4 @@ slint-build = { workspace = true }
 [features]
 default = ["desktop"]
 desktop = ["slint/backend-winit", "slint/renderer-femtovg"]
+pi = ["slint/backend-linuxkms", "slint/renderer-femtovg"]
