@@ -1,9 +1,6 @@
 //! Client for the realtime voice service: connection, audio streaming and events.
 
-// Ticket 02 connects the public spawn entry point to this transport seam.
-#[allow(dead_code)]
 mod connection;
-#[allow(dead_code)]
 mod protocol;
 
 use serde_json::Value;
@@ -21,10 +18,50 @@ pub fn spawn(
     let (commands_tx, commands_rx) = mpsc::channel(COMMAND_CAPACITY);
     let (events_tx, events_rx) = mpsc::channel(EVENT_CAPACITY);
     tokio::spawn(async move {
-        let _ = (config, commands_rx, events_tx);
-        todo!("OTA discovery is implemented in ticket 02")
+        let mut commands_rx = commands_rx;
+        let _ = events_tx
+            .send(VoiceEvent::Connection(ConnectionState::Connecting))
+            .await;
+        let config = config.borrow().clone();
+        let result = async {
+            let (url, token) = discover_websocket(&config).await?;
+            connection::connect_and_wait(url, token, config.device, &events_tx, &mut commands_rx)
+                .await
+        }
+        .await;
+        if result.is_err() {
+            let _ = events_tx
+                .send(VoiceEvent::Connection(ConnectionState::Offline {
+                    retry_in: std::time::Duration::from_secs(1),
+                }))
+                .await;
+        }
     });
     (commands_tx, events_rx)
+}
+
+async fn discover_websocket(config: &VoiceConfig) -> Result<(Url, String), ()> {
+    let response = reqwest::Client::new()
+        .get(config.ota_url.clone())
+        .header("device-id", &config.device.device_id)
+        .header("client-id", &config.device.client_id)
+        .send()
+        .await
+        .map_err(|_| ())?
+        .error_for_status()
+        .map_err(|_| ())?;
+    let response_body = response.bytes().await.map_err(|_| ())?;
+    let body: serde_json::Value = serde_json::from_slice(&response_body).map_err(|_| ())?;
+    let websocket = body.get("websocket").ok_or(())?;
+    let url = websocket
+        .get("url")
+        .and_then(serde_json::Value::as_str)
+        .ok_or(())?;
+    let token = websocket
+        .get("token")
+        .and_then(serde_json::Value::as_str)
+        .ok_or(())?;
+    Ok((Url::parse(url).map_err(|_| ())?, token.to_owned()))
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
