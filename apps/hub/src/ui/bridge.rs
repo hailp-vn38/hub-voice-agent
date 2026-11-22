@@ -11,17 +11,17 @@ fn apply(app: &App, state: &UiState) {
 /// Forwards each `UiState` snapshot to the Slint window on the event-loop thread.
 pub fn spawn_bridge(app: Weak<App>, mut rx: watch::Receiver<UiState>) {
     tokio::spawn(async move {
-        loop {
+        // Skip the initial snapshot so the window keeps its placeholder clock.
+        rx.borrow_and_update();
+        while rx.changed().await.is_ok() {
             let state = rx.borrow_and_update().clone();
             let app = app.clone();
-            if slint::invoke_from_event_loop(move || {
+            let queued = slint::invoke_from_event_loop(move || {
                 if let Some(app) = app.upgrade() {
                     apply(&app, &state);
                 }
-            })
-            .is_err()
-                || rx.changed().await.is_err()
-            {
+            });
+            if queued.is_err() {
                 return;
             }
         }

@@ -12,7 +12,7 @@ BIN=target/pi/release/ai-hub
 [ -f "$BIN" ] || { echo "missing $BIN; run scripts/build-pi.sh first" >&2; exit 1; }
 
 if [ "$INIT" = 1 ]; then
-    ssh "$HOST" 'sudo apt-get update && sudo apt-get install -y libinput10 libgbm1 libegl1 libgles2 libfontconfig1 \
+    ssh "$HOST" 'sudo apt-get update && sudo apt-get install -y libinput10 libgbm1 libegl1 libgles2 libfontconfig1 libseat1 rsync \
         && (id hub >/dev/null 2>&1 || sudo useradd --system --create-home --shell /usr/sbin/nologin hub) \
         && sudo mkdir -p /opt/ai-hub'
 fi
@@ -20,5 +20,7 @@ fi
 rsync -av --rsync-path="sudo rsync" "$BIN" "$HOST:/opt/ai-hub/ai-hub"
 rsync -av --rsync-path="sudo rsync" deploy/ai-hub.service "$HOST:/etc/systemd/system/ai-hub.service"
 ssh "$HOST" 'sudo systemctl daemon-reload'
-[ "$INIT" = 1 ] && ssh "$HOST" 'sudo systemctl enable ai-hub'
+if [ "$INIT" = 1 ]; then
+    ssh "$HOST" 'sudo systemctl enable ai-hub'
+fi
 ssh "$HOST" 'sudo systemctl restart ai-hub'

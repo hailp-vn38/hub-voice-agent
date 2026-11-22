@@ -1,6 +1,6 @@
 [Unit]
 Description=AI Hub
-After=multi-user.target
+After=systemd-user-sessions.service
 
 [Service]
 User=hub
