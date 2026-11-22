@@ -123,6 +123,12 @@ async fn audio_events_drop_when_full_and_tts_stop_waits_for_capacity() {
             ))
             .await
             .unwrap();
+        socket
+            .send(Message::Text(
+                json!({"type":"tts", "state":"start"}).to_string().into(),
+            ))
+            .await
+            .unwrap();
         for _ in 0..600 {
             socket
                 .send(Message::Binary(vec![7; 60].into()))

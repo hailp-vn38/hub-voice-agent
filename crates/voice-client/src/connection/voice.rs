@@ -14,10 +14,14 @@ pub(super) async fn run(
 ) -> ConnectionEnd {
     let tools = io.active_config.tools.clone();
     let (reply_tx, mut reply_rx) = tokio::sync::mpsc::unbounded_channel();
+    let mut tts_active = false;
     loop {
         tokio::select! {
             frame = socket.next() => match frame {
-                Some(Ok(Message::Close(_))) | None | Some(Err(_)) => return ConnectionEnd::Failed { became_ready: true },
+                Some(Ok(Message::Close(_))) | None | Some(Err(_)) => {
+                    interrupted_stop(io.events, &mut tts_active).await;
+                    return ConnectionEnd::Failed { became_ready: true };
+                }
                 Some(Ok(Message::Text(text))) => {
                     let value = serde_json::from_str::<Value>(&text).ok();
                     if let Some(payload) = value.as_ref().and_then(crate::mcp::mcp_payload) {
@@ -27,6 +31,7 @@ pub(super) async fn run(
                             "type": "mcp", "session_id": &session_id, "payload": response
                         }).to_string();
                         if send_with_timeout(&mut socket, Message::Text(frame.into())).await.is_err() {
+                            interrupted_stop(io.events, &mut tts_active).await;
                             return ConnectionEnd::Failed { became_ready: true };
                         }
                     } else if let Some(event) = value.as_ref().and_then(crate::mcp::tool_status) {
@@ -38,6 +43,22 @@ pub(super) async fn run(
                             VoiceEvent::TtsAudio(_) => {
                                 let _ = io.events.try_send(event);
                             }
+                            VoiceEvent::TtsStart { .. } => {
+                                interrupted_stop(io.events, &mut tts_active).await;
+                                tts_active = true;
+                                if io.events.send(event).await.is_err() {
+                                    return ConnectionEnd::Stopped;
+                                }
+                            }
+                            VoiceEvent::TtsStop { .. } if tts_active => {
+                                tts_active = false;
+                                if io.events.send(VoiceEvent::TtsStop {
+                                    reason: crate::TtsStopReason::Completed,
+                                }).await.is_err() {
+                                    return ConnectionEnd::Stopped;
+                                }
+                            }
+                            VoiceEvent::TtsStop { .. } => {}
                             event => if io.events.send(event).await.is_err() {
                                 return ConnectionEnd::Stopped;
                             },
@@ -56,6 +77,7 @@ pub(super) async fn run(
                     "type": "mcp", "session_id": &session_id, "payload": response
                 }).to_string();
                 if send_with_timeout(&mut socket, Message::Text(frame.into())).await.is_err() {
+                    interrupted_stop(io.events, &mut tts_active).await;
                     return ConnectionEnd::Failed { became_ready: true };
                 }
             },
@@ -65,23 +87,27 @@ pub(super) async fn run(
                         "type": "listen", "state": "start", "mode": "realtime", "session_id": session_id
                     }).to_string();
                     if send_with_timeout(&mut socket, Message::Text(text.into())).await.is_err() {
+                        interrupted_stop(io.events, &mut tts_active).await;
                         return ConnectionEnd::Failed { became_ready: true };
                     }
                 }
                 Some(VoiceCommand::ListenStop) => {
                     let text = json!({"type": "listen", "state": "stop", "session_id": session_id}).to_string();
                     if send_with_timeout(&mut socket, Message::Text(text.into())).await.is_err() {
+                        interrupted_stop(io.events, &mut tts_active).await;
                         return ConnectionEnd::Failed { became_ready: true };
                     }
                 }
                 Some(VoiceCommand::Abort) => {
                     let text = json!({"type": "abort", "session_id": session_id}).to_string();
                     if send_with_timeout(&mut socket, Message::Text(text.into())).await.is_err() {
+                        interrupted_stop(io.events, &mut tts_active).await;
                         return ConnectionEnd::Failed { became_ready: true };
                     }
                 }
                 Some(VoiceCommand::Audio(OpusFrame(data))) => {
                     if send_with_timeout(&mut socket, Message::Binary(data.into())).await.is_err() {
+                        interrupted_stop(io.events, &mut tts_active).await;
                         return ConnectionEnd::Failed { became_ready: true };
                     }
                 }
@@ -97,11 +123,13 @@ pub(super) async fn run(
                         "request_id": request_id, "text": text
                     }).to_string();
                     if send_with_timeout(&mut socket, Message::Text(frame.into())).await.is_err() {
+                        interrupted_stop(io.events, &mut tts_active).await;
                         return ConnectionEnd::Failed { became_ready: true };
                     }
                 }
                 None => {
                     let _ = send_with_timeout(&mut socket, Message::Close(None)).await;
+                    interrupted_stop(io.events, &mut tts_active).await;
                     return ConnectionEnd::Stopped;
                 }
             },
@@ -115,11 +143,23 @@ pub(super) async fn run(
                     let updated = io.config.borrow_and_update().clone();
                     if updated != *io.active_config {
                         let _ = send_with_timeout(&mut socket, Message::Close(None)).await;
+                        interrupted_stop(io.events, &mut tts_active).await;
                         return ConnectionEnd::Reconfigured(updated);
                     }
                 }
             },
         }
+    }
+}
+
+async fn interrupted_stop(events: &tokio::sync::mpsc::Sender<VoiceEvent>, tts_active: &mut bool) {
+    if *tts_active {
+        *tts_active = false;
+        let _ = events
+            .send(VoiceEvent::TtsStop {
+                reason: crate::TtsStopReason::Interrupted,
+            })
+            .await;
     }
 }
 

@@ -127,48 +127,73 @@ ai-hub/
 
 ### 3.1 `voice-client`
 
-Một module sâu: toàn bộ Voice Protocol nằm sau hai channel.
+Một module sâu: toàn bộ Voice Protocol nằm sau hai channel giới hạn.
 
 ```rust
 pub fn spawn(config: watch::Receiver<VoiceConfig>)
     -> (mpsc::Sender<VoiceCommand>, mpsc::Receiver<VoiceEvent>);
 
 pub struct VoiceConfig {
-    pub server: ServerConfig,     // URL OTA; URL WS + token nếu đã Enrollment
-    pub device: DeviceIdentity,
-    pub features: Features,       // mcp, tool_status, direct_tts, aec = true
-    pub tools: Vec<ToolDef>,      // trả lời tools/list
+    pub ota_url: Url,
+    pub device: DeviceIdentity,   // device_id, client_id
+    pub tools: Vec<ToolDef>,      // trả lời Device MCP tools/list
 }
+
+pub struct DeviceIdentity { pub device_id: String, pub client_id: String }
+pub struct ToolDef { pub name: String, pub description: String, pub input_schema: serde_json::Value }
+pub struct OpusFrame(pub Vec<u8>);
 
 pub enum VoiceCommand {
     ListenStart,                  // listen:start, mode realtime
     ListenStop,
+    Abort,                        // abort phiên hiện tại
     Audio(OpusFrame),             // bỏ khi chưa Ready
     DirectSpeech { request_id: String, text: String },
-    PlaybackAck { .. },
 }
 
 pub enum VoiceEvent {
-    Connection(ConnectionState),  // Connecting | Ready | Offline { retry_in }
-    Activation { code: String },  // chưa Enrollment: hiện mã trên màn
-    Enrolled(Credentials),        // hub-core ghi vào config
+    Connection(ConnectionState),  // Connecting | Ready | Offline { retry_in } | Enrolling
+    Activation { code: String },  // API khai báo; server hiện không phát event activation có cấu trúc
     Stt { text: String },
-    TtsStart { origin: TtsOrigin },          // Agent | ClientDirect { request_id }
-    TtsText { text: String },
-    TtsAudio(OpusFrame),
-    TtsStop,
-    DirectSpeechRejected { request_id: String, reason: String },
-    ServerTool { name: String, state: ToolState },  // started | completed | failed
+    TtsStart { origin: TtsOrigin },
+    TtsText { text: String },      // sentence_start
+    TtsAudio(OpusFrame),           // binary Opus downlink
+    TtsStop { reason: TtsStopReason },
+    DirectSpeechRejected { request_id: String, reason: DirectSpeechError },
+    ServerTool { name: String, state: ToolState },
     ToolCall(ToolCall),
 }
 
-pub struct ToolCall { pub name: String, pub arguments: serde_json::Value, /* reply */ }
+pub enum ConnectionState { Connecting, Ready, Offline { retry_in: Duration }, Enrolling }
+pub enum TtsOrigin { Agent, ClientDirect { request_id: String } }
+pub enum TtsStopReason { Completed, Interrupted }
+pub enum DirectSpeechError {
+    Offline, UnsupportedFeature, InvalidText, InvalidRequestId, SessionBusy,
+    RateLimited, TtsUnavailable, CapacityReached, ShuttingDown, Other(String),
+}
+pub enum ToolState { Started, Completed, Failed }
+
+pub struct ToolCall { pub name: String, pub arguments: serde_json::Value }
 impl ToolCall { pub fn reply(self, result: Result<serde_json::Value, ToolError>); }
+pub struct ToolError { pub code: i32, pub message: String, pub data: Option<serde_json::Value> }
 ```
 
-**Giấu bên trong:** WebSocket, handshake, admission, Enrollment, reconnect có backoff, đánh số JSON-RPC, trả lời `tools/list`, frame text vs binary, kết nối lại khi `VoiceConfig` đổi (vd. đổi địa chỉ server qua Setup web). `ToolCall` bị drop mà chưa `reply` → voice-client tự trả lỗi nội bộ, server không treo.
+Features `mcp`, `tool_status`, `direct_tts` và `aec` luôn bật trong ClientHello; chúng không nằm trong `VoiceConfig`. Command channel có capacity 64, event channel có capacity 256. Khi event channel đầy, `TtsAudio` bị drop trước để reader WebSocket tiếp tục; các sự kiện khác đợi chỗ trống.
 
-**Test:** server WS giả trong `tests/support`, kịch bản message theo `docs/api/studio-assistant.md` của vela-server; backoff với tokio time paused.
+**Giấu bên trong:** `lib.rs` sở hữu `spawn`, hai channel, OTA discovery, backoff và reconnect khi config đổi; `connection.rs` thực hiện WebSocket, xác thực và ClientHello/ServerHello; `connection/voice.rs` ánh xạ command, text/binary frame và quản lý lifecycle TTS; `protocol.rs` giữ type handshake private; `mcp.rs` xử lý Device MCP, phân trang `tools/list`, gọi tool và reply theo JSON-RPC id. `ToolCall` bị drop chưa `reply` → gửi lỗi JSON-RPC nội bộ. Socket đóng trong lượt TTS → phát đúng một `TtsStop { reason: Interrupted }` trước `Connection(Offline)`; `tts stop` từ server, kể cả sau `Abort`, phát `Completed`. Đổi `VoiceConfig` chỉ reconnect khi giá trị khác.
+
+**Enrollment:** `ConnectionState::Enrolling` và `VoiceEvent::Activation` đã khai báo trong API nhưng hiện chưa được phát. Server chưa có discriminant Voice/Enrollment trong OTA hay `ServerHello`, và mã activation chỉ nằm trong văn bản `stt`; client không đoán loại phiên bằng cách dò văn bản. Ticket [03](../.scratch/voice-client/issues/03-enrollment-session.md) đang `needs-info` chờ wire contract phía server.
+
+**Bất biến qua API công khai:**
+
+1. Mỗi `TtsStart` được đóng bởi một `TtsStop`; mất socket giữa lượt phát `Interrupted` trước `Offline`.
+2. Trước `Ready`, `Audio`, `ListenStart`, `ListenStop` và `Abort` bị bỏ; `DirectSpeech` nhận `DirectSpeechRejected { reason: Offline }`.
+3. `ToolCall` bị drop trước reply gửi lỗi nội bộ; socket đã đóng khiến reply thành no-op.
+4. Sự kiện theo đúng thứ tự frame server gửi.
+5. Channel giới hạn 64 command và 256 event; audio bị drop trước khi làm nghẽn reader.
+6. Chỉ giá trị `VoiceConfig` thay đổi mới làm kết nối lại.
+
+Integration test dùng server WebSocket giả tại `tests/`; test backoff dùng tokio time paused.
 
 ### 3.2 `hub-core`
 
@@ -216,7 +241,7 @@ pub enum AudioCommand {
 pub enum AudioEvent {
     WakeWord,
     MicFrame(OpusFrame),
-    TtsPlaybackFinished,           // → PlaybackAck
+    TtsPlaybackFinished,
 }
 ```
 

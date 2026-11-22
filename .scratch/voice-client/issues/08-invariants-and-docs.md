@@ -1,6 +1,6 @@
 # 08 — Đóng lượt TTS khi mất kết nối, cập nhật codebase.md
 
-Status: ready-for-agent
+Status: ready-for-human
 Blocked by: 04, 05, 06, 07
 Spec: [../spec.md](../spec.md)
 
@@ -13,7 +13,12 @@ Spec: [../spec.md](../spec.md)
 
 ## Nghiệm thu
 
-- [ ] Test: đứt giữa `TtsAudio` → `TtsStop { Interrupted }` đứng trước `Offline`.
-- [ ] Test thứ tự trộn qua.
-- [ ] Toàn bộ test của crate, clippy `-D warnings`, fmt qua `scripts/agent-test.sh`.
-- [ ] `grep -n "Enrolled\|PlaybackAck" docs/` không còn kết quả.
+- [x] Test: đứt giữa `TtsAudio` → `TtsStop { Interrupted }` đứng trước `Offline`.
+- [x] Test thứ tự trộn qua; `tts stop` sau `Abort` vẫn là `Completed`.
+- [x] Toàn bộ test crate, clippy `-D warnings`, fmt và `scripts/test.sh -p voice-client` đều qua. Repo không có `scripts/agent-test.sh`.
+- [x] `rg -n 'Enrolled|PlaybackAck' docs/` không có kết quả.
+- [x] `cargo tree -p voice-client` không có Slint, cpal hay opus.
+
+## Comments
+
+`Enrolling` và `Activation` vẫn chỉ là API đã khai báo, chưa được phát vì ticket 03 đang `needs-info`: server chưa cung cấp discriminant loại session hoặc activation code có cấu trúc.
