@@ -1,6 +1,7 @@
 //! Client for the realtime voice service: connection, audio streaming and events.
 
 mod connection;
+mod mcp;
 mod protocol;
 
 use serde_json::Value;
@@ -293,6 +294,9 @@ pub struct ToolError {
 #[cfg(test)]
 #[path = "connection_tests.rs"]
 mod connection_tests;
+#[cfg(test)]
+#[path = "mcp_tests.rs"]
+mod mcp_tests;
 #[cfg(test)]
 #[path = "reconnect_tests/mod.rs"]
 mod reconnect_tests;

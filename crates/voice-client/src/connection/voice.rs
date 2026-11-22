@@ -12,12 +12,28 @@ pub(super) async fn run(
     session_id: String,
     io: ClientIo<'_>,
 ) -> ConnectionEnd {
+    let tools = io.active_config.tools.clone();
+    let (reply_tx, mut reply_rx) = tokio::sync::mpsc::unbounded_channel();
     loop {
         tokio::select! {
             frame = socket.next() => match frame {
                 Some(Ok(Message::Close(_))) | None | Some(Err(_)) => return ConnectionEnd::Failed { became_ready: true },
                 Some(Ok(Message::Text(text))) => {
-                    if let Some(event) = parse_text_event(&text) {
+                    let value = serde_json::from_str::<Value>(&text).ok();
+                    if let Some(payload) = value.as_ref().and_then(crate::mcp::mcp_payload) {
+                        let response = crate::mcp::handle(payload, &tools, io.events, &reply_tx).await;
+                        let Some(response) = response else { continue };
+                        let frame = json!({
+                            "type": "mcp", "session_id": &session_id, "payload": response
+                        }).to_string();
+                        if send_with_timeout(&mut socket, Message::Text(frame.into())).await.is_err() {
+                            return ConnectionEnd::Failed { became_ready: true };
+                        }
+                    } else if let Some(event) = value.as_ref().and_then(crate::mcp::tool_status) {
+                        if io.events.send(event).await.is_err() {
+                            return ConnectionEnd::Stopped;
+                        }
+                    } else if let Some(event) = parse_text_event(&text) {
                         match event {
                             VoiceEvent::TtsAudio(_) => {
                                 let _ = io.events.try_send(event);
@@ -34,6 +50,14 @@ pub(super) async fn run(
                     let _ = io.events.try_send(VoiceEvent::TtsAudio(OpusFrame(data.to_vec())));
                 }
                 Some(Ok(_)) => {}
+            },
+            reply = reply_rx.recv() => if let Some((_id, response)) = reply {
+                let frame = json!({
+                    "type": "mcp", "session_id": &session_id, "payload": response
+                }).to_string();
+                if send_with_timeout(&mut socket, Message::Text(frame.into())).await.is_err() {
+                    return ConnectionEnd::Failed { became_ready: true };
+                }
             },
             command = io.commands.recv(), if io.pending_commands.len() < crate::COMMAND_CAPACITY => match command {
                 Some(VoiceCommand::ListenStart) => {
