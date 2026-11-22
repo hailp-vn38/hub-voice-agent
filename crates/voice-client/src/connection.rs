@@ -55,7 +55,6 @@ where
 pub(super) struct ClientIo<'a> {
     pub events: &'a mpsc::Sender<VoiceEvent>,
     pub commands: &'a mut mpsc::Receiver<VoiceCommand>,
-    pub pending_commands: &'a mut std::collections::VecDeque<VoiceCommand>,
     pub config: &'a mut watch::Receiver<crate::VoiceConfig>,
     pub active_config: &'a mut crate::VoiceConfig,
 }

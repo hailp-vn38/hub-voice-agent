@@ -1,6 +1,6 @@
 # 07 — Direct Speech
 
-Status: ready-for-agent
+Status: ready-for-human
 Blocked by: 05
 Spec: [../spec.md](../spec.md)
 
@@ -16,7 +16,11 @@ Theo ADR 0161 của vela-server (đang Proposed; kiểm trạng thái triển kh
 
 ## Nghiệm thu
 
-- [ ] Test: chấp nhận → `TtsStart { ClientDirect { request_id } }` … `TtsStop`.
-- [ ] Test: server trả `session_busy` → `DirectSpeechRejected { SessionBusy }`.
-- [ ] Test: text 1.025 ký tự → bị từ chối cục bộ, server giả không nhận gì.
-- [ ] Test: khi Offline → `DirectSpeechRejected { Offline }`.
+- [x] Test: chấp nhận → `TtsStart { ClientDirect { request_id } }` … `TtsStop`; result thành công không phát event phụ.
+- [x] Test: server trả `session_busy` → `DirectSpeechRejected { SessionBusy }`.
+- [x] Test: text 1.025 ký tự → bị từ chối cục bộ, server giả không nhận gì.
+- [x] Test: khi Offline → `DirectSpeechRejected { Offline }`.
+
+## Comments
+
+- `.scratch/client-direct-speech/spec.md` của repo vela-server vẫn ghi `needs-triage` và ADR 0161 vẫn `Proposed`. Trong worktree triển khai server, source hiện có parse `direct_speech`, ingress/admission vào session, validate, các mã lỗi, và TTS metadata `request_id`/`source`/`outcome`/`reason`. Triển khai client theo wire behavior trong source như ticket yêu cầu; các mã ngoài danh sách ticket được giữ nguyên trong `Other(String)`.

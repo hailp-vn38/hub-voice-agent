@@ -6,7 +6,6 @@ mod protocol;
 
 use serde_json::Value;
 use std::{
-    collections::VecDeque,
     collections::hash_map::RandomState,
     hash::{BuildHasher, Hasher},
     time::Duration,
@@ -45,7 +44,6 @@ async fn client_loop(
 ) {
     let mut active_config = config.borrow_and_update().clone();
     let mut backoff = Duration::from_secs(1);
-    let mut pending_commands = VecDeque::new();
     loop {
         if events.is_closed() {
             return;
@@ -74,7 +72,6 @@ async fn client_loop(
                     connection::ClientIo {
                         events: &events,
                         commands: &mut commands,
-                        pending_commands: &mut pending_commands,
                         config: &mut config,
                         active_config: &mut active_config,
                     },
@@ -82,7 +79,6 @@ async fn client_loop(
                 .await
             }
             connection::Operation::Reconfigured(updated) => {
-                pending_commands.clear();
                 active_config = updated;
                 backoff = Duration::from_secs(1);
                 continue;
@@ -95,13 +91,11 @@ async fn client_loop(
         match connection {
             connection::ConnectionEnd::Stopped => return,
             connection::ConnectionEnd::Reconfigured(updated) => {
-                pending_commands.clear();
                 active_config = updated;
                 backoff = Duration::from_secs(1);
                 continue;
             }
             connection::ConnectionEnd::Failed { became_ready } => {
-                pending_commands.clear();
                 if became_ready {
                     backoff = Duration::from_secs(1);
                 }
@@ -261,7 +255,15 @@ pub enum TtsStopReason {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum DirectSpeechError {
     Offline,
-    Rejected(String),
+    UnsupportedFeature,
+    InvalidText,
+    InvalidRequestId,
+    SessionBusy,
+    RateLimited,
+    TtsUnavailable,
+    CapacityReached,
+    ShuttingDown,
+    Other(String),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -294,6 +296,9 @@ pub struct ToolError {
 #[cfg(test)]
 #[path = "connection_tests.rs"]
 mod connection_tests;
+#[cfg(test)]
+#[path = "direct_speech_tests.rs"]
+mod direct_speech_tests;
 #[cfg(test)]
 #[path = "mcp_tests.rs"]
 mod mcp_tests;

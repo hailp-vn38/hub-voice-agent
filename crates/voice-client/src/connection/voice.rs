@@ -59,7 +59,7 @@ pub(super) async fn run(
                     return ConnectionEnd::Failed { became_ready: true };
                 }
             },
-            command = io.commands.recv(), if io.pending_commands.len() < crate::COMMAND_CAPACITY => match command {
+            command = io.commands.recv() => match command {
                 Some(VoiceCommand::ListenStart) => {
                     let text = json!({
                         "type": "listen", "state": "start", "mode": "realtime", "session_id": session_id
@@ -85,7 +85,21 @@ pub(super) async fn run(
                         return ConnectionEnd::Failed { became_ready: true };
                     }
                 }
-                Some(command @ VoiceCommand::DirectSpeech { .. }) => io.pending_commands.push_back(command),
+                Some(VoiceCommand::DirectSpeech { request_id, text }) => {
+                    if let Err(reason) = validate_direct_speech(&request_id, &text) {
+                        if io.events.send(VoiceEvent::DirectSpeechRejected { request_id, reason }).await.is_err() {
+                            return ConnectionEnd::Stopped;
+                        }
+                        continue;
+                    }
+                    let frame = json!({
+                        "type": "direct_speech", "session_id": session_id,
+                        "request_id": request_id, "text": text
+                    }).to_string();
+                    if send_with_timeout(&mut socket, Message::Text(frame.into())).await.is_err() {
+                        return ConnectionEnd::Failed { became_ready: true };
+                    }
+                }
                 None => {
                     let _ = send_with_timeout(&mut socket, Message::Close(None)).await;
                     return ConnectionEnd::Stopped;
@@ -134,8 +148,52 @@ fn parse_text_event(text: &str) -> Option<VoiceEvent> {
             "stop" => Some(VoiceEvent::TtsStop {
                 reason: crate::TtsStopReason::Completed,
             }),
+            "result"
+                if value.get("source")?.as_str()? == "client_direct"
+                    && value.get("outcome")?.as_str()? == "rejected" =>
+            {
+                Some(VoiceEvent::DirectSpeechRejected {
+                    request_id: value.get("request_id")?.as_str()?.to_owned(),
+                    reason: direct_speech_error(value.get("reason")?.as_str()?),
+                })
+            }
             _ => None,
         },
         _ => None,
+    }
+}
+
+fn validate_direct_speech(request_id: &str, text: &str) -> Result<(), crate::DirectSpeechError> {
+    if request_id.is_empty()
+        || request_id.len() > 128
+        || !request_id
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || b"_.:-".contains(&byte))
+    {
+        return Err(crate::DirectSpeechError::InvalidRequestId);
+    }
+    if text.trim().is_empty()
+        || text.chars().count() > 1_024
+        || text.len() > 4_096
+        || text
+            .chars()
+            .any(|character| character.is_control() && character != '\n' && character != '\t')
+    {
+        return Err(crate::DirectSpeechError::InvalidText);
+    }
+    Ok(())
+}
+
+fn direct_speech_error(reason: &str) -> crate::DirectSpeechError {
+    match reason {
+        "unsupported_feature" => crate::DirectSpeechError::UnsupportedFeature,
+        "invalid_text" => crate::DirectSpeechError::InvalidText,
+        "invalid_request_id" => crate::DirectSpeechError::InvalidRequestId,
+        "session_busy" => crate::DirectSpeechError::SessionBusy,
+        "rate_limited" => crate::DirectSpeechError::RateLimited,
+        "tts_unavailable" => crate::DirectSpeechError::TtsUnavailable,
+        "capacity_reached" => crate::DirectSpeechError::CapacityReached,
+        "shutting_down" => crate::DirectSpeechError::ShuttingDown,
+        other => crate::DirectSpeechError::Other(other.to_owned()),
     }
 }
