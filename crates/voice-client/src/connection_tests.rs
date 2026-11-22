@@ -1,12 +1,12 @@
 #[path = "../tests/support/fake_server.rs"]
-mod fake_server;
+pub(crate) mod fake_server;
 
 use std::time::Duration;
 
 use tokio::time::timeout;
 use url::Url;
 
-use crate::{DeviceIdentity, VoiceConfig, VoiceEvent, connection};
+use crate::{DeviceIdentity, VoiceConfig, VoiceEvent};
 use fake_server::{FakeOtaServer, FakeServer, ServerAction};
 
 #[tokio::test]
@@ -108,12 +108,18 @@ fn config_receiver(config: VoiceConfig) -> tokio::sync::watch::Receiver<VoiceCon
 #[tokio::test]
 async fn handshake_emits_connecting_then_ready_and_sends_expected_hello() {
     let server = FakeServer::start(ServerAction::SendHello).await;
+    let ota = FakeOtaServer::start(
+        200,
+        serde_json::json!({ "websocket": { "url": server.url, "token": "token-1" } }),
+    )
+    .await;
     let device = DeviceIdentity::new("device-1", "client-1");
-    let (_commands, mut events) = connection::spawn_with_websocket(
-        Url::parse(&server.url).unwrap(),
-        "token-1".into(),
+    let config = VoiceConfig {
+        ota_url: Url::parse(&ota.url).unwrap(),
         device,
-    );
+        tools: Vec::new(),
+    };
+    let (_commands, mut events) = crate::spawn(config_receiver(config));
 
     assert!(matches!(
         events.recv().await,
@@ -151,11 +157,17 @@ async fn handshake_emits_connecting_then_ready_and_sends_expected_hello() {
 #[tokio::test]
 async fn server_protocol_close_after_client_hello_emits_offline() {
     let server = FakeServer::start(ServerAction::CloseProtocolError).await;
-    let (_commands, mut events) = connection::spawn_with_websocket(
-        Url::parse(&server.url).unwrap(),
-        "token-1".into(),
-        DeviceIdentity::new("device-1", "client-1"),
-    );
+    let ota = FakeOtaServer::start(
+        200,
+        serde_json::json!({ "websocket": { "url": server.url, "token": "token-1" } }),
+    )
+    .await;
+    let config = VoiceConfig {
+        ota_url: Url::parse(&ota.url).unwrap(),
+        device: DeviceIdentity::new("device-1", "client-1"),
+        tools: Vec::new(),
+    };
+    let (_commands, mut events) = crate::spawn(config_receiver(config));
 
     assert!(matches!(
         events.recv().await,
