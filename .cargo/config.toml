@@ -1,0 +1,6 @@
+# Smaller dev/test artifacts: keep line numbers in backtraces, drop full debug info.
+[profile.dev]
+debug = "line-tables-only"
+
+[profile.dev.package."*"]
+debug = false
