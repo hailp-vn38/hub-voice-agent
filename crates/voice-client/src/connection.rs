@@ -23,6 +23,7 @@ pub enum ConnectionState {
     Enrolling,
 }
 
+#[cfg(test)]
 pub(super) fn spawn_with_websocket(
     url: Url,
     token: String,
@@ -46,7 +47,7 @@ pub(super) fn spawn_with_websocket(
     (commands_tx, events_rx)
 }
 
-async fn connect_and_wait(
+pub(super) async fn connect_and_wait(
     url: Url,
     token: String,
     device: DeviceIdentity,
