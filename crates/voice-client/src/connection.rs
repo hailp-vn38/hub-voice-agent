@@ -17,6 +17,8 @@ use crate::{
     protocol::{ClientHello, ServerHello},
 };
 
+mod voice;
+
 const WRITE_TIMEOUT: Duration = Duration::from_secs(10);
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -188,11 +190,11 @@ pub(super) async fn connect_and_wait(
     {
         Operation::Complete(()) => {}
         Operation::Reconfigured(config) => {
-            let _ = socket.close(None).await;
+            let _ = send_with_timeout(&mut socket, Message::Close(None)).await;
             return ConnectionEnd::Reconfigured(config);
         }
         Operation::Stopped => {
-            let _ = socket.close(None).await;
+            let _ = send_with_timeout(&mut socket, Message::Close(None)).await;
             return ConnectionEnd::Stopped;
         }
         Operation::Failed => {
@@ -213,11 +215,11 @@ pub(super) async fn connect_and_wait(
             };
         }
         Operation::Reconfigured(config) => {
-            let _ = socket.close(None).await;
+            let _ = send_with_timeout(&mut socket, Message::Close(None)).await;
             return ConnectionEnd::Reconfigured(config);
         }
         Operation::Stopped => {
-            let _ = socket.close(None).await;
+            let _ = send_with_timeout(&mut socket, Message::Close(None)).await;
             return ConnectionEnd::Stopped;
         }
     };
@@ -231,38 +233,16 @@ pub(super) async fn connect_and_wait(
             became_ready: false,
         };
     }
-    let _session_id = server_hello.session_id();
+    let session_id = server_hello.session_id().to_owned();
     if io
         .events
         .send(VoiceEvent::Connection(ConnectionState::Ready))
         .await
         .is_err()
     {
-        let _ = socket.close(None).await;
+        let _ = send_with_timeout(&mut socket, Message::Close(None)).await;
         return ConnectionEnd::Stopped;
     }
 
-    loop {
-        tokio::select! {
-            frame = socket.next() => match frame {
-                Some(Ok(Message::Close(_))) | None | Some(Err(_)) => return ConnectionEnd::Failed { became_ready: true },
-                Some(Ok(_)) => todo!("server events are implemented by later tickets"),
-            },
-            command = io.commands.recv(), if io.pending_commands.len() < crate::COMMAND_CAPACITY => match command {
-                Some(command) => io.pending_commands.push_back(command),
-                None => { let _ = socket.close(None).await; return ConnectionEnd::Stopped; },
-            },
-            _ = io.events.closed() => { let _ = socket.close(None).await; return ConnectionEnd::Stopped; },
-            changed = io.config.changed(), if io.config.has_changed().is_ok() => match changed {
-                Err(_) => continue,
-                Ok(()) => {
-                    let updated = io.config.borrow_and_update().clone();
-                    if updated != *io.active_config {
-                        let _ = socket.close(None).await;
-                        return ConnectionEnd::Reconfigured(updated);
-                    }
-                }
-            },
-        }
-    }
+    voice::run(socket, session_id, io).await
 }
