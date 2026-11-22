@@ -1,0 +1,16 @@
+import { Theme } from "theme.slint";
+
+export component App inherits Window {
+    in property <string> clock: "--:--:--";
+    preferred-width: 1920px;
+    preferred-height: 1080px;
+    background: Theme.background;
+
+    Text {
+        text: root.clock;
+        color: Theme.text;
+        font-size: 160px;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+}
