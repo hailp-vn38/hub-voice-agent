@@ -1,6 +1,6 @@
 # Spec: voice-client
 
-Status: ready-for-agent
+Status: needs-info
 
 ## Mục tiêu
 
@@ -124,11 +124,11 @@ Ticket cuối cập nhật docs/codebase.md theo bảng này.
 
 | # | Ticket | Blocked by | Status |
 |---|---|---|---|
-| 01 | [Handshake tới Ready qua server giả](issues/01-handshake-ready.md) | — | ready-for-agent |
-| 02 | [OTA lấy URL WS và token](issues/02-ota-discovery.md) | 01 | ready-for-agent |
-| 03 | [Enrollment Session và mã kích hoạt](issues/03-enrollment-session.md) | 02 | ready-for-agent |
-| 04 | [Reconnect có backoff, đổi config](issues/04-reconnect-backoff.md) | 02 | ready-for-agent |
-| 05 | [Listen, audio uplink, STT/TTS downlink](issues/05-listen-and-tts.md) | 01 | ready-for-agent |
-| 06 | [Device MCP và tool status](issues/06-device-mcp.md) | 01 | ready-for-agent |
-| 07 | [Direct Speech](issues/07-direct-speech.md) | 05 | ready-for-agent |
-| 08 | [Đóng lượt TTS khi mất kết nối, cập nhật codebase.md](issues/08-invariants-and-docs.md) | 04, 05, 06, 07 | ready-for-agent |
+| 01 | [Handshake tới Ready qua server giả](issues/01-handshake-ready.md) | — | ready-for-human |
+| 02 | [OTA lấy URL WS và token](issues/02-ota-discovery.md) | 01 | ready-for-human |
+| 03 | [Enrollment Session và mã kích hoạt](issues/03-enrollment-session.md) | 02 | needs-info |
+| 04 | [Reconnect có backoff, đổi config](issues/04-reconnect-backoff.md) | 02 | ready-for-human |
+| 05 | [Listen, audio uplink, STT/TTS downlink](issues/05-listen-and-tts.md) | 01 | ready-for-human |
+| 06 | [Device MCP và tool status](issues/06-device-mcp.md) | 01 | ready-for-human |
+| 07 | [Direct Speech](issues/07-direct-speech.md) | 05 | ready-for-human |
+| 08 | [Đóng lượt TTS khi mất kết nối, cập nhật codebase.md](issues/08-invariants-and-docs.md) | 04, 05, 06, 07 | ready-for-human |
