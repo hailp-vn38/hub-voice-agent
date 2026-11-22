@@ -21,6 +21,7 @@ Xem thiết kế tổng thể ở [concept.md](concept.md).
 ai-hub/
 ├── Cargo.toml              # workspace
 ├── crates/voice-client/    # kết nối Voice Protocol, không UI, không thiết bị âm thanh
+├── crates/hub-core/        # hành vi của hub, test bằng `cargo test -p hub-core`
 ├── apps/hub/               # app Slint chạy trên Mac và Pi
 │   └── ui/                 # file .slint
 ├── docker/pi-build.Dockerfile

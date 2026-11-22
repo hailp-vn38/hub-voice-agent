@@ -37,8 +37,11 @@ AEC là điều kiện để wake word và barge-in hoạt động khi loa đang
 ```
 ai-hub/
 ├── crates/voice-client   # chỉ kết nối voice theo mô hình client–server
+├── crates/hub-core       # toàn bộ hành vi của hub, không UI/audio/OS
 └── apps/hub              # ứng dụng chạy trên Pi 4
 ```
+
+Thiết kế chi tiết từng module: [codebase.md](codebase.md); quyết định đã chốt: [adr/](adr/).
 
 **`voice-client`** — không UI, không đụng thiết bị âm thanh:
 
