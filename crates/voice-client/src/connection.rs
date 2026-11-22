@@ -17,6 +17,8 @@ use crate::{
     protocol::{ClientHello, ServerHello},
 };
 
+const WRITE_TIMEOUT: Duration = Duration::from_secs(10);
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ConnectionState {
     Connecting,
@@ -36,6 +38,16 @@ pub(super) enum Operation<T> {
     Reconfigured(crate::VoiceConfig),
     Stopped,
     Failed,
+}
+
+pub(crate) async fn send_with_timeout<S>(sink: &mut S, message: Message) -> Result<(), ()>
+where
+    S: futures_util::Sink<Message, Error = tokio_tungstenite::tungstenite::Error> + Unpin,
+{
+    tokio::time::timeout(WRITE_TIMEOUT, sink.send(message))
+        .await
+        .map_err(|_| ())?
+        .map_err(|_| ())
 }
 
 pub(super) struct ClientIo<'a> {
@@ -171,12 +183,7 @@ pub(super) async fn connect_and_wait(
         };
     };
     match io
-        .operation(async {
-            socket
-                .send(Message::Text(hello.into()))
-                .await
-                .map_err(|_| ())
-        })
+        .operation(async { send_with_timeout(&mut socket, Message::Text(hello.into())).await })
         .await
     {
         Operation::Complete(()) => {}

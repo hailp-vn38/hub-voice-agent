@@ -2,11 +2,17 @@
 pub(crate) mod fake_server;
 
 use std::time::Duration;
+use std::{
+    pin::Pin,
+    task::{Context, Poll},
+};
 
+use futures_util::Sink;
 use tokio::time::timeout;
+use tokio_tungstenite::tungstenite::Message;
 use url::Url;
 
-use crate::{DeviceIdentity, VoiceConfig, VoiceEvent};
+use crate::{DeviceIdentity, VoiceConfig, VoiceEvent, connection};
 use fake_server::{FakeOtaServer, FakeServer, ServerAction};
 
 #[tokio::test]
@@ -103,6 +109,47 @@ async fn ota_response_without_websocket_emits_offline() {
 
 fn config_receiver(config: VoiceConfig) -> tokio::sync::watch::Receiver<VoiceConfig> {
     tokio::sync::watch::channel(config).1
+}
+
+#[tokio::test(start_paused = true)]
+async fn websocket_write_times_out_after_ten_seconds() {
+    let mut sink = NeverReadySink;
+    let send = connection::send_with_timeout(&mut sink, Message::Text("hello".into()));
+    tokio::pin!(send);
+    tokio::task::yield_now().await;
+    tokio::time::advance(Duration::from_secs(10)).await;
+    assert!(send.await.is_err());
+}
+
+struct NeverReadySink;
+
+impl Sink<Message> for NeverReadySink {
+    type Error = tokio_tungstenite::tungstenite::Error;
+
+    fn poll_ready(
+        self: Pin<&mut Self>,
+        _context: &mut Context<'_>,
+    ) -> Poll<Result<(), Self::Error>> {
+        Poll::Pending
+    }
+
+    fn start_send(self: Pin<&mut Self>, _item: Message) -> Result<(), Self::Error> {
+        unreachable!("send should remain pending")
+    }
+
+    fn poll_flush(
+        self: Pin<&mut Self>,
+        _context: &mut Context<'_>,
+    ) -> Poll<Result<(), Self::Error>> {
+        Poll::Pending
+    }
+
+    fn poll_close(
+        self: Pin<&mut Self>,
+        _context: &mut Context<'_>,
+    ) -> Poll<Result<(), Self::Error>> {
+        Poll::Pending
+    }
 }
 
 #[tokio::test]
