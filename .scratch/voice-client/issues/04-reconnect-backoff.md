@@ -25,3 +25,4 @@ Spec: [../spec.md](../spec.md)
 - Không phát hiện khác biệt giữa wire source của vela-server và ticket 04.
 - Verification: `cargo test -p voice-client` (13 passed), `cargo fmt --check`, `cargo clippy -p voice-client --all-targets -- -D warnings`, `scripts/test.sh -p voice-client` (14 passed).
 - Đổi config bằng giá trị khác khi đang kết nối đóng WebSocket hiện tại rồi chuyển ngay; config bằng nhau không ngắt attempt đang chạy. DirectSpeech nhận được trước Ready bị trả `Offline`, còn lệnh listen/audio trước Ready bị bỏ theo spec.
+- ClientHello có write timeout 10 giây; đây là lựa chọn triển khai phía client, độc lập với giới hạn writer 10 giây của server. Helper riêng được để các ticket 05/06 tái sử dụng khi gửi lệnh.
