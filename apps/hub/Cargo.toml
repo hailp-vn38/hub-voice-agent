@@ -11,6 +11,9 @@ path = "src/main.rs"
 hub-core = { path = "../../crates/hub-core" }
 slint = { workspace = true, features = ["std", "compat-1-2"] }
 
+tokio = { workspace = true, features = ["rt-multi-thread", "sync"] }
+anyhow = { workspace = true }
+
 [build-dependencies]
 slint-build = { workspace = true }
 

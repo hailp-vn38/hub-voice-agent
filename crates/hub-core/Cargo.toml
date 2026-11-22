@@ -5,3 +5,9 @@ version.workspace = true
 
 [dependencies]
 voice-client = { path = "../voice-client" }
+jiff = { workspace = true }
+anyhow = { workspace = true }
+tokio = { workspace = true, features = ["sync", "time", "macros"] }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["rt", "test-util"] }
