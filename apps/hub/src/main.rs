@@ -47,10 +47,12 @@ fn main() -> anyhow::Result<()> {
             };
             let (voice_tx, _voice_commands) = tokio::sync::mpsc::channel(16);
             let (_voice_events, voice_rx) = tokio::sync::mpsc::channel(16);
-            let (audio_tx, _audio_commands) = tokio::sync::mpsc::channel(16);
+            let (audio_tx, mut _audio_commands) = tokio::sync::mpsc::channel(16);
+            let (_audio_events, audio_rx) = tokio::sync::mpsc::channel(16);
+            tokio::spawn(async move { while _audio_commands.recv().await.is_some() {} });
             let (_inputs, input_rx) = tokio::sync::mpsc::channel(16);
             tokio::select! {
-                result = hub_core::run(ports, Io { voice_tx, voice_rx, audio_tx, input_rx, ui_tx }) => result,
+                result = hub_core::run(ports, Io { voice_tx, voice_rx, audio_tx, audio_rx, input_rx, ui_tx }) => result,
                 _ = stop_rx => Ok(()),
             }
         })
