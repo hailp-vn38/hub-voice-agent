@@ -1,0 +1,20 @@
+import { Theme } from "../theme.slint";
+
+export component Toggle inherits Rectangle {
+    in property <bool> on;
+    callback toggled(bool);
+    width: 120px;
+    height: 64px;
+    border-radius: 32px;
+    background: root.on ? Theme.accent : Theme.card;
+    Rectangle {
+        x: root.on ? parent.width - self.width - 6px : 6px;
+        y: 6px;
+        width: 52px;
+        height: 52px;
+        border-radius: 26px;
+        background: Theme.text;
+        animate x { duration: 150ms; }
+    }
+    TouchArea { clicked => { root.toggled(!root.on); } }
+}

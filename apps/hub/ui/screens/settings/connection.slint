@@ -1,0 +1,37 @@
+import { LineEdit } from "std-widgets.slint";
+import { SettingsData } from "../../contract/settings.slint";
+import { Theme } from "../../theme.slint";
+import { ActionButton } from "../../components/action-button.slint";
+import { SettingRow } from "../../components/setting-row.slint";
+
+component Info inherits Text {
+    color: Theme.text-dim;
+    font-size: Theme.font-small;
+    vertical-alignment: center;
+    wrap: word-wrap;
+}
+
+export component ConnectionPanel inherits VerticalLayout {
+    SettingRow {
+        label: "vela-server";
+        Info { text: SettingsData.connection.server-connected ? "Đã kết nối · " + SettingsData.connection.latency-ms + " ms" : "Mất kết nối"; }
+    }
+    if !SettingsData.connection.enrolled: SettingRow {
+        label: "Mã Enrollment";
+        Text { text: SettingsData.connection.enrollment-code; color: Theme.warm; font-size: Theme.font-title; vertical-alignment: center; }
+        ActionButton { text: "Kết nối"; clicked => { SettingsData.connect-voice(); } }
+    }
+    SettingRow {
+        label: "Wi-Fi";
+        Info { text: SettingsData.connection.wifi-name + " · " + SettingsData.connection.wifi-strength + "/3 · " + SettingsData.connection.wifi-ip; }
+    }
+    SettingRow { label: "Home Assistant"; Info { text: SettingsData.connection.ha-status; } }
+    SettingRow { label: "Google Calendar"; Info { text: SettingsData.connection.calendar-status; } }
+    SettingRow { label: "Open-Meteo"; Info { text: SettingsData.connection.weather-status; } }
+    // Ngoại lệ tạm: ô nhập OTA URL giữ lại cho tới khi hub-core #13 xong (Setup web).
+    SettingRow {
+        label: "OTA URL (tạm)";
+        LineEdit { text <=> SettingsData.ota-url; }
+        ActionButton { text: "Lưu"; clicked => { SettingsData.save-voice-url(SettingsData.ota-url); } }
+    }
+}

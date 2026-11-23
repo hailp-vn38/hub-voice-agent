@@ -1,6 +1,6 @@
 # 17 — Setting
 
-Status: ready-for-agent
+Status: resolved
 Blocked by: 03
 Spec: [../spec.md](../spec.md)
 Thiết kế: concept.md §6 "Setting"
@@ -52,3 +52,13 @@ Map: chờ hub-core #02 (Kết nối voice), #13 (Setup web URL); các danh mụ
 | `choose` / `toggle` / `preview-sound` | |
 | `clear` / `system` | |
 | `connect-voice()` / `save-voice-url(url)` | |
+
+## Answer
+
+Đã làm: `contract/settings.slint` (`SettingsData`), `screens/settings.slint` + 7 panel trong `screens/settings/`, components `slider`, `choice`, `toggle`, `setting-row`, `action-button`; Shell hiển thị Setting thay Placeholder; demo fixture `demo/settings.rs` và 3 kịch bản (Đổi độ phân giải, Chưa đăng ký voice, Tắt mic) + "Mở Setting".
+
+- Thẻ xác nhận xoá/tắt máy là bản cục bộ trong `settings.slint` vì ticket 14 (`overlays/confirm.slint`) chưa có; thay bằng overlay chung khi 14 xong.
+- Slider đặt `SettingsData.dragging` để Shell tắt vuốt phải khi đang kéo.
+- Callback hệ thống tên `system-action` (tránh trùng property `system`).
+- OTA URL: `LineEdit` tạm trong Kết nối (`SettingsData.ota-url`); đường thật (VoiceSettings, non-demo) giữ nguyên, chưa nối `SettingsData` vào bridge.
+- Chưa có QR thật (`setup-qr` rỗng trong demo). Không có unit test (không có logic Rust ngoài demo).

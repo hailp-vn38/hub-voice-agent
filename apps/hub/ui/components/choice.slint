@@ -1,0 +1,24 @@
+import { Theme } from "../theme.slint";
+
+// Nhóm lựa chọn một trong nhiều; giá trị là nhãn.
+export component Choice inherits HorizontalLayout {
+    in property <[string]> options;
+    in property <string> current;
+    callback chosen(string);
+    spacing: Theme.space-s;
+    alignment: start;
+    for o in root.options: Rectangle {
+        min-width: 120px;
+        height: Theme.touch-min;
+        border-radius: Theme.radius;
+        background: o == root.current ? Theme.accent : Theme.card;
+        Text {
+            text: o;
+            color: o == root.current ? Theme.background : Theme.text;
+            font-size: Theme.font-small;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+        TouchArea { clicked => { root.chosen(o); } }
+    }
+}

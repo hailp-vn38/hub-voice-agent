@@ -2,6 +2,7 @@
 mod clock;
 mod fixtures;
 mod scenarios;
+mod settings;
 
 use crate::{App, DemoPanel, Nav, StatusBar};
 use slint::{ComponentHandle, ModelRc, SharedString, Timer, TimerMode, VecModel};

@@ -1,0 +1,17 @@
+import { Theme } from "../theme.slint";
+
+// Một dòng cài đặt: nhãn bên trái, điều khiển (children) bên phải.
+export component SettingRow inherits HorizontalLayout {
+    in property <string> label;
+    spacing: Theme.space-m;
+    padding-bottom: Theme.space-m;
+    Text {
+        text: root.label;
+        color: Theme.text;
+        font-size: Theme.font-body;
+        vertical-alignment: center;
+        min-width: 300px;
+        horizontal-stretch: 0;
+    }
+    @children
+}

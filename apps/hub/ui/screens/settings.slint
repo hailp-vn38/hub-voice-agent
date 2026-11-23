@@ -1,0 +1,125 @@
+import { Theme } from "../theme.slint";
+import { SettingsData } from "../contract/settings.slint";
+import { ActionButton } from "../components/action-button.slint";
+import { DisplayPanel } from "settings/display.slint";
+import { AudioPanel } from "settings/audio.slint";
+import { VoicePanel } from "settings/voice.slint";
+import { HomePanel } from "settings/home.slint";
+import { ConnectionPanel } from "settings/connection.slint";
+import { DataPanel } from "settings/data.slint";
+import { SystemPanel } from "settings/system.slint";
+
+// Setting: danh mục trái, bảng giữa (cuộn), ô QR Setup web phải. Áp dụng ngay, không nút Lưu.
+// Thẻ xác nhận ở đây là bản cục bộ cho tới khi ticket 14 có overlays/confirm.slint.
+export component Settings inherits Rectangle {
+    private property <[string]> categories: ["Hiển thị", "Âm thanh", "Giọng nói", "Nhà", "Kết nối", "Dữ liệu", "Hệ thống"];
+    private property <int> cat: 0;
+    private property <string> pending-kind; // "clear" | "system"
+    private property <string> pending-key;
+    private property <string> pending-title;
+
+    HorizontalLayout {
+        padding-top: 120px;
+        padding-bottom: 260px;
+        padding-left: Theme.space-l;
+        padding-right: Theme.space-l;
+        spacing: Theme.space-l;
+
+        VerticalLayout {
+            width: 300px;
+            spacing: Theme.space-s;
+            for name[i] in root.categories: Rectangle {
+                height: Theme.touch-min;
+                border-radius: Theme.radius;
+                background: i == root.cat ? Theme.accent : Theme.card;
+                Text {
+                    text: name;
+                    color: i == root.cat ? Theme.background : Theme.text;
+                    font-size: Theme.font-body;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+                TouchArea { clicked => { root.cat = i; } }
+            }
+        }
+
+        Flickable {
+            content-height: panel.preferred-height;
+            panel := VerticalLayout {
+                if root.cat == 0: DisplayPanel { }
+                if root.cat == 1: AudioPanel { }
+                if root.cat == 2: VoicePanel { }
+                if root.cat == 3: HomePanel { }
+                if root.cat == 4: ConnectionPanel { }
+                if root.cat == 5: DataPanel {
+                    ask(key, title) => { root.pending-kind = "clear"; root.pending-key = key; root.pending-title = title; }
+                }
+                if root.cat == 6: SystemPanel {
+                    ask(key, title) => { root.pending-kind = "system"; root.pending-key = key; root.pending-title = title; }
+                }
+            }
+        }
+
+        Rectangle {
+            width: 380px;
+            background: Theme.card;
+            border-radius: Theme.radius;
+            VerticalLayout {
+                padding: Theme.space-m;
+                spacing: Theme.space-m;
+                alignment: center;
+                Text { text: "Setup web"; color: Theme.text; font-size: Theme.font-body; horizontal-alignment: center; }
+                Image { source: SettingsData.setup-qr; height: 260px; }
+                Text { text: SettingsData.setup-url; color: Theme.accent; font-size: Theme.font-small; horizontal-alignment: center; }
+                Text { text: "Server, lịch, nhà, vị trí"; color: Theme.text-dim; font-size: Theme.font-small; horizontal-alignment: center; wrap: word-wrap; }
+            }
+        }
+    }
+
+    // Thẻ đếm ngược đổi độ phân giải.
+    if SettingsData.resolution-confirm > 0: Rectangle {
+        background: #000000a0;
+        TouchArea { }
+        Rectangle {
+            width: 760px;
+            height: 280px;
+            border-radius: Theme.radius;
+            background: Theme.card;
+            VerticalLayout {
+                padding: Theme.space-l;
+                spacing: Theme.space-m;
+                Text { text: "Giữ độ phân giải này? " + SettingsData.resolution-confirm; color: Theme.text; font-size: Theme.font-title; horizontal-alignment: center; }
+                ActionButton { text: "Giữ"; clicked => { SettingsData.keep-resolution(); } }
+            }
+        }
+    }
+
+    // Thẻ xác nhận xoá / khởi động lại / tắt máy.
+    if root.pending-key != "": Rectangle {
+        background: #000000a0;
+        TouchArea { }
+        Rectangle {
+            width: 760px;
+            height: 300px;
+            border-radius: Theme.radius;
+            background: Theme.card;
+            VerticalLayout {
+                padding: Theme.space-l;
+                spacing: Theme.space-m;
+                Text { text: root.pending-title; color: Theme.text; font-size: Theme.font-title; horizontal-alignment: center; }
+                HorizontalLayout {
+                    spacing: Theme.space-m;
+                    ActionButton { text: "Huỷ"; clicked => { root.pending-key = ""; } }
+                    ActionButton {
+                        text: "Đồng ý";
+                        danger: true;
+                        clicked => {
+                            if (root.pending-kind == "clear") { SettingsData.clear(root.pending-key); } else { SettingsData.system-action(root.pending-key); }
+                            root.pending-key = "";
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
