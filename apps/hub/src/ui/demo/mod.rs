@@ -4,6 +4,7 @@ mod clock;
 mod fixtures;
 mod levels;
 mod qr;
+mod reminders;
 mod response;
 mod scenarios;
 mod settings;

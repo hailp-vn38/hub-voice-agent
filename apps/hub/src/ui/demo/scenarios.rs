@@ -107,6 +107,13 @@ pub fn all() -> Vec<Scenario> {
         ("Trung tâm: hôm nay là Tết", super::fixtures::countdown_today),
         ("Trung tâm: hỏi mai có mưa", super::fixtures::focus_weather),
         ("Trung tâm: offline", super::fixtures::stale),
+        ("Reminder: nhắc uống thuốc 21:00", |app| { app.global::<Nav>().set_screen(Screen::Reminders); super::reminders::add_medicine(app) }),
+        ("Reminder: mỗi sáng 7 giờ", |app| { app.global::<Nav>().set_screen(Screen::Reminders); super::reminders::add_gym(app) }),
+        ("Reminder: tối nay có gì?", super::reminders::focus_tonight),
+        ("Reminder: huỷ uống thuốc", super::reminders::cancel_medicine),
+        ("Reminder: hoãn 10 phút", super::reminders::postpone),
+        ("Reminder: một mục đã lỡ", super::reminders::missed),
+        ("Reminder: trống", super::reminders::empty),
         ("Chữ lớn", |app| app.global::<Theme>().set_text_scale(1.25)),
     ]
 }
