@@ -105,7 +105,7 @@ ai-hub/
 │   │   │       └── fixtures/     # một module mỗi tính năng (fixture + kịch bản); wiring.rs nạp/tick tất cả
 │   │   ├── audio/
 │   │   │   ├── mod.rs            # spawn() → (Sender<AudioCommand>, Receiver<AudioEvent>, watch<Levels>)
-│   │   │   ├── devices.rs        # cpal: chọn XVF3800 cả vào lẫn ra
+│   │   │   ├── devices.rs        # cpal: Pi chọn XVF3800 vào/ra; Mac dùng thiết bị mặc định
 │   │   │   ├── capture.rs        # mic → wake word + preroll + Opus encode
 │   │   │   ├── wake.rs           # openWakeWord qua ort
 │   │   │   ├── preroll.rs        # ring buffer sau wake word
@@ -353,7 +353,7 @@ Không phải seam (một adapter): `Store` (test dùng `Store::in_memory()`), `
 
 **UI bridge:** `bridge/mod.rs` đọc `watch<UiState>` và qua `slint::invoke_from_event_loop` gọi `bridge/<screen>.rs::apply(&app, &state.<screen>)` cho từng màn; callback Slint đổi sang `UserInput`. Logic không nằm ở đây; nếu bridge cần một nhánh `if` theo nghiệp vụ thì nhánh đó thuộc `hub-core`.
 
-**Audio:** một luồng PCM 16 kHz mono từ XVF3800 chia hai: khối 80 ms cho openWakeWord (melspectrogram → embedding → `hey_jarvis`) và khối 60 ms cho Opus encode. `preroll` giữ ~1–2 s gần nhất để xả khi `Mic { on: true }`. `playback` trộn TTS với chuông (chuông nhỏ hơn khi đang có TTS), mọi âm ra đều qua cổng ra của mic array ([ADR 0005](adr/0005-local-wake-word-hardware-aec.md)).
+**Audio:** Trên Pi, audio vào/ra dùng ReSpeaker XVF3800 để phần cứng làm AEC; trên Mac dùng thiết bị mặc định (theo ADR 0005, đeo tai nghe hoặc cắm XVF3800 để test thật). Luồng PCM 16 kHz mono chia hai: khối 80 ms cho openWakeWord (melspectrogram → embedding → `hey_jarvis`) và khối 60 ms cho Opus encode. `preroll` giữ ~1–2 s gần nhất để xả khi `Mic { on: true }`. `playback` trộn TTS với chuông (chuông nhỏ hơn khi đang có TTS) ([ADR 0005](adr/0005-local-wake-word-hardware-aec.md)).
 
 ## 4. Luồng qua các module
 

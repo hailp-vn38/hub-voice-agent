@@ -22,7 +22,8 @@ pub(super) struct Mixer {
     tts_resampler: Option<Async<f32>>,
     tts_pending: VecDeque<f32>,
     tts_samples: VecDeque<f32>,
-    sound: Option<SoundPlayback>,
+    alert: Option<SoundPlayback>,
+    ding: Option<SoundPlayback>,
     level: f32,
 }
 
@@ -37,7 +38,8 @@ impl Mixer {
             tts_resampler: make_resampler(rate),
             tts_pending: VecDeque::new(),
             tts_samples: VecDeque::new(),
-            sound: None,
+            alert: None,
+            ding: None,
             level: 0.0,
         }
     }
@@ -54,15 +56,7 @@ impl Mixer {
                 self.level = 0.0;
             }
             AudioCommand::Play(sound) => self.play(sound),
-            AudioCommand::StopSound(sound) => {
-                if self
-                    .sound
-                    .as_ref()
-                    .is_some_and(|playing| playing.sound == sound)
-                {
-                    self.sound = None;
-                }
-            }
+            AudioCommand::StopSound(sound) => self.stop_sound(sound),
             AudioCommand::Mic { .. }
             | AudioCommand::SetVolume(_)
             | AudioCommand::SetWakeWord { .. } => {}
@@ -76,9 +70,13 @@ impl Mixer {
         for sample in out.iter_mut() {
             let tts_active = !self.tts_samples.is_empty();
             let tts = self.tts_samples.pop_front().unwrap_or_default();
-            let sound = self.sound.as_mut().and_then(SoundPlayback::next_sample);
-            if self.sound.as_ref().is_some_and(SoundPlayback::finished) {
-                self.sound = None;
+            let alert = self.alert.as_mut().and_then(SoundPlayback::next_sample);
+            if self.alert.as_ref().is_some_and(SoundPlayback::finished) {
+                self.alert = None;
+            }
+            let ding = self.ding.as_mut().and_then(SoundPlayback::next_sample);
+            if self.ding.as_ref().is_some_and(SoundPlayback::finished) {
+                self.ding = None;
             }
 
             if tts_active {
@@ -90,7 +88,8 @@ impl Mixer {
             } else {
                 CHIME_WITHOUT_TTS
             };
-            *sample = (tts + sound.unwrap_or_default() * gain).clamp(-1.0, 1.0);
+            *sample = (tts + (alert.unwrap_or_default() + ding.unwrap_or_default()) * gain)
+                .clamp(-1.0, 1.0);
         }
 
         self.level = if tts_count == 0 {
@@ -139,14 +138,43 @@ impl Mixer {
             return;
         };
         let repeat = matches!(sound, Sound::TimerChime | Sound::ReminderChime);
-        self.sound = Some(SoundPlayback {
+        let playback = SoundPlayback {
             sound,
             samples,
             cursor: 0,
             pause: 0,
             repeat,
             rate: self.rate as usize,
-        });
+        };
+        match playback.sound {
+            Sound::Ding => self.ding = Some(playback),
+            Sound::TimerChime | Sound::ReminderChime => self.alert = Some(playback),
+            Sound::ToolDone => {}
+        }
+    }
+
+    fn stop_sound(&mut self, sound: Sound) {
+        match sound {
+            Sound::Ding => {
+                if self
+                    .ding
+                    .as_ref()
+                    .is_some_and(|playing| playing.sound == Sound::Ding)
+                {
+                    self.ding = None;
+                }
+            }
+            Sound::TimerChime | Sound::ReminderChime => {
+                if self
+                    .alert
+                    .as_ref()
+                    .is_some_and(|playing| playing.sound == sound)
+                {
+                    self.alert = None;
+                }
+            }
+            Sound::ToolDone => {}
+        }
     }
 }
 
