@@ -1,6 +1,6 @@
 # 13 — Setup web
 
-Status: needs-triage
+Status: ready-for-agent
 Blocked by: 02
 Spec: [../spec.md](../spec.md)
 
@@ -17,3 +17,4 @@ Spec: [../spec.md](../spec.md)
 ## Comments
 
 - Cần chốt khi triage: xác thực Setup web trên LAN (mã hiển thị trên màn hình?) và phạm vi trang cho first-boot (ADR 0010).
+- 2026-11-23: Theo quyết định của người dùng, Setup web không xác thực trên LAN theo ADR 0009. First-boot AP và hai mã QR theo ADR 0010 để ticket riêng, ngoài phạm vi ticket này.
