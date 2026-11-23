@@ -1,6 +1,7 @@
 # 07 — Audio ra: Mixer, chuông, TTS
 
-Status: ready-for-agent
+Status: ready-for-human
+Asset attribution: needs-info
 Blocked by: —
 Spec: [../spec.md](../spec.md) · Thiết kế: [../design.md](../design.md) §2
 
@@ -19,7 +20,13 @@ Spec: [../spec.md](../spec.md) · Thiết kế: [../design.md](../design.md) §2
 
 ## Nghiệm thu
 
-- [ ] Test `Mixer`: `Play(Ding)` phát một lần rồi im; `Play(TimerChime)` lặp tới `StopSound(TimerChime)`; `StopTts` xoá hàng đợi TTS; chuông nhỏ hơn khi có TTS; thiếu dữ liệu → im lặng, không panic.
-- [ ] Test `sounds`: hai file giải mã được, ra mono đúng tần số yêu cầu.
+- [x] Test `Mixer`: `Play(Ding)` phát một lần rồi im; `Play(TimerChime)` lặp tới `StopSound(TimerChime)`; `StopTts` xoá hàng đợi TTS; chuông nhỏ hơn khi có TTS; thiếu dữ liệu → im lặng, không panic.
+- [x] Test `sounds`: hai file giải mã được, ra mono đúng tần số yêu cầu.
 - [ ] Tay: hẹn giờ 1 phút hết giờ → chuông lặp; bấm tắt → dừng ngay.
 - [ ] Tay (vela-server): câu trả lời TTS phát ra tai nghe, không vấp.
+
+## Comments
+
+- A1 đầu ra đã nối `Mixer`/`sounds` với thiết bị cpal mặc định qua audio thread và SPSC ring. `Mic`, `SetVolume`, `SetWakeWord` được bỏ qua; không phát `AudioEvent` cho tới ticket 08.
+- Attribution của hai MP3 vẫn `needs-info`: metadata chỉ cho biết codec/tần số/kênh, còn lịch sử git chỉ cho thấy chúng có sẵn trong commit nền `ba704ae`. Không sửa hai binary.
+- Còn gate kiểm tay với thiết bị Mac và vela-server; chưa xác nhận runtime.

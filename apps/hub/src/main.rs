@@ -7,6 +7,8 @@ compile_error!("enable exactly one backend feature: `desktop` (default) or `pi`"
 
 mod ui;
 #[cfg(not(feature = "demo"))]
+mod audio;
+#[cfg(not(feature = "demo"))]
 use hub_core::{ConfigStore, Io, Ports, SystemClock, UiState};
 use slint::ComponentHandle;
 #[cfg(not(feature = "demo"))]
@@ -62,11 +64,12 @@ fn main() -> anyhow::Result<()> {
                 }
             });
             let (voice_tx, voice_rx) = voice_client::spawn(config_rx);
+            let audio = audio::spawn(audio::AudioConfig)?;
+            let audio_tx = audio.commands;
+            let audio_rx = audio.events;
+            let _audio_levels = audio.levels;
             ui::spawn_bridge(weak, ui_rx);
             let ports = Ports { clock: Arc::new(SystemClock), system: Arc::new(HostSystem), calendar: Arc::new(hub_core::GoogleCalendar::default()), weather: Arc::new(hub_core::OpenMeteo::default()), home: Arc::new(hub_core::HomeAssistant::default()), images: Arc::new(hub_core::HttpImageFetcher) };
-            let (audio_tx, mut audio_commands) = mpsc::channel(16);
-            let (_audio_events, audio_rx) = mpsc::channel(16);
-            tokio::spawn(async move { while audio_commands.recv().await.is_some() {} });
             tokio::select! {
                 result = hub_core::run(config, store, ports, Io { voice_config_tx: config_tx, voice_tx, voice_rx, audio_tx, audio_rx, input_rx, ui_tx }) => result,
                 _ = stop_rx => Ok(()),
