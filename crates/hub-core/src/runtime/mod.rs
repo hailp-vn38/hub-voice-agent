@@ -17,6 +17,7 @@ use voice_client::VoiceEvent;
 pub async fn run(mut store: Store, ports: Ports, mut io: Io) -> anyhow::Result<()> {
     let mut timers = crate::features::timers::Feature::load(&store)?;
     let mut conversation = Conversation::default();
+    let mut view = crate::view::View::default();
     let mut jobs = jobs::Jobs::new();
     let mut tick = time::interval(Duration::from_secs(1));
     tick.set_missed_tick_behavior(time::MissedTickBehavior::Skip);
@@ -36,6 +37,7 @@ pub async fn run(mut store: Store, ports: Ports, mut io: Io) -> anyhow::Result<(
             _ = tick.tick() => {
                 let mut pending = tick::tick(ports.clock.as_ref());
                 pending.extend(conversation.on(Input::Tick, ports.clock.now()));
+                pending.extend(view.tick(ports.clock.now().timestamp().as_second()));
                 pending.extend(timers.tick(ports.clock.now().timestamp().as_second()));
                 for effect in pending { effects::execute(effect, &io.ui_tx, &io.voice_tx, &io.audio_tx, &mut jobs, &mut store).await?; }
             }
@@ -48,7 +50,7 @@ pub async fn run(mut store: Store, ports: Ports, mut io: Io) -> anyhow::Result<(
             }
             Some(event) = io.voice_rx.recv() => {
                 let pending = match event {
-                    VoiceEvent::ToolCall(call) => tools::route(&mut timers, call, ports.clock.now().timestamp().as_second()),
+                    VoiceEvent::ToolCall(call) => tools::route(&mut timers, &mut view, call, ports.clock.now().timestamp().as_second()),
                     event => voice::on(event, &mut conversation, ports.clock.now()),
                 };
                 for effect in pending { effects::execute(effect, &io.ui_tx, &io.voice_tx, &io.audio_tx, &mut jobs, &mut store).await?; }
@@ -56,7 +58,9 @@ pub async fn run(mut store: Store, ports: Ports, mut io: Io) -> anyhow::Result<(
             Some(event) = io.audio_rx.recv() => {
                 for effect in audio::on(event, &mut conversation, ports.clock.now()) { effects::execute(effect, &io.ui_tx, &io.voice_tx, &io.audio_tx, &mut jobs, &mut store).await?; }
             }
-            Some(_) = io.input_rx.recv() => {}
+            Some(input) = io.input_rx.recv() => {
+                for effect in view.on_user(input, ports.clock.now().timestamp().as_second()) { effects::execute(effect, &io.ui_tx, &io.voice_tx, &io.audio_tx, &mut jobs, &mut store).await?; }
+            }
             _ = io.ui_tx.closed() => return Ok(()),
         }
     }

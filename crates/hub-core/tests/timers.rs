@@ -2,7 +2,7 @@
 mod support;
 
 use futures_util::{SinkExt, StreamExt};
-use hub_core::{Io, Ports, Store, UiState, run};
+use hub_core::{Focus, Io, Ports, Screen, Store, UiState, run};
 use serde_json::{Value, json};
 use std::{sync::Arc, time::Duration};
 use support::TestClock;
@@ -88,6 +88,13 @@ async fn timers_are_saved_reloaded_and_limit_is_reported() {
                 }
             }
         };
+        if id == 1 {
+            assert_eq!(ui_rx.borrow().view.screen, Screen::Timers);
+            assert_eq!(
+                ui_rx.borrow().view.focus,
+                Some(Focus::Timer(ui_rx.borrow().timers[0].id))
+            );
+        }
         if id <= 4 {
             assert!(reply["payload"]["result"].is_object(), "{reply}");
         } else if id == 5 {

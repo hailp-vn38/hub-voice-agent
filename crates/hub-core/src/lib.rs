@@ -7,6 +7,7 @@ mod ports;
 mod runtime;
 mod store;
 mod ui_state;
+mod view;
 
 use std::sync::Arc;
 
@@ -15,14 +16,18 @@ pub use ports::{Clock, SystemClock};
 pub use runtime::run;
 use tokio::sync::{mpsc, watch};
 pub use ui_state::{UiState, VoiceState, VoiceUiState};
+pub use view::{Focus, Screen, ViewState};
 use voice_client::{VoiceCommand, VoiceEvent};
 
 pub struct Ports {
     pub clock: Arc<dyn Clock>,
 }
 
-/// User inputs will be added with the corresponding behavior.
-pub enum UserInput {}
+pub enum UserInput {
+    Open(Screen),
+    Back,
+    Activity,
+}
 
 pub struct Io {
     pub voice_tx: mpsc::Sender<VoiceCommand>,
