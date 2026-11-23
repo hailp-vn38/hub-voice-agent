@@ -23,7 +23,7 @@ Fixture: đủ 8 dòng; kịch bản "Không có gì đang chạy" (dòng trốn
 
 ## Map với hub-core
 
-Map: done (hub-core #21; bridge ticket 06)
+Map: done (hub-core #21; bridge ticket 06, commit `64295fb`)
 
 | Hợp đồng | UiState / UserInput |
 |---|---|

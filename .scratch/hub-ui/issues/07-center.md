@@ -30,7 +30,7 @@ Fixture đủ mọi card. Kịch bản: "Thêm hẹn giờ" (ô xuất hiện), 
 
 ## Map với hub-core
 
-Map: done (hub-core #21; bridge ticket 06)
+Map: done (hub-core #21; bridge ticket 06, commit `64295fb`)
 
 | Hợp đồng | UiState / UserInput |
 |---|---|

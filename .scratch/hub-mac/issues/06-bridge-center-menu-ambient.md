@@ -22,4 +22,4 @@ Spec: [../spec.md](../spec.md) · UI: hub-ui #07, #08, #18
 
 ## Comments
 
-- 2026-11-23: Đã viết bridge và test hợp đồng/callback. `scripts/test.sh -p hub` qua với 168 test. Chưa chạy UI trên Mac hoặc app thật 30 phút, vì vậy các gate thủ công vẫn để trống.
+- 2026-11-23: Đã viết bridge và test hợp đồng/callback trong commit `64295fb`. `scripts/test.sh -p hub` qua với 168 test. Chưa chạy UI trên Mac hoặc app thật 30 phút, vì vậy các gate thủ công vẫn để trống.
