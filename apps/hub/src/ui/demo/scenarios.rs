@@ -80,6 +80,11 @@ pub fn all() -> Vec<Scenario> {
         ("Đổi độ phân giải", super::settings::change_resolution),
         ("Chưa đăng ký voice", super::settings::not_enrolled),
         ("Tắt mic", super::settings::mute_mic),
+        ("Người dùng nói", super::response::user_says),
+        ("Agent trả lời", super::response::agent_reply),
+        ("Tool server: lịch", super::response::tool_server),
+        ("Tool lỗi", super::response::tool_failed),
+        ("Im lặng → mờ", super::response::silence),
         ("Chữ lớn", |app| app.global::<Theme>().set_text_scale(1.25)),
     ]
 }
