@@ -1,32 +1,45 @@
-# 03 — Enrollment Session và mã kích hoạt
+# 03 — Đăng ký Device qua OTA và mã kích hoạt
 
-Status: needs-info
+Status: ready-for-human
 Blocked by: 02
 Spec: [../spec.md](../spec.md)
 
 ## Việc
 
-Theo ADR 0074 của vela-server: Device chưa đăng ký vẫn được upgrade nhưng vào Enrollment Session. Server gửi hello, `stt` chứa mã, rồi `tts` + Opus đọc mã. Khi được claim, server gửi thông báo rồi đóng `1000`. Client phải tự kết nối lại để vào Voice Session thật.
+Hub dùng chế độ đăng ký qua OTA của vela-server (`devices.enrollment.transport = "ota"`). Device chưa được link thì không mở WebSocket: OTA trả mã kích hoạt, người dùng nhập mã vào admin web để map Device vào agent, người dùng bấm "Kết nối" lại để vào voice.
 
-- **Trước khi code:** tìm trong `crates/vela-server/src/app/enrollment/` và transport WS cách client phân biệt Enrollment Session với Voice Session (field trong ServerHello, dạng `stt`, hay chỉ suy từ OTA). Ghi kết luận vào `## Comments`. Nếu không có tín hiệu rõ ràng, chuyển ticket sang `needs-info` và mô tả lựa chọn.
-- `enrollment.rs`: khi ở Enrollment Session thì phát `Connection(Enrolling)` (không phải `Ready`), lấy mã từ `stt` → `Activation { code }`. Audio đọc mã vẫn đi qua `TtsStart…TtsStop` để hub phát được.
-- Trong Enrollment Session, `ListenStart`/`Audio`/`DirectSpeech` xử lý như khi chưa Ready (bất biến 2). Cooldown replay 60 s của server: không tự gửi `listen`.
-- Đóng `1000` sau claim → kết nối lại ngay, không backoff.
-- Timeout tuyệt đối 120 s của server → đóng; kết nối lại theo backoff (ticket 04).
+Contract server (repo `AI_Agent_Voice_rust`):
+
+- `GET /voice/ota` (`crates/vela-server/src/app/enrollment/ota.rs:27-112`, schema `protocol/server.rs:37-70`):
+  - Device chưa link → `activation { code, message, challenge, timeout_ms }`, **không có** `websocket`.
+  - Device đã đăng ký → có `websocket { url, token }`, không có `activation`.
+  - Lỗi: `403 device_not_admitted`, `503` (`database_unavailable`, `server_shutting_down`, `enrollment_capacity_exceeded`, `enrollment_code_unavailable`).
+
+Không dùng `POST /voice/ota/activate`: endpoint này chỉ báo trạng thái chờ cho firmware tương thích. Gọi lại OTA là đủ, vì OTA trả lại mã đang chờ (`get_or_create_enrollment`) khi chưa link và trả `websocket` khi đã link.
+
+Phía `voice-client` (`enrollment.rs`):
+
+- `spawn` tự gọi OTA và kết nối như ticket 02; lỗi OTA/WS retry theo backoff (ticket 04).
+- OTA trả `websocket` → mở WS → `Ready`.
+- OTA trả `activation` → phát `Connection(Enrolling)` rồi `Activation { code }` lấy nguyên từ `activation.code`. Không parse text, không tự gọi lại OTA, không backoff. Người dùng nhập mã trên admin web rồi bấm "Kết nối" trong Settings → `VoiceCommand::Connect` → gọi OTA một lần.
+- `Connect` chỉ có tác dụng khi đang `Enrolling`; trạng thái khác thì bỏ qua.
+- Trong lúc `Enrolling`, `ListenStart`/`ListenStop`/`Abort`/`Audio`/`DirectSpeech` xử lý như khi chưa Ready (bất biến 2): `DirectSpeech` → `DirectSpeechRejected { reason: Offline }`.
+- OTA trả cả `websocket` lẫn `activation` → ưu tiên `websocket`. OTA không trả cả hai → `Offline` như ticket 02.
+- Đổi `VoiceConfig` khi đang `Enrolling` → gọi OTA với config mới (bất biến 6).
+
+Chế độ đăng ký qua WebSocket (`transport = "websocket"`, mặc định của server, ADR 0074) không được hỗ trợ: Device chưa link sẽ nhận `websocket` và vào Enrollment Session, mà client không phân biệt được với Voice Session. Ghi yêu cầu `transport = "ota"` vào tài liệu triển khai hub.
+
+Server giả OTA trả kịch bản theo lượt: `activation`, rồi `websocket`.
 
 ## Nghiệm thu
 
-- [ ] Test: kịch bản enrollment → `Enrolling`, `Activation { code }` đúng mã.
-- [ ] Test: server đóng `1000` sau claim → kết nối lại ngay, lần sau server giả trả Voice Session → `Ready`.
-- [ ] Test: `DirectSpeech` trong Enrollment Session → `DirectSpeechRejected { reason: Offline }`.
+- [ ] Test: OTA trả `activation` → `Enrolling`, `Activation { code }` đúng mã, không mở WS, không gọi OTA lần hai (`tokio::time::pause`, chờ 60 s).
+- [ ] Test: đang `Enrolling`, gửi `Connect`, OTA trả `websocket` → `Ready`.
+- [ ] Test: đang `Enrolling`, gửi `Connect`, OTA vẫn trả `activation` → vẫn `Enrolling`, phát lại `Activation { code }`.
+- [ ] Test: `Connect` khi `Ready` → không gọi OTA.
+- [ ] Test: `DirectSpeech` khi `Enrolling` → `DirectSpeechRejected { reason: Offline }`.
+- [ ] Test: đổi `VoiceConfig` khi `Enrolling` → gọi OTA với config mới.
 
 ## Comments
 
-Audit giao thức theo source hiện tại của `AI_Agent_Voice_rust-infapi`:
-
-- OTA không đưa ra discriminant ổn định cho loại session. Với enrollment qua WebSocket, Unknown/Pending nhận `websocket` URL/token nhưng không có `activation` (`crates/vela-server/src/app/enrollment/ota.rs:50-89`, `:203-260`; schema ở `crates/vela-server/src/protocol/server.rs:37-70`). Registered cũng có URL/token; `push` chỉ có khi tính năng tương ứng bật nên không thể dùng sự có mặt/vắng mặt của trường này để phân loại.
-- Admission phân Pending sang enrollment handler, còn Registered sang Voice (`crates/vela-server/src/app/enrollment/mod.rs:36-79`, `crates/vela-server/src/app/transport/websocket/admission.rs:255-266`). Tuy vậy Enrollment và Voice đều gửi cùng `ServerHello::v1` với `type`, `transport`, `session_id`, `audio_params` (`crates/vela-server/src/app/enrollment/socket.rs:87-90`, `crates/vela-server/src/app/transport/websocket/voice_session.rs:191-193`, `crates/vela-server/src/protocol/server.rs:3-31`).
-- Enrollment chỉ gửi frame `stt` sau handshake và sau khi trạng thái enrollment được kiểm tra/clip được encode (`crates/vela-server/src/app/enrollment/socket.rs:92-105`, `:135-147`). `text` là câu tự do có mã nhúng (`Mã kết nối: …`), không có field `code` hay event type riêng. TTS theo sau bằng `tts:start`, `tts:sentence_start` (có `text`) và raw binary Opus, rồi `tts:stop` (`:141-156`). Các frame đầu cũng có thể là thông báo terminal `stt` nếu trạng thái đã đổi (`:258-276`). Dò text hoặc trích số từ câu không phải tín hiệu phân loại/activation có cấu trúc.
-- Có vấn đề thứ tự: client cần quyết định `Connection(Ready)` so với `Connection(Enrolling)` quanh `ServerHello`, nhưng `stt` phân biệt được chỉ đến sau đó. Nếu phát `Ready` ngay khi nhận hello thì Enrollment phát ra Ready nhầm; nếu chờ đoán từ frame tùy chọn sau hello thì không có ranh giới/protocol marker đảm bảo để phát Ready đúng lúc. Claim gửi `stt` rồi close `1000` (`:258-276`); timeout tuyệt đối cũng close `1000` (`:96-100`, `:121-127`), nên close code tự nó không phân biệt claim với timeout.
-
-Cần quyết định thay đổi wire contract phía server trước khi implement: thêm `session_kind` rõ ràng (`voice`/`enrollment`) vào ServerHello (bao gồm cách tương thích client cũ), và một field/frame activation có cấu trúc như `activation.code` thay cho parse `stt.text`; hoặc định nghĩa một frame Enrollment mở đầu bắt buộc đến trước khi client phát bất kỳ `Ready` nào. Sau khi contract được chốt, có thể implement và test qua public channels mà không dựa vào text matching.
+Bản trước của ticket theo Enrollment Session qua WebSocket (ADR 0074) và bị chặn ở `needs-info`: ServerHello không có trường phân biệt loại session, mã chỉ nằm trong `stt.text`, và close `1000` không phân biệt claim với timeout. Đã chuyển sang chế độ OTA, server có sẵn, không cần đổi wire contract.

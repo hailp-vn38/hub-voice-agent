@@ -8,7 +8,7 @@ Hoàn thiện crate `crates/voice-client`: toàn bộ Voice Protocol tới vela-
 
 Xong spec này thì:
 
-- hub-core (hoặc test) gọi `spawn(config)` là có kết nối Ready tới vela-server, gồm cả lần đầu chưa Enrollment.
+- hub-core (hoặc test) gọi `spawn(config)` là có kết nối Ready tới vela-server, hoặc nhận mã kích hoạt nếu Device chưa được thêm vào agent.
 - Gửi `ListenStart` + frame Opus thì nhận `Stt`, `TtsStart…TtsStop` và audio downlink.
 - Server gọi được tool `hub_*` qua Device MCP; hub-core trả lời qua `ToolCall::reply`.
 - Hub đọc được văn bản bằng giọng server qua `DirectSpeech`.
@@ -20,7 +20,7 @@ Xong spec này thì:
 | Chủ đề | Tài liệu |
 |---|---|
 | Admission, handshake, ingress, thứ tự outbound, đóng socket | `docs/flows/01-websocket.md` |
-| OTA + Enrollment Session qua WebSocket | ADR 0073, ADR 0074 |
+| OTA + đăng ký qua OTA (`activation`) | ADR 0073, `app/enrollment/ota.rs` |
 | Device MCP (`initialize`, `tools/list`, `tools/call`) | `docs/flows/07-device-mcp.md` |
 | Tool status `type:"tool"` | `docs/flows/01-websocket.md` § Tool execution status |
 | `direct_speech` | ADR 0161, `.scratch/client-direct-speech/` |
@@ -46,11 +46,12 @@ pub enum VoiceCommand {
     Abort,
     Audio(OpusFrame),                 // uplink 16 kHz mono 60 ms
     DirectSpeech { request_id: String, text: String },
+    Connect,                          // khi Enrolling: người dùng bấm "Kết nối", gọi OTA một lần
 }
 
 pub enum VoiceEvent {
     Connection(ConnectionState),      // Connecting | Ready | Offline { retry_in } | Enrolling
-    Activation { code: String },      // chỉ trong Enrollment Session
+    Activation { code: String },      // từ OTA `activation.code`, khi Enrolling
     Stt { text: String },
     TtsStart { origin: TtsOrigin },   // Agent | ClientDirect { request_id }
     TtsText { text: String },         // sentence_start
@@ -78,7 +79,7 @@ Features trong ClientHello cố định bên trong crate: `mcp`, `tool_status`, 
 
 ## Giấu bên trong
 
-OTA HTTP, WebSocket + header xác thực, ClientHello/ServerHello, Enrollment Session, reconnect backoff, `session_id`, frame text vs binary, JSON-RPC của Device MCP (trả lời `initialize`, phân trang `tools/list`, đối chiếu id cho `tools/call`), ánh xạ `tts state:"result"` sang `DirectSpeechRejected`.
+OTA HTTP, WebSocket + header xác thực, ClientHello/ServerHello, reconnect backoff, `session_id`, frame text vs binary, JSON-RPC của Device MCP (trả lời `initialize`, phân trang `tools/list`, đối chiếu id cho `tools/call`), ánh xạ `tts state:"result"` sang `DirectSpeechRejected`.
 
 Cấu trúc file theo [codebase.md §2](../../docs/codebase.md): `protocol.rs`, `connection.rs`, `enrollment.rs`, `mcp.rs`, `tests/support/fake_server.rs`.
 
@@ -86,11 +87,12 @@ Cấu trúc file theo [codebase.md §2](../../docs/codebase.md): `protocol.rs`, 
 
 | codebase.md | Spec này | Lý do |
 |---|---|---|
-| `Enrolled(Credentials)` → hub-core ghi config | Bỏ | Enrollment của vela-server diễn ra trong WebSocket (ADR 0074): sau khi claim, server đóng `1000`, client kết nối lại bằng cùng Device ID. Không có credential mới nào phải lưu. |
+| `Enrolled(Credentials)` → hub-core ghi config | Bỏ | Hub dùng chế độ đăng ký qua OTA (`transport = "ota"`): OTA trả `activation.code`, người dùng bấm "Kết nối" lại sau khi nhập mã trên admin web. Device nhận diện bằng Device ID, không có credential mới nào phải lưu. |
 | `ServerConfig { URL OTA; URL WS + token }` | `ota_url` | Mỗi lần kết nối đều gọi OTA. OTA trả URL WS + token theo trạng thái Device. Không cache trong config. |
 | `features` trong `VoiceConfig` | Cố định trong crate | Không có caller nào cần đổi. |
 | `PlaybackAck { .. }` | Bỏ | Playback ACK (`reminder.played`, ADR 0090) chỉ dành cho Reminder phía server, mà hub không dùng. Direct Speech kết thúc bằng `tts state:"result"`. |
 | `TtsStop` | `TtsStop { reason }` + bất biến 1 | hub-core không bị kẹt ở Speaking khi mất mạng. |
+| — | `Connect` | Chờ kích hoạt không tự gọi lại OTA; người dùng bấm "Kết nối" sau khi nhập mã trên admin web. |
 | — | `Abort`, `Connection(Enrolling)` | Barge-in bằng chạm cần lệnh `abort`; UI cần phân biệt "đang chờ kích hoạt" với "offline". |
 | — | `DirectSpeechRejected { reason: Offline }` | hub-core chỉ có một đường fallback (chuông + chữ). |
 
@@ -107,7 +109,7 @@ Ticket cuối cập nhật docs/codebase.md theo bảng này.
 ## Quyết định
 
 - **Async:** tokio. WS: `tokio-tungstenite` + rustls. HTTP OTA: `reqwest` + rustls. JSON: `serde`/`serde_json`. Khai báo trong `[workspace.dependencies]`.
-- **Backoff:** 1 s nhân đôi, jitter ±20 %, rồi chặn trần 60 s (trần áp sau jitter). Chỉ reset về 1 s khi kết nối đã `Ready` liên tục ≥ 30 s; đứt sớm hơn thì tiếp tục tăng. Đóng `1000` sau Enrollment thì kết nối lại ngay, không backoff.
+- **Backoff:** 1 s nhân đôi, jitter ±20 %, rồi chặn trần 60 s (trần áp sau jitter). Chỉ reset về 1 s khi kết nối đã `Ready` liên tục ≥ 30 s; đứt sớm hơn thì tiếp tục tăng.
 - **Mode listen:** luôn `realtime` (ADR 0004 của ai-hub).
 - **Không retry `tools/call`.** Mỗi request trả lời đúng một lần.
 - **Test:** server WS giả + OTA HTTP giả chạy trên `127.0.0.1:0`; backoff test bằng `tokio::time::pause`. Kịch bản theo tài liệu server ở trên.
@@ -126,9 +128,10 @@ Ticket cuối cập nhật docs/codebase.md theo bảng này.
 |---|---|---|---|
 | 01 | [Handshake tới Ready qua server giả](issues/01-handshake-ready.md) | — | ready-for-human |
 | 02 | [OTA lấy URL WS và token](issues/02-ota-discovery.md) | 01 | ready-for-human |
-| 03 | [Enrollment Session và mã kích hoạt](issues/03-enrollment-session.md) | 02 | needs-info |
+| 03 | [Đăng ký Device qua OTA và mã kích hoạt](issues/03-enrollment-session.md) | 02 | ready-for-human |
 | 04 | [Reconnect có backoff, đổi config](issues/04-reconnect-backoff.md) | 02 | ready-for-human |
 | 05 | [Listen, audio uplink, STT/TTS downlink](issues/05-listen-and-tts.md) | 01 | ready-for-human |
 | 06 | [Device MCP và tool status](issues/06-device-mcp.md) | 01 | ready-for-human |
 | 07 | [Direct Speech](issues/07-direct-speech.md) | 05 | ready-for-human |
 | 08 | [Đóng lượt TTS khi mất kết nối, cập nhật codebase.md](issues/08-invariants-and-docs.md) | 04, 05, 06, 07 | ready-for-human |
+| 13 | [Settings: Kết nối voice và mã kích hoạt](issues/13-settings-voice-connection.md) | 03 | needs-triage |
