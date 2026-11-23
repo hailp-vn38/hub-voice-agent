@@ -1,6 +1,7 @@
 //! Adapter demo: ghi fixture vào các global hợp đồng, không cần hub-core.
 mod clock;
 mod fixtures;
+mod levels;
 mod scenarios;
 
 use crate::{App, DemoPanel, Nav, StatusBar};
@@ -10,6 +11,7 @@ use std::{rc::Rc, time::Duration};
 /// Giữ giá trị trả về cho tới khi app thoát (timer và cửa sổ panel).
 pub struct Demo {
     _tick: Timer,
+    _levels: Timer,
     _panel: DemoPanel,
 }
 
@@ -52,5 +54,5 @@ pub fn start(app: &App) -> anyhow::Result<Demo> {
         }
     });
     panel.show()?;
-    Ok(Demo { _tick: tick, _panel: panel })
+    Ok(Demo { _tick: tick, _levels: levels::start(app), _panel: panel })
 }

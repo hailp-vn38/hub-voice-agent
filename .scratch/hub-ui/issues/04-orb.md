@@ -1,6 +1,6 @@
 # 04 — Voice dock: Orb
 
-Status: ready-for-agent
+Status: resolved
 Blocked by: 03
 Spec: [../spec.md](../spec.md)
 Thiết kế: concept.md §6 "Concept voice-first" mục 1 (Orb), §4 "Trạng thái", "Hiệu ứng theo trạng thái"
@@ -52,3 +52,7 @@ Map: chờ hub-core #03 (conversation); levels từ adapter audio ở `apps/hub`
 | `Voice.error-serial` | |
 | `Voice.orb-tapped()` | |
 | `VoiceLevels.mic` / `.tts` | (watch `Levels` từ audio, không qua hub-core) |
+
+## Answer
+
+Thêm `contract/voice.slint` (Voice, VoiceLevels), `components/orb.slint` (Orb + global Dock, neo tâm bằng absolute-position), gắn Orb vào hàng dock của Shell. Hiệu ứng wake/tool/error dựa trên `changed` serial + `animation-tick()`. Demo: `demo/levels.rs` (sóng sin + nhiễu, có test) và 9 kịch bản. Chưa xem bằng mắt/đo fps trên Pi (ready-for-human).

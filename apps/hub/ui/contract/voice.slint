@@ -1,0 +1,17 @@
+// Hợp đồng Voice. Ticket UI: .scratch/hub-ui/issues/04-orb.md.
+export enum VoiceState { idle, listening, thinking, speaking, offline }
+
+export global Voice {
+    in property <VoiceState> state;
+    in property <bool> mic-muted;
+    in property <int> wake-serial;
+    in property <int> tool-serial;
+    in property <int> error-serial;
+    callback orb-tapped();
+}
+
+// 0..1, ~30 Hz, từ adapter audio (không qua hub-core).
+export global VoiceLevels {
+    in property <float> mic;
+    in property <float> tts;
+}
