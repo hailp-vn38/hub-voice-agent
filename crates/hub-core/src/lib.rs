@@ -4,6 +4,9 @@ mod audio;
 mod config;
 mod conversation;
 mod features;
+pub mod lunar;
+pub mod selector;
+
 mod ports;
 mod runtime;
 mod store;
@@ -45,9 +48,12 @@ pub struct Io {
     pub ui_tx: watch::Sender<UiState>,
 }
 
+pub use features::countdowns::{Countdown, CountdownView};
 pub use features::timers::Timer;
 pub use store::Store;
 
 pub fn tool_definitions() -> Vec<voice_client::ToolDef> {
-    features::timers::tools::definitions()
+    let mut tools = features::timers::tools::definitions();
+    tools.extend(features::countdowns::tools::definitions());
+    tools
 }

@@ -19,6 +19,7 @@ pub enum Screen {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Focus {
     Timer(i64),
+    Countdown(i64),
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]

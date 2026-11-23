@@ -19,6 +19,7 @@ pub(crate) enum Effect {
         timeout: Duration,
     },
     Persist(Vec<crate::Timer>),
+    PersistCountdowns(Vec<crate::Countdown>),
     Reply(ToolCall, Result<serde_json::Value, ToolError>),
     ReplyError(ToolCall, &'static str),
 }
@@ -32,6 +33,7 @@ pub(super) async fn execute(
     store: &mut crate::Store,
 ) -> anyhow::Result<()> {
     match effect {
+        Effect::PersistCountdowns(items) => store.countdowns_save(&items)?,
         Effect::Persist(timers) => store.timers_save(&timers)?,
         Effect::Reply(call, result) => call.reply(result),
         Effect::Ui(patch) => {
