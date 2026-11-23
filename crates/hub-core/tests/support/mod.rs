@@ -55,6 +55,7 @@ impl Hub {
         let (input_tx, input_rx) = mpsc::channel(16);
         let (ui_tx, ui_rx) = watch::channel(UiState::default());
         let task = tokio::spawn(run(
+            hub_core::Store::in_memory().unwrap(),
             Ports {
                 clock: Arc::new(TestClock::at(start)),
             },

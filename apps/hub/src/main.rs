@@ -28,6 +28,7 @@ fn main() -> anyhow::Result<()> {
         .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from(".data"));
     let settings = VoiceSettings::open(&data_dir)?;
+    let store = hub_core::Store::open(&data_dir)?;
     let (ui_tx, ui_rx) = watch::channel(UiState::default());
     let (stop_tx, stop_rx) = oneshot::channel::<()>();
     let (settings_tx, settings_rx) = mpsc::sync_channel(1);
@@ -52,7 +53,7 @@ fn main() -> anyhow::Result<()> {
             tokio::spawn(async move { while _audio_commands.recv().await.is_some() {} });
             let (_inputs, input_rx) = tokio::sync::mpsc::channel(16);
             tokio::select! {
-                result = hub_core::run(ports, Io { voice_tx, voice_rx, audio_tx, audio_rx, input_rx, ui_tx }) => result,
+                result = hub_core::run(store, ports, Io { voice_tx, voice_rx, audio_tx, audio_rx, input_rx, ui_tx }) => result,
                 _ = stop_rx => Ok(()),
             }
         })

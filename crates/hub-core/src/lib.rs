@@ -2,8 +2,10 @@
 
 mod audio;
 mod conversation;
+mod features;
 mod ports;
 mod runtime;
+mod store;
 mod ui_state;
 
 use std::sync::Arc;
@@ -29,4 +31,11 @@ pub struct Io {
     pub audio_rx: mpsc::Receiver<AudioEvent>,
     pub input_rx: mpsc::Receiver<UserInput>,
     pub ui_tx: watch::Sender<UiState>,
+}
+
+pub use features::timers::Timer;
+pub use store::Store;
+
+pub fn tool_definitions() -> Vec<voice_client::ToolDef> {
+    features::timers::tools::definitions()
 }
