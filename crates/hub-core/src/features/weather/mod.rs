@@ -153,7 +153,7 @@ impl Feature {
             .flatten()
             .filter(|(updated, _)| now.saturating_sub(*updated) < 1800)
         {
-            let _ = updated;
+            self.next_refresh = updated.saturating_add(1800);
             self.pending = false;
             effects.push(Effect::CancelJob("weather".into()));
             effects.push(Effect::Reply(call, Ok(data)));

@@ -115,6 +115,10 @@ async fn weather_preview_returns_home_and_uses_cache() {
             }
         }
     }
+    tokio::time::advance(std::time::Duration::from_secs(1)).await;
+    for _ in 0..20 {
+        tokio::task::yield_now().await;
+    }
     assert_eq!(
         source.calls.load(std::sync::atomic::Ordering::SeqCst),
         before
