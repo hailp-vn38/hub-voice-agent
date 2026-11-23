@@ -49,8 +49,12 @@ export component Shell inherits Rectangle {
     animate menu-p, feat-p { duration: swipe.swiping ? 0ms : Theme.anim-screen; easing: ease-out; }
 
     // Màn tính năng đọc Dock.height để chừa hàng Voice ở đáy.
-    init => { Dock.height = root.dock-height; }
+    init => {
+        Dock.height = root.dock-height;
+        Theme.unit = root.u;
+    }
     changed dock-height => { Dock.height = root.dock-height; }
+    changed u => { Theme.unit = root.u; }
 
     changed shown => {
         if (!root.is-feature) { BackNav.origin = root.shown; }
@@ -88,7 +92,7 @@ export component Shell inherits Rectangle {
                 x: (1 - root.menu-p) * root.w;
                 opacity: root.menu-p;
                 background: Theme.background;
-                MenuScreen { dock-height: root.dock-height; }
+                MenuScreen { u: root.u; cw: root.cw; ch: root.ch; }
             }
             if root.feat-p > 0 && root.shown != Screen.ambient: Rectangle {
                 x: (1 - root.feat-p) * root.w;

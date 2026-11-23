@@ -1,28 +1,51 @@
 import { Theme } from "../../theme.slint";
 import { CalendarData } from "../../contract/calendar.slint";
 
-// Dải 7 ngày: hôm nay → 6 ngày tới.
+// Dải 7 ngày: hôm nay → 6 ngày tới. Ngày chọn: nền xanh + viền; hôm nay: số cyan + chữ "Hôm nay".
 export component WeekStrip inherits Rectangle {
-    height: 128px;
+    private property <length> u: Theme.unit;
+    private property <length> gap: 12 * root.u;
     for d[i] in CalendarData.week: Rectangle {
         private property <bool> sel: CalendarData.selected-day == d.key;
-        x: i * (self.width + Theme.space-s);
-        width: (parent.width - 6 * Theme.space-s) / 7;
-        background: sel ? Theme.accent : Theme.card;
-        border-radius: Theme.radius;
-        animate background { duration: 200ms; }
+        x: i * (self.width + root.gap);
+        width: (parent.width - 6 * root.gap) / 7;
+        border-radius: Theme.radius-card;
+        background: sel ? Theme.accent.with-alpha(0.55) : touch.pressed ? Theme.card : Theme.glass;
+        border-width: 1 * root.u;
+        border-color: sel ? Theme.accent : Theme.border;
+        drop-shadow-blur: sel ? 14 * root.u : 0;
+        drop-shadow-color: Theme.accent.with-alpha(0.38);
+        transform-scale: touch.pressed ? 0.96 : 1.0;
+        animate background { duration: Theme.anim-state; }
+        animate transform-scale { duration: Theme.anim-tap; easing: ease-out; }
         VerticalLayout {
             alignment: center;
-            spacing: 4px;
-            Text { text: d.weekday; color: sel ? Theme.background : Theme.text-dim; font-size: Theme.font-small; horizontal-alignment: center; }
-            Text { text: d.day; color: sel ? Theme.background : (d.today ? Theme.accent : Theme.text); font-size: Theme.font-title; horizontal-alignment: center; }
+            spacing: 2 * root.u;
+            Text {
+                text: d.today ? "Hôm nay" : d.weekday;
+                color: sel ? Theme.text : Theme.text-dim;
+                font-size: Theme.type-caption;
+                horizontal-alignment: center;
+            }
+            Text {
+                text: d.day;
+                color: d.today && !sel ? Theme.accent-cyan : Theme.text;
+                font-size: Theme.type-section;
+                font-weight: 600;
+                horizontal-alignment: center;
+            }
             HorizontalLayout {
                 alignment: center;
-                spacing: 6px;
-                height: 10px;
-                for k in min(d.dots, 3): Rectangle { width: 10px; height: 10px; border-radius: 5px; background: sel ? Theme.background : Theme.warm; }
+                spacing: 4 * root.u;
+                height: 6 * root.u;
+                for k in min(d.dots, 3): Rectangle {
+                    width: 6 * root.u;
+                    height: 6 * root.u;
+                    border-radius: 3 * root.u;
+                    background: sel ? Theme.text : Theme.warm;
+                }
             }
         }
-        TouchArea { clicked => { CalendarData.select-day(d.key); } }
+        touch := TouchArea { clicked => { CalendarData.select-day(d.key); } }
     }
 }

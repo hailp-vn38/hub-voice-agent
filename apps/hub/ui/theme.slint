@@ -1,22 +1,42 @@
+// Token thiết kế Aurora Glass (ADR 0013). Mọi màn dùng token ở đây, không viết mã màu riêng.
 export global Theme {
     // Màu
-    out property <color> background: #0b0f14;
-    out property <color> card: #151c24;
-    out property <color> text: #e8edf2;
-    out property <color> text-dim: #8fa0b0;
-    out property <color> accent: #4cc2ff;
-    out property <color> warm: #ffb454;
+    out property <color> background: #0a1830;   // bg-primary
+    out property <color> card: #172a49;         // bg-surface
+    out property <color> glass: #172a49d9;      // bg-surface trong suốt: thẻ kính trên ảnh nền
+    out property <color> border: #385678;       // border-glass
+    out property <color> text: #f4f8ff;         // text-primary
+    out property <color> text-dim: #9bafc9;     // text-secondary; icon chưa bật
+    out property <color> accent: #3178ff;       // accent-primary: điều hướng, đang chọn
+    out property <color> accent-cyan: #19d5ff;  // cảm biến, trợ lý
+    out property <color> warm: #ffab32;         // accent-warm: thiết bị đang bật, điểm nhấn
+    out property <color> done: #2de39a;         // status-success: đã kết nối, an toàn
     out property <color> error: #ff8c8c;
-    out property <color> done: #6fd98c;
+
+    // Đơn vị thiết kế: 1 px của canvas 1280×600, Shell ghi theo cỡ cửa sổ.
+    in-out property <length> unit: 1px;
 
     // Cỡ chữ: Setting ghi text-scale (nhỏ 0.85 / vừa 1.0 / lớn 1.25)
     in-out property <float> text-scale: 1.0;
+    // Thang Aurora (theo unit).
+    out property <length> type-clock: 72 * unit * text-scale;
+    out property <length> type-page-title: 28 * unit * text-scale;
+    out property <length> type-section: 22 * unit * text-scale;
+    out property <length> type-card-title: 17 * unit * text-scale;
+    out property <length> type-body: 15 * unit * text-scale;
+    out property <length> type-caption: 12 * unit * text-scale;
+    // Thang cũ (px tuyệt đối cho 1920×1080): màn chưa chuyển sang Aurora.
     out property <length> font-hero: 200px * text-scale;
     out property <length> font-title: 48px * text-scale;
     out property <length> font-body: 32px * text-scale;
     out property <length> font-small: 24px * text-scale;
 
-    // Khoảng cách, bo góc, vùng chạm
+    // Bo góc Aurora (theo unit).
+    out property <length> radius-s: 12 * unit;
+    out property <length> radius-card: 20 * unit;
+    out property <length> radius-panel: 24 * unit;
+
+    // Khoảng cách, bo góc, vùng chạm (px tuyệt đối, màn cũ)
     out property <length> space-s: 12px;
     out property <length> space-m: 24px;
     out property <length> space-l: 48px;
@@ -24,6 +44,8 @@ export global Theme {
     out property <length> touch-min: 88px;
 
     // Animation
+    out property <duration> anim-tap: 140ms;    // phản hồi chạm
+    out property <duration> anim-state: 200ms;  // đổi trạng thái
     out property <duration> anim-screen: 400ms;
     out property <duration> anim-bounce: 600ms;
     out property <duration> anim-shake: 550ms;

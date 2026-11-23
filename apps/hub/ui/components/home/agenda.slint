@@ -1,56 +1,59 @@
+import { Theme } from "../../theme.slint";
 import { Center } from "../../contract/center.slint";
 
+// Thẻ kính (Aurora GlassCard): chạm co nhẹ, phóng lớn khi `zoomed`.
 component GlassCard inherits Rectangle {
     in property <length> u: 1px;
     in property <bool> zoomed;
     callback tapped();
-    border-radius: 24 * root.u;
+    border-radius: Theme.radius-card;
     border-width: 1 * root.u;
-    transform-scale: root.zoomed ? 1.04 : 1.0;
-    animate transform-scale { duration: 350ms; easing: ease-out; }
-    TouchArea { clicked => { root.tapped(); } }
+    border-color: Theme.border;
+    background: Theme.glass;
+    transform-scale: root.zoomed ? 1.04 : touch.pressed ? 0.98 : 1.0;
+    animate transform-scale { duration: touch.pressed ? Theme.anim-tap : Theme.anim-state; easing: ease-out; }
+    touch := TouchArea { clicked => { root.tapped(); } }
     @children
 }
 
-// "Lịch hôm nay": tối đa 3 sự kiện trên trục dọc; sự kiện đang diễn ra tô cam.
+// "Lịch hôm nay" (Aurora ScheduleCard): tối đa 3 sự kiện trên trục dọc;
+// sự kiện đang diễn ra có nền cam + chữ đậm, không chỉ đổi màu.
 export component AgendaCard inherits GlassCard {
-    background: @linear-gradient(135deg, #1c3158ed 0%, #15243ce9 100%);
-    border-color: #a6c3ff70;
     private property <int> n: min(3, Center.today.length);
 
     Image {
         x: 21 * root.u;
         y: 20 * root.u;
-        width: 31 * root.u;
-        height: 31 * root.u;
+        width: 28 * root.u;
+        height: 28 * root.u;
         source: @image-url("../../../assets/home/icons/calendar.png");
-        colorize: #9fc6ff;
+        colorize: Theme.accent-cyan;
     }
     Text {
-        x: 61 * root.u;
+        x: 59 * root.u;
         y: 20 * root.u;
-        height: 31 * root.u;
+        height: 28 * root.u;
         text: "Lịch hôm nay";
-        font-size: 18 * root.u;
+        font-size: Theme.type-section;
         font-weight: 600;
-        color: #f5f8ff;
+        color: Theme.text;
         vertical-alignment: center;
     }
     Text {
         x: parent.width - self.width - 20 * root.u;
         y: 20 * root.u;
-        height: 31 * root.u;
+        height: 28 * root.u;
         text: "Xem thêm  →";
-        font-size: 12 * root.u;
-        color: #bdcfe8;
+        font-size: Theme.type-caption;
+        color: Theme.text-dim;
         vertical-alignment: center;
     }
     if root.n == 0: Text {
         x: 26 * root.u;
         y: 75 * root.u;
         text: "Hôm nay không có lịch";
-        font-size: 14 * root.u;
-        color: #b7c9e4;
+        font-size: Theme.type-body;
+        color: Theme.text-dim;
     }
     // Trục thời gian.
     if root.n > 1: Rectangle {
@@ -58,7 +61,7 @@ export component AgendaCard inherits GlassCard {
         y: 81 * root.u;
         width: 2 * root.u;
         height: (root.n - 1) * 36 * root.u;
-        background: #476494;
+        background: Theme.border;
     }
     for e[i] in Center.today: Rectangle {
         visible: i < 3;
@@ -71,21 +74,21 @@ export component AgendaCard inherits GlassCard {
             width: (i == 0 ? 12 : 8) * root.u;
             height: self.width;
             border-radius: self.width / 2;
-            background: i == 0 ? #72a8ff : #c4d8f8;
+            background: i == 0 ? Theme.accent : Theme.text-dim;
         }
         if e.now: Rectangle {
             x: 25 * root.u;
             width: 160 * root.u;
             border-radius: 8 * root.u;
-            background: #ffb43f1f;
+            background: Theme.warm.with-alpha(0.14);
         }
         Text {
             x: 34 * root.u;
             width: 58 * root.u;
             height: parent.height;
             text: e.time;
-            color: e.now ? #ffb43f : #e3edfc;
-            font-size: 15 * root.u;
+            color: e.now ? Theme.warm : Theme.text;
+            font-size: Theme.type-body;
             font-weight: e.now ? 600 : 400;
             vertical-alignment: center;
         }
@@ -94,8 +97,8 @@ export component AgendaCard inherits GlassCard {
             width: parent.width - self.x;
             height: parent.height;
             text: e.title;
-            color: e.now ? #ffb43f : #edf4ff;
-            font-size: 15 * root.u;
+            color: e.now ? Theme.warm : Theme.text;
+            font-size: Theme.type-body;
             font-weight: e.now ? 600 : 400;
             overflow: elide;
             vertical-alignment: center;
@@ -103,37 +106,33 @@ export component AgendaCard inherits GlassCard {
     }
 }
 
-// "Tiếp theo": 2 Reminder sắp tới.
+// "Tiếp theo" (Aurora ScheduleCard): 2 Reminder sắp tới.
 export component NextCard inherits GlassCard {
-    background: #122238ee;
-    border-color: #6e90c256;
-    border-radius: 23 * root.u;
-
     Image {
         x: 22 * root.u;
         y: 23 * root.u;
-        width: 30 * root.u;
-        height: 30 * root.u;
+        width: 28 * root.u;
+        height: 28 * root.u;
         source: @image-url("../../../assets/home/icons/sparkle.png");
-        colorize: #72aeff;
+        colorize: Theme.accent-cyan;
     }
     Text {
-        x: 63 * root.u;
+        x: 61 * root.u;
         y: 23 * root.u;
-        height: 30 * root.u;
+        height: 28 * root.u;
         text: "Tiếp theo";
-        font-size: 15 * root.u;
+        font-size: Theme.type-card-title;
         font-weight: 600;
-        color: #ffffff;
+        color: Theme.text;
         vertical-alignment: center;
     }
     if Center.reminders.length == 0: Text {
         x: 177 * root.u;
         y: 23 * root.u;
-        height: 30 * root.u;
+        height: 28 * root.u;
         text: "Không có nhắc nhở";
-        font-size: 14 * root.u;
-        color: #b7c9e4;
+        font-size: Theme.type-body;
+        color: Theme.text-dim;
         vertical-alignment: center;
     }
     for r[i] in Center.reminders: Rectangle {
@@ -147,15 +146,15 @@ export component NextCard inherits GlassCard {
             width: 22 * root.u;
             height: 22 * root.u;
             source: @image-url("../../../assets/home/icons/timer.png");
-            colorize: #a3d4ff;
+            colorize: Theme.accent-cyan;
         }
         Text {
             x: 30 * root.u;
             width: parent.width - self.x;
             height: parent.height;
             text: r.time + "  " + r.text;
-            font-size: 15 * root.u;
-            color: #e3edfc;
+            font-size: Theme.type-body;
+            color: Theme.text;
             overflow: elide;
             vertical-alignment: center;
         }

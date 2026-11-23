@@ -63,7 +63,7 @@ export component ResponseText inherits Rectangle {
         vertical-alignment: center;
         text: root.hints[mod(root.hint-index, root.hints.length)];
         font-size: root.font-size;
-        color: #a9bdd9;
+        color: Theme.text-dim;
         opacity: root.show-hint ? min(1, min(root.hint-phase, 1 - root.hint-phase) * 6) * 0.8 : 0;
         animate opacity { duration: 200ms; }
     }

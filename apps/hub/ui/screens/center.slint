@@ -1,8 +1,10 @@
+import { Theme } from "../theme.slint";
 import { Screen } from "../contract/nav.slint";
 import { StatusBar } from "../contract/status.slint";
 import { Center, CenterCard } from "../contract/center.slint";
 import { Icon } from "../components/icon.slint";
 import { NavRail } from "../components/home/nav-rail.slint";
+import { Backdrop } from "../components/home/backdrop.slint";
 import { AgendaCard, NextCard } from "../components/home/agenda.slint";
 import { QuickTile, DeviceTile, TimerTile, HomeSafeCard } from "../components/home/quick-tile.slint";
 
@@ -38,15 +40,7 @@ export component CenterScreen inherits Rectangle {
         }
     }
 
-    // Nền: ảnh ngôi nhà đêm, phủ gradient cho chữ dễ đọc.
-    Image {
-        width: parent.width;
-        height: parent.height;
-        source: @image-url("../../assets/home/backgrounds/home-night.jpg");
-        image-fit: cover;
-    }
-    Rectangle { background: @linear-gradient(90deg, #051329d9 0%, #0b1e3ca0 40%, #09182b75 68%, #061123c0 100%); }
-    Rectangle { background: @linear-gradient(180deg, #06172b63 0%, #08142626 54%, #061022e6 100%); }
+    Backdrop { }
 
     NavRail {
         x: 14 * root.u;
@@ -56,79 +50,58 @@ export component CenterScreen inherits Rectangle {
         current: Screen.center;
     }
 
-    // Đồng hồ + thời tiết: chạm mở màn Thời tiết.
-    hero := Rectangle {
+    // Đồng hồ + thời tiết: chạm mở màn Thời tiết. Cụm thời tiết đi theo bề rộng đồng hồ.
+    Rectangle {
         x: 140 * root.u;
-        y: (42 + root.dy * 0.2) * root.u;
+        y: (52 + root.dy * 0.2) * root.u;
         width: 660 * root.u;
-        height: 150 * root.u;
+        height: 130 * root.u;
         transform-scale: root.zoom-card == CenterCard.weather ? 1.06 : 1.0;
-        animate transform-scale { duration: 350ms; easing: ease-out; }
+        animate transform-scale { duration: Theme.anim-state; easing: ease-out; }
         TouchArea { clicked => { Center.open(Screen.weather); } }
-        Text {
-            x: 10 * root.u;
-            y: 10 * root.u;
-            width: 330 * root.u;
-            text: Center.time;
-            font-size: 99 * root.u;
-            font-weight: 600;
-            color: #f4f9ff;
-        }
-        Text {
-            x: 14 * root.u;
-            y: 120 * root.u;
-            width: 330 * root.u;
-            text: Center.date;
-            font-size: 16 * root.u;
-            color: #b4c9e8;
-            overflow: elide;
-        }
-        Rectangle {
-            x: 353 * root.u;
-            y: 26 * root.u;
-            width: 1 * root.u;
-            height: 72 * root.u;
-            background: #b0c5e5a9;
-        }
-        if Center.weather.icon == "sun": Image {
-            x: 380 * root.u;
-            y: 28 * root.u;
-            width: 47 * root.u;
-            height: 47 * root.u;
-            source: @image-url("../../assets/home/icons/sun.png");
-            colorize: #ffb42a;
-        }
-        if Center.weather.icon != "sun": Icon {
-            x: 380 * root.u;
-            y: 28 * root.u;
-            name: Center.weather.icon;
-            size: 47 * root.u;
-            color: #ffb42a;
-        }
-        Text {
-            x: 437 * root.u;
-            y: 18 * root.u;
-            width: 220 * root.u;
-            text: Center.weather.temp;
-            font-size: 58 * root.u;
-            color: #f2f8ff;
-            overflow: elide;
-        }
-        Text {
-            x: 441 * root.u;
-            y: 95 * root.u;
-            width: 215 * root.u;
-            text: Center.weather.summary;
-            font-size: 16 * root.u;
-            color: #c4d5ec;
-            overflow: elide;
-        }
-        if Center.weather.stale: Text {
-            x: 441 * root.u;
-            y: 120 * root.u;
-            text: "cập nhật lúc " + Center.weather.updated;
-            font-size: 13 * root.u;
-            color: #ffb454;
+        HorizontalLayout {
+            padding-left: 10 * root.u;
+            spacing: 28 * root.u;
+            alignment: start;
+            VerticalLayout {
+                alignment: start;
+                Text { text: Center.time; font-size: Theme.type-clock; font-weight: 300; color: Theme.text; }
+                Text { text: Center.date; font-size: Theme.type-body; color: Theme.text-dim; overflow: elide; }
+            }
+            Rectangle {
+                width: 1 * root.u;
+                height: 72 * root.u;
+                y: 14 * root.u;
+                background: Theme.border;
+            }
+            VerticalLayout {
+                alignment: start;
+                padding-top: 8 * root.u;
+                HorizontalLayout {
+                    spacing: 10 * root.u;
+                    alignment: start;
+                    if Center.weather.icon == "sun": Image {
+                        width: 44 * root.u;
+                        height: 44 * root.u;
+                        y: (parent.height - self.height) / 2;
+                        source: @image-url("../../assets/home/icons/sun.png");
+                        colorize: Theme.warm;
+                    }
+                    if Center.weather.icon != "sun": Icon {
+                        y: (parent.height - self.height) / 2;
+                        name: Center.weather.icon;
+                        size: 44 * root.u;
+                        color: Theme.warm;
+                    }
+                    Text { text: Center.weather.temp; font-size: Theme.type-clock * 0.8; font-weight: 300; color: Theme.text; }
+                }
+                Text { text: Center.weather.summary; font-size: Theme.type-body; color: Theme.text-dim; overflow: elide; }
+                if Center.weather.stale: Text {
+                    text: "cập nhật lúc " + Center.weather.updated;
+                    font-size: Theme.type-caption;
+                    color: Theme.warm;
+                }
+            }
         }
     }
 
@@ -138,9 +111,9 @@ export component CenterScreen inherits Rectangle {
         y: (238 + root.dy * 0.5) * root.u;
         width: 380 * root.u;
         text: root.hour < 11 ? "Chào buổi sáng!" : root.hour < 18 ? "Chào buổi chiều!" : "Chào buổi tối!";
-        font-size: 34 * root.u;
+        font-size: Theme.type-page-title;
         font-weight: 600;
-        color: #ffffff;
+        color: Theme.text;
         overflow: elide;
     }
     Text {
@@ -148,8 +121,8 @@ export component CenterScreen inherits Rectangle {
         y: (292 + root.dy * 0.5) * root.u;
         width: 360 * root.u;
         text: "Chúc bạn một ngày thật tuyệt vời!";
-        font-size: 16 * root.u;
-        color: #b8cbe5;
+        font-size: Theme.type-body;
+        color: Theme.text-dim;
         overflow: elide;
     }
     Image {
@@ -192,7 +165,7 @@ export component CenterScreen inherits Rectangle {
         opacity: Center.timer.visible ? 1 : 0;
         visible: self.opacity > 0;
         zoomed: root.zoom-card == CenterCard.timer;
-        animate opacity { duration: 400ms; }
+        animate opacity { duration: Theme.anim-state; }
         tapped => { Center.open(Screen.timers); }
     }
     QuickTile {
@@ -208,8 +181,8 @@ export component CenterScreen inherits Rectangle {
         opacity: Center.countdown.visible ? 1 : 0;
         visible: self.opacity > 0;
         zoomed: root.zoom-card == CenterCard.countdown;
-        animate x { duration: 400ms; easing: ease-out; }
-        animate opacity { duration: 400ms; }
+        animate x { duration: Theme.anim-state; easing: ease-out; }
+        animate opacity { duration: Theme.anim-state; }
         tapped => { Center.open(Screen.countdowns); }
     }
     for t[i] in Center.home: DeviceTile {
@@ -220,7 +193,7 @@ export component CenterScreen inherits Rectangle {
         u: root.u;
         tile: t;
         updated: Center.weather.updated;
-        animate x { duration: 400ms; easing: ease-out; }
+        animate x { duration: Theme.anim-state; easing: ease-out; }
         toggle(k) => { Center.toggle-home(k); }
     }
     HomeSafeCard {

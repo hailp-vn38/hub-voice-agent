@@ -1,23 +1,40 @@
 import { Theme } from "../../theme.slint";
 import { CalendarData } from "../../contract/calendar.slint";
+import { Icon } from "../icon.slint";
 
 // Thẻ chi tiết sự kiện: phủ lên màn, chạm ngoài để đóng.
 export component DetailCard inherits Rectangle {
-    background: #00000099;
+    private property <length> u: Theme.unit;
+    background: Theme.background.with-alpha(0.7);
     TouchArea { clicked => { CalendarData.close-detail(); } }
     Rectangle {
-        width: min(parent.width - 2 * Theme.space-l, 960px);
-        height: min(420px, parent.height - 2 * Theme.space-l);
+        width: min(parent.width - 80 * root.u, 640 * root.u);
+        height: min(300 * root.u, parent.height - 80 * root.u);
+        border-radius: Theme.radius-panel;
         background: Theme.card;
-        border-radius: Theme.radius;
+        border-width: 1 * root.u;
+        border-color: Theme.border;
+        drop-shadow-blur: 30 * root.u;
+        drop-shadow-color: Theme.background.darker(0.6).with-alpha(0.6);
         TouchArea { }
         VerticalLayout {
-            padding: Theme.space-l;
-            spacing: Theme.space-s;
-            Text { text: CalendarData.detail.title; color: Theme.text; font-size: Theme.font-title; overflow: elide; }
-            Text { text: CalendarData.detail.time; color: Theme.accent; font-size: Theme.font-body; }
-            Text { text: CalendarData.detail.location != "" ? "📍 " + CalendarData.detail.location : ""; color: Theme.text; font-size: Theme.font-body; }
-            Text { text: CalendarData.detail.description; color: Theme.text-dim; font-size: Theme.font-small; wrap: word-wrap; vertical-stretch: 1; }
+            padding: 28 * root.u;
+            spacing: 10 * root.u;
+            Text { text: CalendarData.detail.title; color: Theme.text; font-size: Theme.type-page-title; font-weight: 600; overflow: elide; }
+            Text { text: CalendarData.detail.time; color: Theme.accent-cyan; font-size: Theme.type-card-title; }
+            if CalendarData.detail.location != "": HorizontalLayout {
+                spacing: 8 * root.u;
+                alignment: start;
+                Icon { name: "pin"; size: 20 * root.u; color: Theme.text-dim; }
+                Text { text: CalendarData.detail.location; color: Theme.text; font-size: Theme.type-body; vertical-alignment: center; overflow: elide; }
+            }
+            Text {
+                text: CalendarData.detail.description;
+                color: Theme.text-dim;
+                font-size: Theme.type-body;
+                wrap: word-wrap;
+                vertical-stretch: 1;
+            }
         }
     }
 }

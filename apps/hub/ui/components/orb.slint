@@ -42,16 +42,16 @@ export component Orb inherits Rectangle {
 
     // Sóng lan khi wake.
     Rectangle {
-        border-radius: 17 * root.u;
+        border-radius: Theme.radius-s;
         border-width: 2 * root.u;
-        border-color: #8c82ff;
+        border-color: Theme.accent-cyan;
         opacity: root.wp < 1 ? 1 - root.wp : 0;
         transform-scale: 1 + root.wp * 0.6;
     }
     // Quầng sáng theo tiếng nói.
     Rectangle {
-        border-radius: 17 * root.u;
-        background: #6a5cff;
+        border-radius: Theme.radius-s;
+        background: Theme.accent;
         opacity: root.active ? 0.2 + 0.3 * root.level : 0;
         transform-scale: 1.1 + 0.35 * root.level;
         animate opacity { duration: 150ms; }
@@ -59,11 +59,11 @@ export component Orb inherits Rectangle {
     // Lõi (rung ngang một lần khi có lỗi).
     Rectangle {
         x: sin(root.ep * 3turn) * 8 * root.u * (1 - root.ep);
-        border-radius: 17 * root.u;
+        border-radius: Theme.radius-s;
         border-width: 1 * root.u;
-        border-color: root.grey ? #6b7686 : #8c82ff;
-        background: root.grey ? @linear-gradient(125deg, #3a4656 0%, #4a5262 100%)
-            : @linear-gradient(125deg, #006bc9 0%, #6033dd 100%);
+        border-color: root.grey ? Theme.border : Theme.accent.brighter(0.4);
+        background: root.grey ? Theme.card
+            : @linear-gradient(125deg, Theme.accent 0%, Theme.accent-cyan.mix(Theme.accent, 0.3) 100%);
         opacity: AlertData.kind != AlertKind.none ? 0.7 + 0.3 * sin(root.now / 1200ms * 1turn)
             : root.active ? 1 : 0.9 + 0.1 * root.breath;
         Image {
@@ -72,7 +72,7 @@ export component Orb inherits Rectangle {
             width: 24 * root.u;
             height: 24 * root.u;
             source: @image-url("../../assets/home/icons/mic.png");
-            colorize: #ffffff;
+            colorize: Theme.text;
         }
         // 3 vạch sóng: theo mức âm; nhấp lần lượt khi đang nghĩ.
         for i in 3: Rectangle {
@@ -82,14 +82,14 @@ export component Orb inherits Rectangle {
                 : root.active ? root.level * (i == 1 ? 1 : 0.7) : 0.15)) * root.u;
             y: (parent.height - self.height) / 2;
             border-radius: 1.5 * root.u;
-            background: #ffffff;
+            background: Theme.text;
             opacity: root.grey ? 0.4 : 0.9;
         }
         // Tắt mic: gạch chéo.
         Rectangle {
             width: 34 * root.u;
             height: 3 * root.u;
-            background: #ffffff;
+            background: Theme.text;
             opacity: Voice.mic-muted ? 1 : 0;
             transform-rotation: -35deg;
             animate opacity { duration: 200ms; }

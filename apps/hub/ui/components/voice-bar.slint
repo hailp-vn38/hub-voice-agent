@@ -1,3 +1,4 @@
+import { Theme } from "../theme.slint";
 import { StatusBar } from "../contract/status.slint";
 import { Orb } from "orb.slint";
 import { ResponseText } from "response-text.slint";
@@ -8,9 +9,9 @@ import { ToolTrailView } from "tool-trail.slint";
 export component VoiceBar inherits Rectangle {
     in property <length> u: 1px;
     in property <bool> disabled;
-    border-radius: 22 * root.u;
-    background: #09172ac9;
-    border-color: #6183c42a;
+    border-radius: Theme.radius-panel;
+    background: Theme.background.with-alpha(0.8);
+    border-color: Theme.border.with-alpha(0.5);
     border-width: 1 * root.u;
 
     orb := Orb {
@@ -25,7 +26,7 @@ export component VoiceBar inherits Rectangle {
         x: root.text-x;
         width: root.width - root.text-x - root.icons-w - 20 * root.u;
         height: parent.height;
-        font-size: 17 * root.u;
+        font-size: Theme.type-card-title;
     }
     ToolTrailView {
         x: root.width - root.icons-w - self.width;
@@ -42,21 +43,21 @@ export component VoiceBar inherits Rectangle {
             width: 25 * root.u;
             height: 25 * root.u;
             source: @image-url("../../assets/home/icons/wifi.png");
-            colorize: StatusBar.offline ? #ff8c8c : #a6b9d2;
+            colorize: StatusBar.offline ? Theme.error : Theme.text-dim;
         }
         Image {
             y: (parent.height - self.height) / 2;
             width: 25 * root.u;
             height: 25 * root.u;
             source: @image-url("../../assets/home/icons/bluetooth.png");
-            colorize: #a6b9d2;
+            colorize: Theme.text-dim;
         }
         Image {
             y: (parent.height - self.height) / 2;
             width: 20 * root.u;
             height: 25 * root.u;
             source: @image-url("../../assets/home/icons/phone.png");
-            colorize: #a6b9d2;
+            colorize: Theme.text-dim;
         }
     }
 }
