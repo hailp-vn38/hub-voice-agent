@@ -6,6 +6,8 @@ pub use menu::idle as menu_idle;
 use crate::App;
 
 pub mod home;
+mod center;
+pub use center::{add_timer, countdown_today, end_timer, focus_weather, stale};
 
 pub fn init(app: &App) {
     super::settings::init(app);
@@ -13,6 +15,12 @@ pub fn init(app: &App) {
     home::init(app);
     first_boot::init(app);
     super::photos::init(app);
+    center::init(app);
+    super::reminders::init(app);
+    super::timers::init(app);
 }
 
-pub fn tick(_app: &App) {}
+pub fn tick(app: &App) {
+    center::tick(app);
+    super::timers::tick(app);
+}

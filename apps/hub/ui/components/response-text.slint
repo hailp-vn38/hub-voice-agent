@@ -1,0 +1,91 @@
+import { Theme } from "../theme.slint";
+import { Nav, Screen } from "../contract/nav.slint";
+import { Voice, VoiceState } from "../contract/voice.slint";
+import { Response, Speaker } from "../contract/response.slint";
+
+component WordView inherits Rectangle {
+    in property <string> text;
+    in property <bool> emphasis;
+    in property <bool> user;
+    in property <bool> fresh; // chỉ vài từ mới nhất mới animate
+    private property <duration> t0: animation-tick();
+    private property <float> p: root.fresh ? clamp((animation-tick() - root.t0) / 550ms, 0, 1) : 1;
+    // Overshoot rồi rung tắt.
+    private property <float> k: 1 - root.p;
+    width: label.preferred-width;
+    height: label.preferred-height;
+    label := Text {
+        text: root.text + " ";
+        font-size: Theme.font-title;
+        font-weight: root.emphasis ? 600 : 400;
+        color: root.emphasis ? Theme.warm : (root.user ? Theme.text-dim : Theme.text);
+        x: root.k * 80px;
+        transform-rotation: root.k * sin(root.p * 3turn) * 14deg;
+        transform-scale: 1 + root.k * 0.4 * sin(root.p * 1.5turn);
+        opacity: min(1, root.p * 4);
+    }
+}
+
+// Dòng chữ phản hồi căn phải sát Orb, không xuống dòng; từ cũ trôi sang trái và mờ ở mép trái.
+// Idle thì xoay vòng gợi ý câu nói theo màn.
+export component ResponseText inherits Rectangle {
+    clip: true;
+    private property <duration> line-t: animation-tick();
+    private property <int> serial: Response.line-serial;
+    changed serial => { root.line-t = animation-tick(); }
+    // Nhịp hiện từ cố định: 170 ms/từ.
+    private property <int> shown: min(Response.words.length, floor((animation-tick() - root.line-t) / 170ms) + 1);
+    private property <bool> has-text: Response.words.length > 0;
+
+    private property <[string]> hints-center: ["Hey, bật đèn phòng khách", "Hey, mấy giờ rồi?", "Hey, mở menu", "Hey, thời tiết hôm nay thế nào?"];
+    private property <[string]> hints-timers: ["Hey, hẹn giờ 10 phút", "Hey, đặt báo thức 6 giờ sáng", "Hey, huỷ hẹn giờ"];
+    private property <[string]> hints-weather: ["Hey, mai có mưa không?", "Hey, thời tiết cuối tuần", "Hey, hôm nay bao nhiêu độ?"];
+    private property <[string]> hints-home: ["Hey, tắt hết đèn", "Hey, bật quạt phòng ngủ", "Hey, đèn phòng khách đang bật không?"];
+    private property <[string]> hints-other: ["Hey, quay về trung tâm", "Hey, mở menu"];
+    private property <[string]> hints: Nav.screen == Screen.center || Nav.screen == Screen.menu ? root.hints-center
+        : Nav.screen == Screen.timers || Nav.screen == Screen.countdowns || Nav.screen == Screen.reminders ? root.hints-timers
+        : Nav.screen == Screen.weather ? root.hints-weather
+        : Nav.screen == Screen.home ? root.hints-home : root.hints-other;
+    private property <int> hint-index: floor(animation-tick() / 5000ms);
+    private property <float> hint-phase: mod(animation-tick() / 5000ms, 1);
+    private property <bool> show-hint: !root.has-text && Voice.state == VoiceState.idle;
+
+    // Gợi ý: mờ vào/ra mỗi 5 s.
+    Text {
+        width: parent.width;
+        horizontal-alignment: right;
+        vertical-alignment: center;
+        text: root.hints[mod(root.hint-index, root.hints.length)];
+        font-size: Theme.font-body;
+        color: Theme.text-dim;
+        opacity: root.show-hint ? min(1, min(root.hint-phase, 1 - root.hint-phase) * 6) * 0.8 : 0;
+        animate opacity { duration: 200ms; }
+    }
+
+    // Hàng chữ: layout rộng đúng bằng nội dung, đặt sát mép phải, trượt khi thêm từ.
+    Rectangle {
+        opacity: Response.fading ? 0 : 1;
+        animate opacity { duration: 1500ms; easing: ease-in; }
+        row := HorizontalLayout {
+            x: parent.width - self.preferred-width;
+            height: parent.height;
+            alignment: start;
+            animate x { duration: 200ms; easing: ease-out; }
+            for w[i] in Response.words: Rectangle {
+                if i < root.shown: WordView {
+                    text: w.text;
+                    emphasis: w.emphasis;
+                    user: Response.speaker == Speaker.user;
+                    fresh: i >= root.shown - 3;
+                }
+            }
+        }
+    }
+
+    // Mép trái mờ dần (thay mask).
+    Rectangle {
+        x: 0;
+        width: 160px;
+        background: @linear-gradient(90deg, Theme.background 0%, transparent 100%);
+    }
+}

@@ -1,6 +1,6 @@
 # 11 — Màn Hẹn giờ
 
-Status: ready-for-agent
+Status: resolved
 Blocked by: 06
 Spec: [../spec.md](../spec.md)
 Thiết kế: concept.md §6 "Màn Hẹn giờ" (báo hết giờ ở ticket 14, ô trên màn trung tâm ở ticket 07)
@@ -49,3 +49,7 @@ Map: chờ hub-core #04 (hẹn giờ), #06 (hết giờ)
 | `.focus` / `.focus-serial` | |
 | `quick-start(minutes)` | |
 | `toggle-pause(key)` / `add-minute(key)` / `cancel(key)` | |
+
+## Answer
+
+Màn Hẹn giờ xong: `contract/timers.slint`, `components/timer-ring.slint`, `components/timer-card.slint`, `screens/timers.slint`; gắn vào Shell. Demo mô phỏng (`demo/timers/`, logic thuần có test trong `sim_tests.rs`) tự đếm ngược mỗi giây, 8 kịch bản trong Demo panel. Nút Huỷ trên thẻ co về tâm 300 ms rồi gọi `cancel`; kịch bản "Huỷ trứng" xoá ngay (không co). Chưa kiểm bằng mắt trên màn hình.

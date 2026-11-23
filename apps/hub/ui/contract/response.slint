@@ -1,0 +1,11 @@
+// Hợp đồng Response. Ticket UI: .scratch/hub-ui/issues/05-response-text-tool-trail.md.
+export struct Word { text: string, emphasis: bool }
+export enum Speaker { user, agent }
+
+// Mỗi câu mới (stt hoặc sentence_start) là một line-serial mới; words đã tách từ.
+export global Response {
+    in property <int> line-serial;
+    in property <Speaker> speaker;
+    in property <[Word]> words;
+    in property <bool> fading;
+}
