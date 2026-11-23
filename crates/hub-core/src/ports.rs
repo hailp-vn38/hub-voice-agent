@@ -103,6 +103,8 @@ pub trait ImageFetcher: Send + Sync {
 pub struct CalendarEvent {
     #[serde(default)]
     pub location: Option<String>,
+    #[serde(default)]
+    pub description: Option<String>,
     pub id: String,
     pub summary: String,
     pub start: String,

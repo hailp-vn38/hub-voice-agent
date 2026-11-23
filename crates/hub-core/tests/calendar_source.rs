@@ -15,7 +15,7 @@ async fn google_adapter_lists_inserts_and_reports_expired_sync_token() {
             let query = query.0.unwrap_or_default();
             if query.contains("syncToken=expired") { return (StatusCode::GONE, Json(json!({}))).into_response(); }
             assert!(query.contains("timeMin=2026-10-24T00") && query.contains("timeMax=2027-01-22T00"), "{query}");
-            Json(json!({"items":[{"id":"one","summary":"Meeting","start":{"dateTime":"2026-11-23T10:00:00+07:00"},"end":{"dateTime":"2026-11-23T11:00:00+07:00"}},{"id":"gone","status":"cancelled"}],"nextSyncToken":"next"})).into_response()
+            Json(json!({"items":[{"id":"one","summary":"Meeting","description":"Check-in","start":{"dateTime":"2026-11-23T10:00:00+07:00"},"end":{"dateTime":"2026-11-23T11:00:00+07:00"}},{"id":"gone","status":"cancelled"}],"nextSyncToken":"next"})).into_response()
         }).post(|Json(body): Json<serde_json::Value>| async move { assert_eq!(body["start"]["date"], "2026-11-23"); assert_eq!(body["end"]["date"], "2026-11-24"); assert_eq!(body["location"], "Hanoi"); Json(json!({"id":"new","summary":"Lunch","location":"Hanoi","start":{"date":"2026-11-23"},"end":{"date":"2026-11-24"}})) }));
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let addr = listener.local_addr().unwrap();
@@ -35,6 +35,7 @@ async fn google_adapter_lists_inserts_and_reports_expired_sync_token() {
     };
     let delta = source.list(settings.clone(), full).await.unwrap();
     assert_eq!(delta.events[0].summary, "Meeting");
+    assert_eq!(delta.events[0].description.as_deref(), Some("Check-in"));
     assert_eq!(delta.removed, ["gone"]);
     assert_eq!(delta.sync_token.as_deref(), Some("next"));
     assert!(

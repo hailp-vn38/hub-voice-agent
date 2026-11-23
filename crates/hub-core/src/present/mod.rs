@@ -1,5 +1,6 @@
 mod alerts;
 mod ambient;
+mod calendar;
 mod countdowns;
 mod home;
 mod nav;
@@ -15,6 +16,10 @@ mod weather;
 use crate::UiState;
 pub use alerts::{AlertKind, AlertView};
 pub use ambient::AmbientView;
+pub use calendar::{
+    CalendarBlockView, CalendarDayView, CalendarDetailView, CalendarKind, CalendarMonthDayView,
+    CalendarUpcomingView, CalendarView, PendingState,
+};
 pub use countdowns::{CountdownItemView, CountdownUnit, CountdownsView};
 pub use home::{HomeKind, HomeTileView, HomeView};
 pub use photos::{PhotoState, PhotoView, PhotosView};
@@ -36,6 +41,7 @@ pub struct HubView {
     pub nav: crate::Screen,
     pub status: StatusView,
     pub ambient: AmbientView,
+    pub calendar: CalendarView,
     pub countdowns: CountdownsView,
     pub home: HomeView,
     pub photos: PhotosView,
@@ -54,6 +60,7 @@ pub fn present(state: &UiState) -> HubView {
         nav: nav::screen(state),
         status: status::from_state(state),
         ambient: ambient::from_state(state),
+        calendar: calendar::from_state(state),
         countdowns: countdowns::from_state(state),
         home: home::from_state(state),
         photos: photos::from_state(state),

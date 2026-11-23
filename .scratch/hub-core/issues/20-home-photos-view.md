@@ -23,4 +23,4 @@ Spec: [../spec.md](../spec.md) · UI: hub-ui #15, #16
 ## Comments
 
 - Đã thêm dữ liệu trình bày Nhà/Ảnh, trạng thái tải ảnh và xoá ảnh cùng hai tệp cache. Viewer focus tiếp tục do `hub-core` giữ qua `Focus`; `auto-advance` tiếp tục thuộc UI.
-- Gates sau khi sửa viewer focus khi xoá ảnh: `scripts/test.sh -p hub-core` (132 passed), `cargo fmt --all -- --check`, `cargo build -p hub` và `git diff --check` đều đạt.
+- Gates sau khi ghép `feat/hub-core` ở `ec46e9d`: `scripts/test.sh -p hub-core` (140 passed), `cargo fmt --all -- --check`, `cargo build -p hub` và `git diff --check` đều đạt.

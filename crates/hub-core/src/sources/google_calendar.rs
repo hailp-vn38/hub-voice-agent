@@ -89,6 +89,7 @@ impl GoogleCalendar {
                 ) {
                     events.push(CalendarEvent {
                         location: item.location,
+                        description: item.description,
                         id: item.id,
                         summary: item.summary.unwrap_or_default(),
                         start,
@@ -135,6 +136,7 @@ impl GoogleCalendar {
             .await?;
         Ok(CalendarEvent {
             location: item.location,
+            description: item.description,
             id: item.id,
             summary: item.summary.unwrap_or_default(),
             start: item
@@ -177,6 +179,7 @@ struct ListResponse {
 #[derive(Deserialize)]
 struct Item {
     location: Option<String>,
+    description: Option<String>,
     id: String,
     status: Option<String>,
     summary: Option<String>,

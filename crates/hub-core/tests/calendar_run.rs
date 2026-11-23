@@ -39,6 +39,7 @@ impl CalendarSource for Fake {
             Ok(CalendarDelta {
                 events: vec![CalendarEvent {
                     location: None,
+                    description: None,
                     id: "one".into(),
                     summary: "Meeting".into(),
                     start: "2026-11-23T10:00:00+07:00".into(),
@@ -133,6 +134,7 @@ impl CalendarSource for FutureEvent {
                 events: if token.is_none() {
                     vec![CalendarEvent {
                         location: None,
+                        description: None,
                         id: "future".into(),
                         summary: "Future".into(),
                         start: "2027-01-23T10:00:00Z".into(),

@@ -145,7 +145,11 @@ impl Hub {
             Internal::Timeout(id, reply) if id == "weather" => {
                 (id, Err(anyhow::anyhow!("Job timed out")), reply)
             }
-            Internal::Timeout(id, reply) if id == "photos" || id.starts_with("home:") => {
+            Internal::Timeout(id, reply)
+                if id == "photos"
+                    || id.starts_with("home:")
+                    || calendar::Feature::owns_job(&id) =>
+            {
                 (id, Err(anyhow::anyhow!("Job timed out")), reply)
             }
             Internal::Timeout(_, reply) => {
