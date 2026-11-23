@@ -66,6 +66,9 @@ pub async fn run(
                 for effect in pending { effects::execute(effect, &io.ui_tx, &io.voice_tx, &io.audio_tx, &mut jobs, &mut store).await?; }
             }
             Some(event) = io.audio_rx.recv() => {
+                if matches!(event, crate::AudioEvent::WakeWord) {
+                    for effect in view.on_user(UserInput::Activity, ports.clock.now().timestamp().as_second()) { effects::execute(effect, &io.ui_tx, &io.voice_tx, &io.audio_tx, &mut jobs, &mut store).await?; }
+                }
                 for effect in audio::on(event, &mut conversation, ports.clock.now()) { effects::execute(effect, &io.ui_tx, &io.voice_tx, &io.audio_tx, &mut jobs, &mut store).await?; }
             }
             Some(input) = io.input_rx.recv() => match input {
