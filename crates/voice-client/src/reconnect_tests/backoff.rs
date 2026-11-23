@@ -38,7 +38,7 @@ async fn ota_failure_emits_offline_then_retries_after_injected_backoff() {
         device: DeviceIdentity::new("retry-device", "retry-client"),
         tools: Vec::new(),
     };
-    let (_config_tx, config_rx) = watch::channel(config);
+    let (_config_tx, config_rx) = watch::channel(Some(config));
     let (_commands, mut events) = spawn_with_jitter(config_rx, |nominal| {
         Duration::from_millis(nominal.as_millis() as u64 * 120 / 100)
     });
@@ -68,7 +68,7 @@ async fn ota_failures_double_backoff_to_sixty_seconds() {
         device: DeviceIdentity::new("backoff-device", "backoff-client"),
         tools: Vec::new(),
     };
-    let (_config_tx, config_rx) = watch::channel(config);
+    let (_config_tx, config_rx) = watch::channel(Some(config));
     let (_commands, mut events) = spawn_with_jitter(config_rx, |nominal| nominal);
 
     for delay in [1, 2, 4, 8, 16, 32, 60, 60] {
@@ -114,7 +114,7 @@ async fn disconnect_after_ready_resets_backoff_to_one_second() {
         device: DeviceIdentity::new("reset-device", "reset-client"),
         tools: Vec::new(),
     };
-    let (_config_tx, config_rx) = watch::channel(config);
+    let (_config_tx, config_rx) = watch::channel(Some(config));
     let (_commands, mut events) = spawn_with_jitter(config_rx, |nominal| nominal);
 
     assert!(matches!(
@@ -145,7 +145,7 @@ async fn jitter_never_pushes_retry_past_sixty_seconds() {
         device: DeviceIdentity::new("cap-device", "cap-client"),
         tools: Vec::new(),
     };
-    let (_config_tx, config_rx) = watch::channel(config);
+    let (_config_tx, config_rx) = watch::channel(Some(config));
     let (_commands, mut events) = spawn_with_jitter(config_rx, |nominal| nominal * 120 / 100);
 
     let mut largest = Duration::ZERO;
@@ -202,7 +202,7 @@ async fn backoff_resets_only_after_a_stable_connection() {
     };
     // Report the nominal backoff but sleep only a thousandth of it.
     let (_commands, mut events) =
-        crate::spawn_with(watch::channel(config).1, |nominal| nominal / 1000, timeouts);
+        crate::spawn_with(held_config(config), |nominal| nominal / 1000, timeouts);
 
     let mut retries = Vec::new();
     while retries.len() < 4 {
@@ -215,4 +215,12 @@ async fn backoff_resets_only_after_a_stable_connection() {
         }
     }
     assert_eq!(retries, [1, 2, 1, 2]);
+}
+
+fn held_config(config: VoiceConfig) -> tokio::sync::watch::Receiver<Option<VoiceConfig>> {
+    let (sender, receiver) = tokio::sync::watch::channel(Some(config));
+    tokio::spawn(async move {
+        sender.closed().await;
+    });
+    receiver
 }

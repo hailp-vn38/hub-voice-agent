@@ -188,6 +188,14 @@ async fn audio_events_drop_when_full_and_tts_stop_waits_for_capacity() {
     );
 }
 
-fn config_receiver(config: VoiceConfig) -> tokio::sync::watch::Receiver<VoiceConfig> {
-    tokio::sync::watch::channel(config).1
+fn config_receiver(config: VoiceConfig) -> tokio::sync::watch::Receiver<Option<VoiceConfig>> {
+    held_config(config)
+}
+
+fn held_config(config: VoiceConfig) -> tokio::sync::watch::Receiver<Option<VoiceConfig>> {
+    let (sender, receiver) = tokio::sync::watch::channel(Some(config));
+    tokio::spawn(async move {
+        sender.closed().await;
+    });
+    receiver
 }

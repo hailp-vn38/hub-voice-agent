@@ -1,6 +1,6 @@
 # 14 — `spawn` nhận `Option<VoiceConfig>`, channel sống suốt vòng đời app
 
-Status: ready-for-agent
+Status: ready-for-human
 Blocked by: —
 Spec: [../spec.md](../spec.md)
 
@@ -15,8 +15,12 @@ Hiện `spawn(watch::Receiver<VoiceConfig>)` cần config ngay từ đầu, nên
 
 ## Nghiệm thu
 
-- [ ] Test: `spawn` với `None` → `Connection(Unconfigured)`, server giả không nhận kết nối nào; gửi `Some` → `Ready`.
-- [ ] `Some → None` khi đang trong lượt TTS → `TtsStop { Interrupted }` rồi `Connection(Unconfigured)`.
-- [ ] `DirectSpeech` khi `Unconfigured` → `DirectSpeechRejected { Offline }`.
-- [ ] Bất biến 6 vẫn giữ: gửi lại cùng `Some(config)` không kết nối lại.
-- [ ] `docs/codebase.md` §3.1 cập nhật chữ ký và bất biến.
+- [x] Test: `spawn` với `None` → `Connection(Unconfigured)`, server giả không nhận kết nối nào; gửi `Some` → `Ready`.
+- [x] `Some → None` khi đang trong lượt TTS → `TtsStop { Interrupted }` rồi `Connection(Unconfigured)`.
+- [x] `DirectSpeech` khi `Unconfigured` → `DirectSpeechRejected { Offline }`.
+- [x] Bất biến 6 vẫn giữ: gửi lại cùng `Some(config)` không kết nối lại.
+- [x] `docs/codebase.md` §3.1 cập nhật chữ ký và bất biến.
+
+## Comments
+
+- Đã triển khai cấu hình optional và vòng đời channel; kiểm thử qua API công khai với OTA/WebSocket giả. Kiểm thử server thật vẫn cần môi trường vela-server.

@@ -46,17 +46,16 @@ fn identity() -> (String, String) {
 #[tokio::test]
 #[ignore = "needs a running vela-server; see module docs"]
 async fn connects_to_real_server() {
-    let ota_url = Url::parse(
-        &std::env::var("VOICE_OTA_URL").unwrap_or_else(|_| DEFAULT_OTA_URL.into()),
-    )
-    .unwrap();
+    let ota_url =
+        Url::parse(&std::env::var("VOICE_OTA_URL").unwrap_or_else(|_| DEFAULT_OTA_URL.into()))
+            .unwrap();
     let (device_id, client_id) = identity();
     let config = VoiceConfig {
         ota_url,
         device: DeviceIdentity::new(device_id, client_id),
         tools: vec![],
     };
-    let (_config_tx, config_rx) = watch::channel(config);
+    let (_config_tx, config_rx) = watch::channel(Some(config));
     let (_commands, mut events) = voice_client::spawn(config_rx);
 
     let outcome = tokio::time::timeout(Duration::from_secs(600), async {
@@ -71,10 +70,12 @@ async fn connects_to_real_server() {
                 VoiceEvent::Connection(ConnectionState::Ready) => {
                     eprintln!("connection: Ready (đang xác nhận phiên voice)");
                     let probe = tokio::time::timeout(Duration::from_secs(3), events.recv()).await;
-                    if let Ok(Some(VoiceEvent::Stt { text })) = &probe {
-                        if text.contains("Mã kết nối") {
-                            return Err("server đang ở enrollment transport=websocket, không phải phiên voice");
-                        }
+                    if let Ok(Some(VoiceEvent::Stt { text })) = &probe
+                        && text.contains("Mã kết nối")
+                    {
+                        return Err(
+                            "server đang ở enrollment transport=websocket, không phải phiên voice",
+                        );
                     }
                     return Ok(());
                 }

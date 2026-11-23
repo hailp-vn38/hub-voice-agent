@@ -100,13 +100,12 @@ impl FakeServer {
     }
 }
 
-fn config(server: &FakeServer, tools: Vec<ToolDef>) -> watch::Receiver<VoiceConfig> {
-    watch::channel(VoiceConfig {
+fn config(server: &FakeServer, tools: Vec<ToolDef>) -> watch::Receiver<Option<VoiceConfig>> {
+    held_config(VoiceConfig {
         ota_url: server.ota_url.clone(),
         device: DeviceIdentity::new("mcp-device", "mcp-client"),
         tools,
     })
-    .1
 }
 
 async fn ready(events: &mut mpsc::Receiver<VoiceEvent>) {
@@ -138,3 +137,11 @@ async fn next(connection: &mut FakeConnection) -> Value {
 mod calls;
 mod discovery;
 mod edges;
+
+fn held_config(config: VoiceConfig) -> watch::Receiver<Option<VoiceConfig>> {
+    let (sender, receiver) = watch::channel(Some(config));
+    tokio::spawn(async move {
+        sender.closed().await;
+    });
+    receiver
+}

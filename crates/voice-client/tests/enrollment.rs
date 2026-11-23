@@ -70,7 +70,7 @@ async fn activation(events: &mut mpsc::Receiver<VoiceEvent>, code: &str) {
 #[tokio::test]
 async fn activation_waits_without_retrying() {
     let (url, mut requests) = ota(vec![json!({"activation":{"code":"A-123"}})]).await;
-    let (_config_tx, config_rx) = watch::channel(config(url));
+    let (_config_tx, config_rx) = watch::channel(Some(config(url)));
     let (_commands, mut events) = voice_client::spawn(config_rx);
     activation(&mut events, "A-123").await;
     requests.recv().await.unwrap();
@@ -89,7 +89,7 @@ async fn expired_activation_code_is_refreshed_from_ota() {
         json!({"activation":{"code":"fresh"}}),
     ])
     .await;
-    let (_config_tx, config_rx) = watch::channel(config(url));
+    let (_config_tx, config_rx) = watch::channel(Some(config(url)));
     let (_commands, mut events) = voice_client::spawn(config_rx);
     activation(&mut events, "old").await;
     activation(&mut events, "fresh").await;
@@ -106,7 +106,7 @@ async fn connect_rechecks_activation_then_enters_ready_and_ignores_connect() {
         json!({"websocket":{"url":websocket.url,"token":"token"},"activation":{"code":"ignored"}}),
     ])
     .await;
-    let (_config_tx, config_rx) = watch::channel(config(url));
+    let (_config_tx, config_rx) = watch::channel(Some(config(url)));
     let (commands, mut events) = voice_client::spawn(config_rx);
     activation(&mut events, "first").await;
     requests.recv().await.unwrap();
@@ -134,7 +134,7 @@ async fn connect_rechecks_activation_then_enters_ready_and_ignores_connect() {
 async fn enrolling_drops_session_commands_and_reconnects_on_new_config() {
     let (first, mut first_requests) = ota(vec![json!({"activation":{"code":"first"}})]).await;
     let (second, mut second_requests) = ota(vec![json!({"activation":{"code":"new"}})]).await;
-    let (config_tx, config_rx) = watch::channel(config(first));
+    let (config_tx, config_rx) = watch::channel(Some(config(first)));
     let (commands, mut events) = voice_client::spawn(config_rx);
     activation(&mut events, "first").await;
     first_requests.recv().await.unwrap();
@@ -158,7 +158,7 @@ async fn enrolling_drops_session_commands_and_reconnects_on_new_config() {
     );
     let mut updated = config(second);
     updated.device = DeviceIdentity::new("new-device", "new-client");
-    config_tx.send(updated).unwrap();
+    config_tx.send(Some(updated)).unwrap();
     activation(&mut events, "new").await;
     let request = second_requests.recv().await.unwrap().to_lowercase();
     assert!(request.contains("device-id: new-device"));
