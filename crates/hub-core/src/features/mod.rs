@@ -5,3 +5,5 @@ pub(crate) mod calendar;
 pub(crate) mod weather;
 
 pub(crate) mod home;
+
+pub(crate) mod photos;

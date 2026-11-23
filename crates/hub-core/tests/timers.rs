@@ -67,6 +67,7 @@ async fn timers_are_saved_reloaded_and_limit_is_reported() {
             calendar: Arc::new(hub_core::sources::google_calendar::GoogleCalendar::default()),
             weather: Arc::new(hub_core::OpenMeteo::default()),
             home: Arc::new(hub_core::HomeAssistant::default()),
+            images: Arc::new(hub_core::HttpImageFetcher),
             system: system.clone(),
         },
         Io {
@@ -184,6 +185,7 @@ async fn timers_are_saved_reloaded_and_limit_is_reported() {
             calendar: Arc::new(hub_core::sources::google_calendar::GoogleCalendar::default()),
             weather: Arc::new(hub_core::OpenMeteo::default()),
             home: Arc::new(hub_core::HomeAssistant::default()),
+            images: Arc::new(hub_core::HttpImageFetcher),
             system: Arc::new(support::Synced),
         },
         Io {

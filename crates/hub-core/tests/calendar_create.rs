@@ -69,6 +69,7 @@ async fn creating_event_replies_after_source_and_focuses_event() {
         Store::in_memory().unwrap(),
         Ports {
             home: Arc::new(hub_core::HomeAssistant::default()),
+            images: Arc::new(hub_core::HttpImageFetcher),
             clock: Arc::new(TestClock::at(
                 "2026-11-23T12:00:00+07:00[Asia/Ho_Chi_Minh]"
                     .parse()

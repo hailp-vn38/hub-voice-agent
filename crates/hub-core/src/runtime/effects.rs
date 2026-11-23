@@ -19,6 +19,12 @@ pub(crate) enum Effect {
         timeout: Duration,
     },
     Persist(Vec<crate::Timer>),
+    PinPhoto(String, bool),
+    PersistPhotos(
+        Vec<(String, anyhow::Result<crate::FetchedImage>)>,
+        i64,
+        Option<ToolCall>,
+    ),
     PersistWeather(String, i64, serde_json::Value),
     CancelJob(JobId),
     PersistCountdowns(Vec<crate::Countdown>),
@@ -40,6 +46,31 @@ pub(super) async fn execute(
         Effect::CancelJob(id) => {
             if let Some(call) = jobs.cancel(&id) {
                 reply_error(call, "Job cancelled");
+            }
+        }
+        Effect::PinPhoto(id, pinned) => {
+            if store.photos_pin(&id, pinned).is_ok() {
+                let photos = store.photos_load()?;
+                ui_tx.send_modify(|ui| ui.photos = photos);
+            }
+        }
+        Effect::PersistPhotos(results, now, reply) => {
+            let mut loaded = 0;
+            for (caption, image) in results {
+                if let Ok(image) = image {
+                    if store.photos_add(caption, image, now).is_ok() {
+                        loaded += 1;
+                    }
+                }
+            }
+            let photos = store.photos_load()?;
+            ui_tx.send_modify(|ui| ui.photos = photos);
+            if let Some(call) = reply {
+                if loaded > 0 {
+                    call.reply(Ok(serde_json::json!({"loaded": loaded})));
+                } else {
+                    reply_error(call, "Images unavailable");
+                }
             }
         }
         Effect::PersistWeather(key, updated, data) => store.weather_save(&key, updated, &data)?,

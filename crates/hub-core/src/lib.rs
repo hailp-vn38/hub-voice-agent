@@ -44,11 +44,16 @@ pub struct Ports {
     pub calendar: Arc<dyn CalendarSource>,
     pub weather: Arc<dyn WeatherSource>,
     pub home: Arc<dyn HomeSource>,
+    pub images: Arc<dyn ImageFetcher>,
     pub system: Arc<dyn System>,
 }
 
 pub enum UserInput {
     DismissAlert,
+    PinPhoto {
+        id: String,
+        pinned: bool,
+    },
     Open(Screen),
     Back,
     Activity,
@@ -71,6 +76,7 @@ pub struct Io {
 }
 
 pub use features::countdowns::{Countdown, CountdownView};
+pub use features::photos::Photo;
 pub use features::timers::Timer;
 pub use features::weather::WeatherView;
 pub use sources::{HomeAssistant, HttpImageFetcher, OpenMeteo};
@@ -82,5 +88,6 @@ pub fn tool_definitions() -> Vec<voice_client::ToolDef> {
     tools.extend(features::calendar::tools::definitions());
     tools.extend(features::weather::tools::definitions());
     tools.extend(features::home::tools::definitions());
+    tools.extend(features::photos::tools::definitions());
     tools
 }

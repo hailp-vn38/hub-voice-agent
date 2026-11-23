@@ -33,19 +33,23 @@ pub async fn run(
         tokio::sync::watch::channel(config.get().home.clone());
     let mut home_events = ports.home.subscribe(home_settings_rx);
     let mut home = crate::features::home::Feature::new(ports.home.clone());
+    let mut photos = crate::features::photos::Feature::load(ports.images.clone(), &store)?;
     let mut conversation = Conversation::default();
     let mut alerts = crate::alerts::Alerts::default();
     let mut view = crate::view::View::new(ports.clock.now().timestamp().as_second());
     let mut jobs = jobs::Jobs::new();
     let mut tick = time::interval(Duration::from_secs(1));
     tick.set_missed_tick_behavior(time::MissedTickBehavior::Skip);
-    for effect in std::iter::once(weather.snapshot()).chain(
-        timers
-            .snapshot()
-            .into_iter()
-            .chain(countdowns.snapshot(ports.clock.now().date()))
-            .chain(calendar.snapshot()),
-    ) {
+    for effect in std::iter::once(weather.snapshot())
+        .chain(std::iter::once(photos.snapshot()))
+        .chain(
+            timers
+                .snapshot()
+                .into_iter()
+                .chain(countdowns.snapshot(ports.clock.now().date()))
+                .chain(calendar.snapshot()),
+        )
+    {
         effects::execute(
             effect,
             &io.ui_tx,
@@ -87,7 +91,8 @@ pub async fn run(
                     },
                     jobs::Internal::JobDone(id, result, reply) => {
                         let old_screen = view.screen();
-                        let mut pending = if id == "weather" { weather.on_job(result, reply, ports.clock.now().timestamp().as_second()) } else if id.starts_with("calendar-") { calendar.on_job(&id, result, reply, &mut view, ports.calendar.clone(), config.get().calendar.clone(), ports.clock.now().timestamp().as_second()) } else if id.starts_with("home:") { if let Some(call) = reply { let response = result.map(|_| serde_json::json!({"ok": true})).map_err(|e| crate::features::countdowns::tools::error(&e.to_string())); vec![effects::Effect::Reply(call, response)] } else { Vec::new() } } else { Vec::new() };
+                        let mut pending = if id == "weather" { weather.on_job(result, reply, ports.clock.now().timestamp().as_second()) } else if id.starts_with("calendar-") { calendar.on_job(&id, result, reply, &mut view, ports.calendar.clone(), config.get().calendar.clone(), ports.clock.now().timestamp().as_second()) } else if id == "photos" { photos.on_job(result, reply, ports.clock.now().timestamp().as_second()) }
+                        else if id.starts_with("home:") { if let Some(call) = reply { let response = result.map(|_| serde_json::json!({"ok": true})).map_err(|e| crate::features::countdowns::tools::error(&e.to_string())); vec![effects::Effect::Reply(call, response)] } else { Vec::new() } } else { Vec::new() };
                         if old_screen == crate::Screen::Weather && view.screen() != crate::Screen::Weather { pending.extend(weather.leave(&store, ports.clock.now().timestamp().as_second())); }
                         for effect in pending { effects::execute(effect, &io.ui_tx, &io.voice_tx, &io.audio_tx, &mut jobs, &mut store).await?; }
                     },
@@ -102,7 +107,7 @@ pub async fn run(
                 let old_screen = view.screen();
                 let mut pending = match event {
                     VoiceEvent::ToolCall(call) if call.name.starts_with("hub_calendar_") => calendar.on_tool(&mut view, call, ports.calendar.clone(), config.get().calendar.clone(), ports.clock.now().timestamp().as_second()),
-                    VoiceEvent::ToolCall(call) => tools::route(&mut timers, &mut countdowns, &mut view, &mut weather, &home, &store, call, ports.clock.now()),
+                    VoiceEvent::ToolCall(call) => tools::route(&mut timers, &mut countdowns, &mut view, &mut weather, &home, &photos, &store, call, ports.clock.now()),
                     event => voice::on(event, &mut conversation, ports.clock.now()),
                 };
                 if old_screen == crate::Screen::Weather && view.screen() != crate::Screen::Weather { pending.extend(weather.leave(&store, ports.clock.now().timestamp().as_second())); }
@@ -115,6 +120,9 @@ pub async fn run(
                 for effect in audio::on(event, &mut conversation, ports.clock.now()) { effects::execute(effect, &io.ui_tx, &io.voice_tx, &io.audio_tx, &mut jobs, &mut store).await?; }
             }
             Some(input) = io.input_rx.recv() => match input {
+                UserInput::PinPhoto { id, pinned } => {
+                    effects::execute(effects::Effect::PinPhoto(id, pinned), &io.ui_tx, &io.voice_tx, &io.audio_tx, &mut jobs, &mut store).await?;
+                }
                 UserInput::DismissAlert => {
                     let (dismissed, effects) = alerts.dismiss();
                     let mut pending = effects;

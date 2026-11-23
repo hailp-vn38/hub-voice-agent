@@ -81,6 +81,7 @@ async fn tool_calls_service_and_tracks_state_and_disconnect() {
             )),
             weather: Arc::new(hub_core::OpenMeteo::default()),
             home: fake.clone(),
+            images: Arc::new(hub_core::HttpImageFetcher),
             system: Arc::new(support::Synced),
         },
         Io {

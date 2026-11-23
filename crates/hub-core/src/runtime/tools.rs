@@ -8,11 +8,14 @@ pub(super) fn route(
     view: &mut crate::view::View,
     weather: &mut crate::features::weather::Feature,
     home: &crate::features::home::Feature,
+    photos: &crate::features::photos::Feature,
     store: &crate::Store,
     call: ToolCall,
     now: jiff::Zoned,
 ) -> Vec<Effect> {
-    if call.name.starts_with("hub_home_") {
+    if call.name == "hub_show_image" {
+        photos.on_tool(view, call, now.timestamp().as_second())
+    } else if call.name.starts_with("hub_home_") {
         home.on_tool(view, call, now.timestamp().as_second())
     } else if call.name == "hub_weather_get" {
         weather.on_tool(view, call, now.timestamp().as_second(), store)

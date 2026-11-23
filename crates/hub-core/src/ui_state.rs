@@ -6,6 +6,7 @@ pub struct UiState {
     pub calendar: Vec<crate::CalendarEvent>,
     pub weather: crate::WeatherView,
     pub home: Vec<crate::HomeEntity>,
+    pub photos: Vec<crate::Photo>,
     pub alert: Option<crate::Alert>,
     pub countdowns: Vec<crate::CountdownView>,
     pub view: crate::ViewState,

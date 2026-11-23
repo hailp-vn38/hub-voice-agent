@@ -68,6 +68,7 @@ async fn actor_refreshes_and_keeps_cached_events_when_offline() {
         Store::open(dir.path()).unwrap(),
         Ports {
             home: Arc::new(hub_core::HomeAssistant::default()),
+            images: Arc::new(hub_core::HttpImageFetcher),
             clock: Arc::new(TestClock::at(
                 "2026-11-23T12:00:00+07:00[Asia/Ho_Chi_Minh]"
                     .parse()
@@ -153,6 +154,7 @@ async fn future_event_enters_rolling_cache_without_remote_changes() {
         Store::open(dir.path()).unwrap(),
         Ports {
             home: Arc::new(hub_core::HomeAssistant::default()),
+            images: Arc::new(hub_core::HttpImageFetcher),
             clock: Arc::new(TestClock::at("2026-11-23T12:00:00Z[UTC]".parse().unwrap())),
             calendar: Arc::new(FutureEvent),
             system: Arc::new(support::Synced),
