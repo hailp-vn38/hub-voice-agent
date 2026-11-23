@@ -3,6 +3,7 @@ import { Nav, Screen } from "../contract/nav.slint";
 import { PageDots } from "page-dots.slint";
 import { StatusBarView } from "status-bar.slint";
 import { IdleBackground } from "idle-background.slint";
+import { MenuScreen } from "../screens/menu.slint";
 import { Placeholder } from "../screens/placeholder.slint";
 
 // Khung app: tầng trung tâm ⇄ menu (vuốt theo ngón tay), tầng màn tính năng,
@@ -64,7 +65,7 @@ export component Shell inherits Rectangle {
                 x: (1 - root.menu-p) * root.w;
                 opacity: root.menu-p;
                 background: Theme.background;
-                Placeholder { title: "menu"; }
+                MenuScreen { dock-height: root.dock-height; }
             }
             if root.feat-p > 0: Rectangle {
                 x: (1 - root.feat-p) * root.w;

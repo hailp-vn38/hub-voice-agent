@@ -1,6 +1,10 @@
 //! Fixture mỗi tính năng một file; ticket sau thêm `mod <feature>;` và gọi vào đây.
+mod menu;
+pub use menu::idle as menu_idle;
 use crate::App;
 
-pub fn init(_app: &App) {}
+pub fn init(app: &App) {
+    menu::init(app);
+}
 
 pub fn tick(_app: &App) {}
