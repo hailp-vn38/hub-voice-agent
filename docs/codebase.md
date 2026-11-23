@@ -209,7 +209,7 @@ Integration test dùng server WebSocket giả tại `tests/`; test backoff dùng
 
 #### Interface bên ngoài
 
-Interface bên dưới là thiết kế đích. Hiện `run(store, ports, io)` nhận SQLite Store, `clock`, các channel voice, input, audio command và UI. Runtime xử lý các tool hẹn giờ; audio command và input chưa có biến thể. Store được mở bằng `Store::open(dir)` hoặc `Store::in_memory()`; `tool_definitions()` cung cấp schema cho bốn tool hẹn giờ. Báo hết giờ thuộc ticket 06.
+Interface bên dưới là thiết kế đích. Hiện `run(store, ports, io)` nhận SQLite Store, `clock`, các channel voice, audio, input và UI. Runtime xử lý hội thoại và các tool hẹn giờ; input chưa có biến thể. Store được mở bằng `Store::open(dir)` hoặc `Store::in_memory()`; `tool_definitions()` cung cấp schema cho bốn tool hẹn giờ. Báo hết giờ thuộc ticket 06.
 
 ```rust
 pub async fn run(config: ConfigStore, store: Store, ports: Ports, io: Io) -> anyhow::Result<()>;
@@ -258,7 +258,7 @@ pub enum AudioEvent {
 }
 ```
 
-Biên độ mic và năng lượng TTS không đi qua `hub-core`: audio ghi thẳng vào `watch<Levels>` mà UI đọc.
+Biên độ mic và năng lượng TTS không đi qua `hub-core`: audio ghi thẳng vào `watch<Levels>` mà UI đọc. Hiện tại adapter desktop chỉ tiêu thụ lệnh, chưa thu hoặc phát âm thanh; `UiState.voice` chứa trạng thái hội thoại, transcript và phản hồi.
 
 #### Module bên trong
 

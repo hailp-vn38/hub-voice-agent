@@ -28,7 +28,7 @@ impl Clock for TestClock {
 
 use std::sync::Arc;
 
-use hub_core::{AudioCommand, Io, Ports, UiState, UserInput, run};
+use hub_core::{AudioCommand, AudioEvent, Io, Ports, UiState, UserInput, run};
 use tokio::{
     sync::{mpsc, watch},
     task::JoinHandle,
@@ -40,6 +40,7 @@ pub struct Hub {
     pub voice_rx: mpsc::Receiver<VoiceCommand>,
     pub voice_tx: mpsc::Sender<VoiceEvent>,
     pub audio_rx: mpsc::Receiver<AudioCommand>,
+    pub audio_tx: mpsc::Sender<AudioEvent>,
     pub input_tx: mpsc::Sender<UserInput>,
     pub ui_rx: watch::Receiver<UiState>,
     pub task: JoinHandle<anyhow::Result<()>>,
@@ -50,6 +51,7 @@ impl Hub {
         let (voice_tx, voice_rx) = mpsc::channel(16);
         let (voice_event_tx, voice_event_rx) = mpsc::channel(16);
         let (audio_tx, audio_rx) = mpsc::channel(16);
+        let (audio_event_tx, audio_event_rx) = mpsc::channel(16);
         let (input_tx, input_rx) = mpsc::channel(16);
         let (ui_tx, ui_rx) = watch::channel(UiState::default());
         let task = tokio::spawn(run(
@@ -61,6 +63,7 @@ impl Hub {
                 voice_tx,
                 voice_rx: voice_event_rx,
                 audio_tx,
+                audio_rx: audio_event_rx,
                 input_rx,
                 ui_tx,
             },
@@ -69,6 +72,7 @@ impl Hub {
             voice_rx,
             voice_tx: voice_event_tx,
             audio_rx,
+            audio_tx: audio_event_tx,
             input_tx,
             ui_rx,
             task,

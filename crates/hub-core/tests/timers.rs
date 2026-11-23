@@ -40,6 +40,7 @@ async fn timers_are_saved_reloaded_and_limit_is_reported() {
     }));
     let (voice_tx, voice_rx) = voice_client::spawn(config_rx);
     let (audio_tx, _audio_rx) = mpsc::channel(16);
+    let (_audio_events, audio_rx) = mpsc::channel(16);
     let (_input_tx, input_rx) = mpsc::channel(16);
     let (ui_tx, ui_rx) = watch::channel(UiState::default());
     let start: jiff::Zoned = "2026-11-22T12:00:00+07:00[Asia/Ho_Chi_Minh]"
@@ -54,6 +55,7 @@ async fn timers_are_saved_reloaded_and_limit_is_reported() {
             voice_tx,
             voice_rx,
             audio_tx,
+            audio_rx,
             input_rx,
             ui_tx,
         },
@@ -110,6 +112,7 @@ async fn timers_are_saved_reloaded_and_limit_is_reported() {
     let (voice_tx, _commands) = mpsc::channel(1);
     let (_events, voice_rx) = mpsc::channel(1);
     let (audio_tx, _audio) = mpsc::channel(1);
+    let (_audio_events, audio_rx) = mpsc::channel(1);
     let (_input, input_rx) = mpsc::channel(1);
     let (ui_tx, mut ui_rx) = watch::channel(UiState::default());
     let task = tokio::spawn(run(
@@ -121,6 +124,7 @@ async fn timers_are_saved_reloaded_and_limit_is_reported() {
             voice_tx,
             voice_rx,
             audio_tx,
+            audio_rx,
             input_rx,
             ui_tx,
         },
