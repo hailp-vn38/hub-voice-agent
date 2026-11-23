@@ -13,5 +13,5 @@ Spec: [../spec.md](../spec.md)
 ## Nghiệm thu
 
 - [ ] Adapter parse được fixture; không gọi mạng trong test.
-- [ ] Test qua `run()`: tool hỏi thời tiết Đà Nẵng → mở màn Thời tiết ở chế độ tạm xem, reply có nhiệt độ; 30 phút sau quay về vị trí nhà.
+- [ ] Test qua `run()`: tool hỏi thời tiết Đà Nẵng → mở màn Thời tiết ở chế độ tạm xem, reply có nhiệt độ; rời màn → quay về vị trí nhà ngay, cache giữ 30 phút.
 - [ ] Nguồn lỗi → giữ dữ liệu cache, `UiState` đánh dấu cũ.

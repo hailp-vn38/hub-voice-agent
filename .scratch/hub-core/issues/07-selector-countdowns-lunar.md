@@ -1,6 +1,6 @@
 # 07 — Selector, mốc đếm ngược, âm lịch
 
-Status: ready-for-agent
+Status: ready-for-human
 Blocked by: 04
 Spec: [../spec.md](../spec.md)
 
@@ -13,7 +13,14 @@ Spec: [../spec.md](../spec.md)
 
 ## Nghiệm thu
 
-- [ ] Unit test `lunar` với bảng mốc đã biết (Tết các năm 2020–2030, một năm có tháng nhuận).
-- [ ] `yearly_lunar` cho ngày 30 tháng thiếu → quy tắc rõ ràng, có test.
-- [ ] `selector`: khớp không dấu, nhiều kết quả → `Ambiguous`, reply tool liệt kê lựa chọn.
-- [ ] Test qua `run()`: tạo mốc → `UiState.countdowns` hiển thị số ngày đúng; qua nửa đêm thì cập nhật.
+- [x] Unit test `lunar` với bảng mốc đã biết (Tết các năm 2020–2030, một năm có tháng nhuận).
+- [x] `yearly_lunar` cho ngày 30 tháng thiếu → quy tắc rõ ràng, có test.
+- [x] `selector`: khớp không dấu, nhiều kết quả → `Ambiguous`, reply tool liệt kê lựa chọn.
+- [x] Test qua `run()`: tạo mốc → `UiState.countdowns` hiển thị số ngày đúng; qua nửa đêm thì cập nhật.
+
+## Kiểm chứng
+
+- Test lịch âm Tết 2020–2030 và tháng nhuận; năm 2030 dùng ngày 02/02 theo UTC+7.
+- Test ngày 30 tháng thiếu chuyển thành ngày 29; ngày 29/2 dương lịch chuyển thành 28/2 năm không nhuận.
+- Test qua `run()` tạo mốc, cập nhật sau nửa đêm, lưu lại sau khởi động, và trả danh sách ứng viên khi nhãn hẹn giờ mơ hồ.
+- `hub_countdown_create` nhận `date` YYYY-MM-DD theo lịch của `repeat`, và `lunar_leap` khi cần tháng nhuận.

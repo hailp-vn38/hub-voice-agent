@@ -18,6 +18,7 @@ impl Store {
     fn initialize(connection: Connection) -> anyhow::Result<Self> {
         connection.pragma_update(None, "journal_mode", "WAL")?;
         connection.execute_batch(include_str!("migrations/0001_init.sql"))?;
+        connection.execute_batch(include_str!("migrations/0002_countdowns.sql"))?;
         Ok(Self { connection })
     }
 }
