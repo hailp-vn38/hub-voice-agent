@@ -1,6 +1,6 @@
 # 02 — Bridge Hẹn giờ và lớp báo
 
-Status: ready-for-agent
+Status: ready-for-human
 Blocked by: 01
 Spec: [../spec.md](../spec.md) · UI: hub-ui #11, #14
 
@@ -17,3 +17,7 @@ Spec: [../spec.md](../spec.md) · UI: hub-ui #11, #14
 - [ ] Tay: bấm bắt đầu nhanh 1 phút → thẻ chạy, vòng giảm mượt; tạm dừng/tiếp tục; +1 phút; huỷ.
 - [ ] Tay: hết giờ → lớp báo hiện; bấm tắt → lớp báo biến mất. (Chuông kiểm ở #07.)
 - [ ] Tay (giọng, sau #08): "đặt hẹn giờ 2 phút" → mở màn Hẹn giờ, thẻ mới phát sáng.
+
+## Comments
+
+- 2026-11-23: Bridge hoàn tất ở commit `93214e4`; `scripts/test.sh -p hub --no-default-features --features desktop` đạt 154 passed. Các bước kiểm tay trên Mac còn chờ người dùng, vì vậy giữ nguyên ô nghiệm thu chưa tick.

@@ -34,13 +34,13 @@ Kịch bản: "Hết giờ trứng", "Reminder uống thuốc", "Hai báo liên 
 
 ## Map với hub-core
 
-Map: chờ hub-core #06 (alerts), #08 (Reminder); `hub_set_brightness/volume` chưa có ticket hub-core
+Map: Alert done · hub-mac #02, commit `93214e4`; `VoiceSlider` chờ G3
 
 | Hợp đồng | UiState / UserInput |
 |---|---|
-| `AlertData.kind` / `.serial` | |
-| `.title` / `.time` / `.body` | |
-| `dismiss()` | |
+| `AlertData.kind` / `.serial` | `HubView.alert.kind` / `.serial`; `None` → `AlertKind::none` |
+| `.title` / `.time` / `.body` | `HubView.alert.title` / `.time` / `.body` |
+| `dismiss()` | `UserInput::DismissAlert` |
 | `VoiceSlider.kind` / `.value` / `.serial` | |
 
 ## Answer

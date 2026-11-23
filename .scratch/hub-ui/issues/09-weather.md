@@ -34,7 +34,7 @@ Fixture: Hà Nội (nhà) và Đà Nẵng (tạm xem). Kịch bản: mỗi kiể
 
 ## Map với hub-core
 
-Map: done (hub-mac #04)
+Map: done (hub-mac #04, commit `1a6cd0c`)
 
 | Hợp đồng | UiState / UserInput |
 |---|---|
