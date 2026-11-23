@@ -1,0 +1,108 @@
+import { Theme } from "../theme.slint";
+import { Voice, VoiceState, VoiceLevels } from "../contract/voice.slint";
+
+// Tâm Orb (toạ độ cửa sổ) cho ticket 06 dùng làm điểm xuất phát.
+export global Dock {
+    in-out property <length> orb-x;
+    in-out property <length> orb-y;
+}
+
+export component Orb inherits Rectangle {
+    width: Theme.touch-min * 2;
+    height: Theme.touch-min * 2;
+    private property <duration> now: animation-tick();
+    private property <int> wake: Voice.wake-serial;
+    private property <int> tool: Voice.tool-serial;
+    private property <int> err: Voice.error-serial;
+    private property <duration> wake-t: -10000ms;
+    private property <duration> tool-t: -10000ms;
+    private property <duration> err-t: -10000ms;
+    changed wake => { root.wake-t = animation-tick(); }
+    changed tool => { root.tool-t = animation-tick(); }
+    changed err => { root.err-t = animation-tick(); }
+
+    private property <bool> grey: Voice.state == VoiceState.offline || Voice.mic-muted;
+    private property <float> level: Voice.state == VoiceState.listening ? VoiceLevels.mic
+        : Voice.state == VoiceState.speaking ? VoiceLevels.tts : 0;
+    private property <bool> active: Voice.state != VoiceState.idle && Voice.state != VoiceState.offline;
+    private property <float> breath: sin(root.now / 4000ms * 1turn);
+    private property <float> wp: clamp((root.now - root.wake-t) / 700ms, 0, 1);
+    private property <float> tp: clamp((root.now - root.tool-t) / 600ms, 0, 1);
+    private property <float> ep: clamp((root.now - root.err-t) / 450ms, 0, 1);
+    private property <color> tint: root.grey ? #5a6570 : Theme.accent;
+    private property <float> size: (root.active ? 0.8 : 0.55) + (root.active ? 0.25 * root.level : 0.03 * root.breath)
+        + 0.2 * sin(root.wp * 0.5turn);
+    animate tint { duration: 300ms; }
+
+    private property <length> d: Theme.touch-min * 1.4;
+
+    // Sóng lan khi wake.
+    Rectangle {
+        width: root.d; height: root.d;
+        border-radius: self.width / 2;
+        border-width: 4px;
+        border-color: root.tint;
+        opacity: root.wp < 1 ? 1 - root.wp : 0;
+        transform-scale: 1 + root.wp * 0.9;
+    }
+    // Vòng ngoài mờ lan theo tiếng nói.
+    Rectangle {
+        width: root.d; height: root.d;
+        border-radius: self.width / 2;
+        background: root.tint;
+        opacity: root.active ? 0.12 + 0.25 * root.level : 0;
+        transform-scale: 1.15 + 0.6 * root.level;
+        animate opacity { duration: 150ms; }
+    }
+    // Lõi (rung ngang một lần khi có lỗi).
+    Rectangle {
+        x: (parent.width - self.width) / 2 + sin(root.ep * 3turn) * 10px * (1 - root.ep);
+        width: root.d; height: root.d;
+        border-radius: self.width / 2;
+        background: root.tint;
+        opacity: root.grey ? 0.5 : (root.active ? 1 : 0.55 + 0.1 * root.breath);
+        transform-scale: root.size;
+        animate opacity { duration: 300ms; }
+    }
+    // Thinking: chấm quay quanh.
+    Rectangle {
+        width: root.d * 1.5; height: root.d * 1.5;
+        background: transparent;
+        opacity: Voice.state == VoiceState.thinking ? 1 : 0;
+        transform-rotation: root.now / 2500ms * 1turn;
+        animate opacity { duration: 300ms; }
+        Rectangle { x: (parent.width - 16px) / 2; y: 0; width: 16px; height: 16px; border-radius: 8px; background: Theme.text; }
+    }
+    // Hạt bắn khi tool chạy, về phía màn.
+    Rectangle {
+        width: 20px; height: 20px;
+        border-radius: 10px;
+        background: Theme.warm;
+        opacity: root.tp < 1 ? 1 - root.tp : 0;
+        y: (parent.height - self.height) / 2 - root.tp * 300px;
+    }
+    // Tắt mic: gạch chéo.
+    Rectangle {
+        width: root.d * 1.2; height: 6px;
+        background: Theme.text;
+        opacity: Voice.mic-muted ? 1 : 0;
+        transform-rotation: -45deg;
+        animate opacity { duration: 200ms; }
+    }
+
+    TouchArea {
+        width: max(parent.width, Theme.touch-min);
+        height: max(parent.height, Theme.touch-min);
+        clicked => { Voice.orb-tapped(); }
+    }
+
+    private property <length> ax: self.absolute-position.x;
+    private property <length> ay: self.absolute-position.y;
+    function anchor() {
+        Dock.orb-x = root.absolute-position.x + root.width / 2;
+        Dock.orb-y = root.absolute-position.y + root.height / 2;
+    }
+    init => { root.anchor(); }
+    changed ax => { root.anchor(); }
+    changed ay => { root.anchor(); }
+}

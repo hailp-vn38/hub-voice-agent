@@ -3,6 +3,7 @@ import { Nav, Screen } from "../contract/nav.slint";
 import { PageDots } from "page-dots.slint";
 import { StatusBarView } from "status-bar.slint";
 import { IdleBackground } from "idle-background.slint";
+import { Orb } from "orb.slint";
 import { Placeholder } from "../screens/placeholder.slint";
 
 // Khung app: tầng trung tâm ⇄ menu (vuốt theo ngón tay), tầng màn tính năng,
@@ -83,5 +84,6 @@ export component Shell inherits Rectangle {
         menu-progress: root.menu-p;
         opacity: 1 - root.feat-p;
     }
-    // Voice dock (ticket 04) và lớp phủ (ticket 14) gắn vào đây.
+    Orb { x: (parent.width - self.width) / 2; y: parent.height - root.dock-height / 2 - self.height / 2; }
+    // Lớp phủ (ticket 14) gắn vào đây.
 }
