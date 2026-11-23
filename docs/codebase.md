@@ -241,7 +241,7 @@ Gần như mọi hành vi của sản phẩm — luồng voice, 21 tool `hub_*`,
 
 Ứng dụng mở Setup web trên `0.0.0.0:8080` và gửi thay đổi tới actor; OAuth dùng redirect loopback, có thể dán URL từ điện thoại. Làm mới dữ liệu (thời tiết 30 phút, lịch 5 phút) chạy trên tick của actor qua `Effect::Spawn`; HA đẩy event qua `HomeSource::subscribe()`.
 
-Calendar dùng `CalendarSource` và adapter `sources::google_calendar::GoogleCalendar`: actor làm mới mỗi năm phút, lưu cache cùng sync token trong SQLite, đồng bộ lại đầy đủ khi Google trả 410 và dùng cache khi offline. Setup web lưu refresh token trong `ConfigStore`; tạo sự kiện chờ kết quả nguồn rồi mở Lịch và focus sự kiện đó.
+Calendar dùng `CalendarSource` và adapter `sources::google_calendar::GoogleCalendar`: actor làm mới mỗi năm phút, lưu cache cùng sync token trong SQLite, đồng bộ lại đầy đủ khi khởi động, mỗi ngày UTC hoặc khi Google trả 410, và dùng cache khi offline. Setup web lưu refresh token trong `ConfigStore`; tạo sự kiện chờ kết quả nguồn rồi mở Lịch và focus sự kiện đó.
 
 #### Kênh audio
 
@@ -315,7 +315,7 @@ Không có enum `ToolRequest` chung: `runtime/tools.rs` định tuyến theo ti�
 | `ImageFetcher` | `sources::image_fetch` | Fake |
 | `System` (độ sáng, Wi-Fi, AP setup, khởi động lại/tắt máy) | `apps/hub/system/pi.rs` | `system/desktop.rs`, fake |
 
-Không phải seam (một adapter): `Store` (test dùng `Store::in_memory()`), `ConfigStore` (test dùng thư mục tạm), `setup_web`, OAuth Google (nằm trong `sources::google_calendar`, Setup web gọi trực tiếp).
+Không phải seam (một adapter): `Store` (test dùng `Store::in_memory()`), `ConfigStore` (test dùng thư mục tạm), `setup_web`, OAuth đổi mã (trong `setup_web`), refresh access token (trong `sources::google_calendar`).
 
 ### 3.3 `apps/hub`
 

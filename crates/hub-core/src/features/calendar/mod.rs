@@ -11,6 +11,7 @@ pub struct Feature {
     events: Vec<CalendarEvent>,
     token: Option<String>,
     next_sync: i64,
+    last_full_day: Option<i64>,
     created: Vec<String>,
 }
 impl Feature {
@@ -20,6 +21,7 @@ impl Feature {
             events,
             token,
             next_sync: 0,
+            last_full_day: None,
             created: Vec::new(),
         })
     }
@@ -28,6 +30,7 @@ impl Feature {
         self.created.clear();
         self.token = None;
         self.next_sync = 0;
+        self.last_full_day = None;
         {
             let mut effects = vec![Effect::CancelJob("calendar-sync".into())];
             effects.extend(self.changed());
@@ -55,10 +58,16 @@ impl Feature {
             return vec![];
         }
         self.next_sync = now.saturating_add(300);
-        self.sync(source, settings)
+        let full = self.last_full_day != Some(now.div_euclid(86400));
+        self.sync(source, settings, full)
     }
-    fn sync(&self, source: Arc<dyn CalendarSource>, settings: CalendarSettings) -> Vec<Effect> {
-        let token = self.token.clone();
+    fn sync(
+        &self,
+        source: Arc<dyn CalendarSource>,
+        settings: CalendarSettings,
+        full: bool,
+    ) -> Vec<Effect> {
+        let token = if full { None } else { self.token.clone() };
         vec![Effect::Spawn {
             job: "calendar-sync".into(),
             work: Box::pin(async move {
@@ -165,6 +174,7 @@ impl Feature {
                 if let Ok(delta) = value.downcast::<(CalendarDelta, bool)>() {
                     let (delta, full) = *delta;
                     if full {
+                        self.last_full_day = Some(now.div_euclid(86400));
                         self.events.retain(|event| self.created.contains(&event.id));
                     }
                     self.events
@@ -199,7 +209,7 @@ impl Feature {
                     now,
                 ));
                 effects.push(Effect::Reply(call, Ok(serde_json::json!({"event": event}))));
-                effects.extend(self.sync(source, settings));
+                effects.extend(self.sync(source, settings, false));
                 effects
             }
             Err(_) => vec![Effect::ReplyError(call, "Calendar request failed")],

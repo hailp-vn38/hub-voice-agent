@@ -20,3 +20,5 @@ Spec: [../spec.md](../spec.md)
 ## Comments
 
 Đã triển khai CalendarSource, Google adapter, cache SQLite và đồng bộ qua actor; test adapter, đồng bộ 410/offline và tạo sự kiện qua run. Chưa kiểm tra Google OAuth/API thực tế.
+
+- Đồng bộ toàn bộ khi khởi động và mỗi ngày UTC để cửa sổ cache dịch chuyển vẫn nhận được sự kiện không thay đổi; test actor kiểm tra trường hợp này. OAuth đổi mã do Setup web thực hiện, adapter Google làm refresh. Chưa kiểm tra OAuth/API Google thực tế.
