@@ -100,8 +100,10 @@ impl View {
                 self.snapshot(false)
             }
             UserInput::PinPhoto { .. }
+            | UserInput::RemoveCountdown(_)
             | UserInput::SaveVoiceUrl(_)
             | UserInput::VoiceConnect
+            | UserInput::OrbTapped
             | UserInput::Setup(_, _)
             | UserInput::Timer(_)
             | UserInput::DismissAlert => Vec::new(),

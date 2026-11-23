@@ -19,6 +19,7 @@ pub struct UiState {
     pub voice_settings: VoiceSettingsState,
     pub timers: Vec<crate::Timer>,
     pub voice: VoiceUiState,
+    pub tool_trail: Vec<ToolTrailStep>,
 }
 
 impl Default for UiState {
@@ -42,6 +43,7 @@ impl Default for UiState {
             voice_settings: VoiceSettingsState::default(),
             timers: Vec::new(),
             voice: VoiceUiState::default(),
+            tool_trail: Vec::new(),
         }
     }
 }
@@ -82,4 +84,28 @@ pub struct VoiceUiState {
     pub state: VoiceState,
     pub stt_text: String,
     pub response_text: String,
+    pub response_speaker: ResponseSpeaker,
+    pub response_line_serial: u64,
+    pub response_fading: bool,
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum ResponseSpeaker {
+    User,
+    #[default]
+    Agent,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ToolTrailState {
+    Running,
+    Done,
+    Failed,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ToolTrailStep {
+    pub key: String,
+    pub label: String,
+    pub state: ToolTrailState,
 }

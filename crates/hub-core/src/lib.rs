@@ -36,7 +36,10 @@ pub use present::{
 };
 pub use runtime::run;
 use tokio::sync::{mpsc, watch};
-pub use ui_state::{UiEvents, UiState, VoiceSettingsState, VoiceState, VoiceUiState};
+pub use ui_state::{
+    ResponseSpeaker, ToolTrailState, ToolTrailStep, UiEvents, UiState, VoiceSettingsState,
+    VoiceState, VoiceUiState,
+};
 pub use view::{Focus, Screen, ViewState};
 use voice_client::{VoiceCommand, VoiceConfig, VoiceEvent};
 pub use voice_settings::DEFAULT_OTA_URL;
@@ -58,9 +61,11 @@ pub enum UserInput {
         id: String,
         pinned: bool,
     },
+    RemoveCountdown(i64),
     Open(Screen),
     Back,
     Activity,
+    OrbTapped,
     SaveVoiceUrl(String),
     VoiceConnect,
     Setup(
@@ -86,7 +91,7 @@ pub struct Io {
     pub ui_tx: watch::Sender<UiState>,
 }
 
-pub use features::countdowns::{Countdown, CountdownView};
+pub use features::countdowns::{Countdown, CountdownView, Repeat};
 pub use features::photos::Photo;
 pub use features::reminders::{Reminder, ReminderDue, ReminderHistory, ReminderRepeat};
 pub use features::timers::Timer;

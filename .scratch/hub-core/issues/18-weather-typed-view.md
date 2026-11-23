@@ -24,3 +24,4 @@ Spec: [../spec.md](../spec.md) · UI: hub-ui #09
 
 - 2026-11-23: đã chốt ở #14, `selected-day` do hub-core giữ qua `Focus`.
 - 2026-11-23: `UiState.weather` giờ giữ `WeatherForecast` có kiểu; SQLite tiếp tục lưu JSON. `present` trả đủ hợp đồng thời tiết và suy ngày chọn từ `Focus::Weather`. Đã qua `cargo test -p hub-core`, `cargo build -p hub`, `cargo fmt --all -- --check`, `git diff --check` trên nhánh ticket.
+- 2026-11-23: sau khi merge tip `16fea0b`, test tập trung `cargo test -p hub-core --test weather_present --test present` (7 tests), `cargo test -p hub-core` (17 unit + 58 integration), `cargo build -p hub`, format check và `git diff --check` đều qua.

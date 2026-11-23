@@ -1,7 +1,7 @@
 use rusqlite::Connection;
 use std::path::Path;
 
-/// Numbered schema migrations, applied in order. Each is idempotent.
+/// Numbered schema migrations, applied in order; migration 0007 is schema-guarded.
 const MIGRATIONS: &[&str] = &[
     include_str!("migrations/0001_init.sql"),
     include_str!("migrations/0002_countdowns.sql"),
@@ -10,7 +10,9 @@ const MIGRATIONS: &[&str] = &[
     include_str!("migrations/0005_photos.sql"),
     include_str!("migrations/0006_calendar.sql"),
     include_str!("migrations/0007_timer_duration.sql"),
+    include_str!("migrations/0008_countdown_metadata.sql"),
 ];
+const TIMER_DURATION_MIGRATION_INDEX: usize = 6;
 
 pub struct Store {
     pub(crate) connection: Connection,
@@ -42,11 +44,14 @@ impl Store {
         ephemeral_photos: bool,
     ) -> anyhow::Result<Self> {
         connection.pragma_update(None, "journal_mode", "WAL")?;
-        for migration in &MIGRATIONS[..MIGRATIONS.len() - 1] {
+        for migration in &MIGRATIONS[..TIMER_DURATION_MIGRATION_INDEX] {
             connection.execute_batch(migration)?;
         }
         if !has_timer_duration(&connection)? {
-            connection.execute_batch(MIGRATIONS[MIGRATIONS.len() - 1])?;
+            connection.execute_batch(MIGRATIONS[TIMER_DURATION_MIGRATION_INDEX])?;
+        }
+        for migration in &MIGRATIONS[TIMER_DURATION_MIGRATION_INDEX + 1..] {
+            connection.execute_batch(migration)?;
         }
         Ok(Self {
             connection,

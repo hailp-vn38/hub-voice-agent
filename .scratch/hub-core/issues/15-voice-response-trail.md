@@ -1,6 +1,6 @@
 # 15 — Voice, chữ phản hồi, ToolTrail và chạm Orb
 
-Status: ready-for-agent
+Status: ready-for-human
 Blocked by: 14
 Spec: [../spec.md](../spec.md) · UI: hub-ui #04, #05
 
@@ -14,6 +14,11 @@ Spec: [../spec.md](../spec.md) · UI: hub-ui #04, #05
 
 ## Nghiệm thu
 
-- [ ] Test qua `run()`: wake → STT → TTS hai câu → `response.line-serial` tăng 3 lần, speaker đúng.
-- [ ] Test: `ToolCall` thành công và lỗi → `tool_trail` có hai bước với trạng thái đúng; lượt mới xoá trail.
-- [ ] Test: `OrbTapped` khi Idle → `ListenStart` + mic bật.
+- [x] Test qua `run()`: wake → STT → TTS hai câu → `response.line-serial` tăng 3 lần, speaker đúng.
+- [x] Test: `ToolCall` thành công và lỗi → `tool_trail` có hai bước với trạng thái đúng; lượt mới xoá trail.
+- [x] Test: `OrbTapped` khi Idle → `ListenStart` + mic bật.
+
+## Comments
+
+- `present` hiện cung cấp `voice`, `response` và `tool_trail`; chữ STT/TTS được tách theo khoảng trắng. `mic_muted` là `false` cho tới G5. Nguồn `TtsText` hiện không có metadata nhấn nên `Word.emphasis` là `false`.
+- Sau khi ghép tip integration #16, đã chạy `scripts/test.sh -p hub-core` (123 passed), `cargo fmt --all -- --check`, `cargo check -p hub-core --all-targets` và `git diff --check` (đều thành công).

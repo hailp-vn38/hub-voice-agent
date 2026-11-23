@@ -1,6 +1,9 @@
-use super::{audio, effects::Effect, jobs::Internal, tick, voice};
+use super::{
+    audio, effects::Effect, jobs::Internal, tick, tool_trail, tool_trail::ToolTrail, voice,
+};
 use crate::{
-    Alert, AudioEvent, Clock, Config, HomeEvent, Ports, Screen, Store, System, UserInput,
+    Alert, AudioEvent, Clock, Config, Focus, HomeEvent, Ports, Screen, Store, System,
+    ToolTrailState, UserInput,
     alerts::Alerts,
     conversation::{Conversation, Input},
     features::{calendar, countdowns, home, photos, reminders, timers, weather},
@@ -26,6 +29,7 @@ pub(super) struct Hub {
     conversation: Conversation,
     pub(super) alerts: Alerts,
     pub(super) view: View,
+    tool_trail: ToolTrail,
 }
 
 impl Hub {
@@ -49,6 +53,7 @@ impl Hub {
             conversation: Conversation::default(),
             alerts: Alerts::default(),
             view: View::new(now),
+            tool_trail: ToolTrail::default(),
         })
     }
 
@@ -58,9 +63,11 @@ impl Hub {
 
     /// The first UI snapshot from the loaded state.
     pub fn snapshot(&self) -> Vec<Effect> {
-        let mut effects = vec![self.weather.snapshot(), self.photos.snapshot()];
+        let now = self.now();
+        let mut effects = tick::tick(&now);
+        effects.extend([self.weather.snapshot(), self.photos.snapshot()]);
         effects.extend(self.timers.snapshot());
-        effects.extend(self.countdowns.snapshot(self.now().date()));
+        effects.extend(self.countdowns.snapshot(now.date()));
         effects.extend(self.reminders.snapshot());
         effects.extend(self.calendar.snapshot());
         effects
@@ -135,13 +142,22 @@ impl Hub {
                 (id, Err(anyhow::anyhow!("Job timed out")), reply)
             }
             Internal::Timeout(_, reply) => {
-                return reply
+                let tool_name = reply.as_ref().map(|call| call.name.clone());
+                let mut effects = reply
                     .map(|call| Effect::ReplyError(call, "Job timed out"))
                     .into_iter()
-                    .collect();
+                    .collect::<Vec<_>>();
+                if let Some(name) = tool_name
+                    && let Some(effect) =
+                        self.tool_trail.finish_latest(&name, ToolTrailState::Failed)
+                {
+                    effects.insert(0, effect);
+                }
+                return effects;
             }
         };
-        self.track_view(store, |hub| {
+        let tool_name = reply.as_ref().map(|call| call.name.clone());
+        let mut effects = self.track_view(store, |hub| {
             if id == "weather" {
                 hub.weather.on_job(result, reply, seconds)
             } else if calendar::Feature::owns_job(&id) {
@@ -153,20 +169,56 @@ impl Hub {
             } else {
                 Vec::new()
             }
-        })
+        });
+        if let Some(name) = tool_name
+            && let Some(state) = tool_trail::outcome(&effects)
+            && let Some(effect) = self.tool_trail.finish_latest(&name, state)
+        {
+            effects.insert(0, effect);
+        }
+        effects
     }
 
     pub fn on_voice(&mut self, event: VoiceEvent, store: &Store) -> Vec<Effect> {
         let now = self.now();
         self.speech.event(&event, now.timestamp().as_second());
         self.track_view(store, |hub| match event {
-            VoiceEvent::ToolCall(call) => hub.on_tool(call, store),
-            VoiceEvent::ServerTool {
-                name,
-                state: ToolState::Started,
-            } => view::screen_for_server_tool(&name)
-                .map(|screen| hub.view.show(screen, now.timestamp().as_second()))
-                .unwrap_or_default(),
+            VoiceEvent::ToolCall(call) => {
+                let name = call.name.clone();
+                let (key, started) = hub.tool_trail.start(name);
+                let tool_effects = hub.on_tool(call, store);
+                let mut effects = vec![started];
+                if let Some(state) = tool_trail::outcome(&tool_effects)
+                    && let Some(effect) = hub.tool_trail.finish(&key, state)
+                {
+                    effects.push(effect);
+                }
+                effects.extend(tool_effects);
+                effects
+            }
+            VoiceEvent::ServerTool { name, state } => {
+                let seconds = now.timestamp().as_second();
+                match state {
+                    ToolState::Started => {
+                        let (_, started) = hub.tool_trail.start(name.clone());
+                        let mut effects = view::screen_for_server_tool(&name)
+                            .map(|screen| hub.view.show(screen, seconds))
+                            .unwrap_or_default();
+                        effects.push(started);
+                        effects
+                    }
+                    ToolState::Completed => hub
+                        .tool_trail
+                        .finish_latest(&name, ToolTrailState::Done)
+                        .into_iter()
+                        .collect(),
+                    ToolState::Failed => hub
+                        .tool_trail
+                        .finish_latest(&name, ToolTrailState::Failed)
+                        .into_iter()
+                        .collect(),
+                }
+            }
             event => voice::on(event, &mut hub.conversation, now),
         })
     }
@@ -174,11 +226,15 @@ impl Hub {
     pub fn on_audio(&mut self, event: AudioEvent) -> Vec<Effect> {
         let now = self.now();
         let mut effects = Vec::new();
-        if matches!(event, AudioEvent::WakeWord) {
+        let starts_turn = matches!(&event, AudioEvent::WakeWord) && self.conversation.is_idle();
+        if matches!(&event, AudioEvent::WakeWord) {
             effects.extend(
                 self.view
                     .on_user(UserInput::Activity, now.timestamp().as_second()),
             );
+        }
+        if starts_turn && let Some(effect) = self.tool_trail.clear() {
+            effects.push(effect);
         }
         effects.extend(audio::on(event, &mut self.conversation, now));
         effects
@@ -189,10 +245,37 @@ impl Hub {
     }
 
     pub fn on_input(&mut self, input: UserInput, store: &Store) -> Vec<Effect> {
-        let now = self.now().timestamp().as_second();
+        if matches!(&input, UserInput::OrbTapped) {
+            return self.on_orb_tapped(store);
+        }
+        let now = self.now();
+        let seconds = now.timestamp().as_second();
         self.track_view(store, |hub| match input {
-            UserInput::Timer(input) => hub.timers.on_input(&mut hub.view, input, now),
-            input => hub.view.on_user(input, now),
+            UserInput::RemoveCountdown(id) => {
+                let mut effects = hub.countdowns.remove_id(id, now.date());
+                effects.extend(hub.view.on_user(UserInput::Activity, seconds));
+                if hub.view.focus() == Some(&Focus::Countdown(id)) {
+                    effects.extend(hub.view.on_user(UserInput::Focus(None), seconds));
+                }
+                effects
+            }
+            UserInput::Timer(input) => hub.timers.on_input(&mut hub.view, input, seconds),
+            input => hub.view.on_user(input, seconds),
+        })
+    }
+
+    fn on_orb_tapped(&mut self, store: &Store) -> Vec<Effect> {
+        let now = self.now();
+        let starts_turn = self.conversation.is_idle();
+        self.track_view(store, |hub| {
+            let mut effects = hub
+                .view
+                .on_user(UserInput::Activity, now.timestamp().as_second());
+            if starts_turn && let Some(effect) = hub.tool_trail.clear() {
+                effects.push(effect);
+            }
+            effects.extend(hub.conversation.on(Input::OrbTapped, now.clone()));
+            effects
         })
     }
 }
