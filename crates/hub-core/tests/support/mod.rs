@@ -1,3 +1,6 @@
+mod weather;
+pub use weather::FakeWeather;
+
 use hub_core::Clock;
 use jiff::{Span, Zoned};
 use tokio::time::Instant;
@@ -64,6 +67,7 @@ impl Hub {
             hub_core::Store::in_memory().unwrap(),
             Ports {
                 clock: Arc::new(TestClock::at(start)),
+                weather: Arc::new(hub_core::OpenMeteo::default()),
             },
             Io {
                 voice_config_tx,

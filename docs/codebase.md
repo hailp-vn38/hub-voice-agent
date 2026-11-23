@@ -209,7 +209,7 @@ Integration test dùng server WebSocket giả tại `tests/`; test backoff dùng
 
 #### Interface bên ngoài
 
-Interface bên dưới là thiết kế đích. Hiện `run(config, store, ports, io)` xử lý voice settings, hội thoại và các tool hẹn giờ. `ConfigStore` giữ cấu hình voice, Google Calendar, Home Assistant và vị trí nhà; `Store::open(dir)` hoặc `Store::in_memory()` mở SQLite; `tool_definitions()` cung cấp schema cho bốn tool hẹn giờ. Báo hết giờ thuộc ticket 06.
+Interface bên dưới là thiết kế đích. Hiện `run(config, store, ports, io)` xử lý voice settings, hội thoại và các tool hẹn giờ. `ConfigStore` giữ cấu hình voice, Google Calendar, Home Assistant và vị trí nhà; `Store::open(dir)` hoặc `Store::in_memory()` mở SQLite; `tool_definitions()` cung cấp schema cho tool hẹn giờ, đếm ngược và thời tiết. `WeatherSource` cung cấp dự báo theo tọa độ hoặc tên thành phố; `OpenMeteo` là adapter HTTP, còn `UiState.weather` giữ dữ liệu, trạng thái cũ và icon/nền. Cache SQLite được dùng trong 30 phút và tạm xem kết thúc ngay khi rời màn Thời tiết. Báo hết giờ thuộc ticket 06.
 
 ```rust
 pub async fn run(config: ConfigStore, store: Store, ports: Ports, io: Io) -> anyhow::Result<()>;

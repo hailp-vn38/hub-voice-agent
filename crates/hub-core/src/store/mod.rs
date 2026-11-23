@@ -19,6 +19,7 @@ impl Store {
         connection.pragma_update(None, "journal_mode", "WAL")?;
         connection.execute_batch(include_str!("migrations/0001_init.sql"))?;
         connection.execute_batch(include_str!("migrations/0002_countdowns.sql"))?;
+        connection.execute_batch(include_str!("migrations/0003_weather.sql"))?;
         Ok(Self { connection })
     }
 }

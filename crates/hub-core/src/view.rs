@@ -20,6 +20,7 @@ pub enum Screen {
 pub enum Focus {
     Timer(i64),
     Countdown(i64),
+    Weather(String),
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -36,6 +37,9 @@ pub(crate) struct View {
 }
 
 impl View {
+    pub fn screen(&self) -> Screen {
+        self.state.screen
+    }
     pub fn open(&mut self, screen: Screen, focus: Option<Focus>, now: i64) -> Vec<Effect> {
         if screen != Screen::Menu && !matches!(screen, Screen::Center | Screen::Ambient) {
             if self.state.screen == Screen::Menu {

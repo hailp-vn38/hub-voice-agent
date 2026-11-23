@@ -27,7 +27,7 @@ async fn timed_out_job_reports_timeout() {
         None,
         Duration::from_secs(3),
     );
-    assert!(matches!(jobs.next().await, Internal::Timeout(None)));
+    assert!(matches!(jobs.next().await, Internal::Timeout(_, None)));
 }
 
 #[tokio::test(start_paused = true)]
