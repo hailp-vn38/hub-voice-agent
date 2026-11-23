@@ -2,6 +2,7 @@
 mod clock;
 mod fixtures;
 mod levels;
+mod qr;
 mod scenarios;
 
 use crate::{App, DemoPanel, Nav, StatusBar};

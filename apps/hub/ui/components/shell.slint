@@ -8,6 +8,7 @@ import { Ambient } from "../screens/ambient.slint";
 import { MenuScreen } from "../screens/menu.slint";
 import { Placeholder } from "../screens/placeholder.slint";
 import { Home } from "../screens/home.slint";
+import { FirstBoot } from "../screens/first-boot.slint";
 
 // Khung app: tầng trung tâm ⇄ menu (vuốt theo ngón tay), tầng màn tính năng,
 // hàng dưới cùng dành cho Voice dock (ngoài vùng vuốt), lớp phủ ở trên cùng.
@@ -94,5 +95,6 @@ export component Shell inherits Rectangle {
         opacity: 1 - root.feat-p;
     }
     Orb { x: (parent.width - self.width) / 2; y: parent.height - root.dock-height / 2 - self.height / 2; }
+    if root.shown == Screen.first-boot: FirstBoot { }
     // Lớp phủ (ticket 14) gắn vào đây.
 }

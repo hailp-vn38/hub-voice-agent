@@ -69,6 +69,8 @@ pub fn all() -> Vec<Scenario> {
             v.set_mic_muted(!v.get_mic_muted());
         }),
         ("Về Idle", |app| app.global::<Voice>().set_state(VoiceState::Idle)),
+        ("Lần đầu: 3 bước", |app| super::fixtures::run_first_boot(app, false)),
+        ("Lần đầu: sai mật khẩu", |app| super::fixtures::run_first_boot(app, true)),
         ("Chữ nhỏ", |app| app.global::<Theme>().set_text_scale(0.85)),
         ("Chữ vừa", |app| app.global::<Theme>().set_text_scale(1.0)),
         ("Chữ lớn", |app| app.global::<Theme>().set_text_scale(1.25)),
