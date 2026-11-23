@@ -1,0 +1,135 @@
+#[allow(dead_code)]
+mod support;
+
+use futures_util::{SinkExt, StreamExt};
+use hub_core::{Io, Ports, Store, UiState, run};
+use serde_json::{Value, json};
+use std::{sync::Arc, time::Duration};
+use support::TestClock;
+use tokio::{
+    io::{AsyncReadExt, AsyncWriteExt},
+    net::TcpListener,
+    sync::{mpsc, watch},
+};
+use tokio_tungstenite::{accept_async, tungstenite::Message};
+use voice_client::{DeviceIdentity, VoiceConfig};
+
+#[tokio::test]
+async fn timers_are_saved_reloaded_and_limit_is_reported() {
+    let dir = std::env::temp_dir().join(format!(
+        "hub-timers-{}-{:?}",
+        std::process::id(),
+        std::thread::current().id()
+    ));
+    let ws = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let ws_addr = ws.local_addr().unwrap();
+    let ota = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let ota_addr = ota.local_addr().unwrap();
+    tokio::spawn(async move {
+        let (mut conn, _) = ota.accept().await.unwrap();
+        let mut buf = [0; 4096];
+        conn.read(&mut buf).await.unwrap();
+        let body =
+            json!({"websocket":{"url":format!("ws://{ws_addr}"),"token":"token"}}).to_string();
+        conn.write_all(format!("HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}", body.len()).as_bytes()).await.unwrap();
+    });
+    let (config_tx, config_rx) = watch::channel(Some(VoiceConfig {
+        ota_url: format!("http://{ota_addr}/voice/ota/").parse().unwrap(),
+        device: DeviceIdentity::new("device", "client"),
+        tools: hub_core::tool_definitions(),
+    }));
+    let (voice_tx, voice_rx) = voice_client::spawn(config_rx);
+    let (audio_tx, _audio_rx) = mpsc::channel(16);
+    let (_input_tx, input_rx) = mpsc::channel(16);
+    let (ui_tx, ui_rx) = watch::channel(UiState::default());
+    let start: jiff::Zoned = "2026-11-22T12:00:00+07:00[Asia/Ho_Chi_Minh]"
+        .parse()
+        .unwrap();
+    let task = tokio::spawn(run(
+        Store::open(&dir).unwrap(),
+        Ports {
+            clock: Arc::new(TestClock::at(start.clone())),
+        },
+        Io {
+            voice_tx,
+            voice_rx,
+            audio_tx,
+            input_rx,
+            ui_tx,
+        },
+    ));
+    let (stream, _) = ws.accept().await.unwrap();
+    let mut socket = accept_async(stream).await.unwrap();
+    socket.next().await.unwrap().unwrap();
+    socket.send(Message::Text(json!({"type":"hello","transport":"websocket","session_id":"test","audio_params":{"format":"opus","sample_rate":24000,"channels":1,"frame_duration":60}}).to_string().into())).await.unwrap();
+    for id in 1..=6 {
+        let arguments = if id == 6 {
+            json!({"minutes":"invalid","label":"egg"})
+        } else {
+            json!({"minutes":7,"label":"luộc trứng"})
+        };
+        let frame = json!({"type":"mcp","payload":{"jsonrpc":"2.0","id":id,"method":"tools/call","params":{"name":"hub_timer_start","arguments":arguments}}});
+        socket
+            .send(Message::Text(frame.to_string().into()))
+            .await
+            .unwrap();
+        let reply: Value = loop {
+            let message = tokio::time::timeout(Duration::from_secs(5), socket.next())
+                .await
+                .unwrap()
+                .unwrap()
+                .unwrap();
+            if let Message::Text(text) = message {
+                let value: Value = serde_json::from_str(&text).unwrap();
+                if value["payload"]["id"] == id {
+                    break value;
+                }
+            }
+        };
+        if id <= 4 {
+            assert!(reply["payload"]["result"].is_object(), "{reply}");
+        } else if id == 5 {
+            assert!(
+                reply["payload"]["error"]["message"]
+                    .as_str()
+                    .unwrap()
+                    .contains('4')
+            );
+        } else {
+            assert!(
+                reply["payload"]["error"]["message"]
+                    .as_str()
+                    .unwrap()
+                    .contains("Invalid arguments")
+            );
+        }
+    }
+    assert_eq!(ui_rx.borrow().timers.len(), 4);
+    drop(ui_rx);
+    task.await.unwrap().unwrap();
+    let (voice_tx, _commands) = mpsc::channel(1);
+    let (_events, voice_rx) = mpsc::channel(1);
+    let (audio_tx, _audio) = mpsc::channel(1);
+    let (_input, input_rx) = mpsc::channel(1);
+    let (ui_tx, mut ui_rx) = watch::channel(UiState::default());
+    let task = tokio::spawn(run(
+        Store::open(&dir).unwrap(),
+        Ports {
+            clock: Arc::new(TestClock::at(start)),
+        },
+        Io {
+            voice_tx,
+            voice_rx,
+            audio_tx,
+            input_rx,
+            ui_tx,
+        },
+    ));
+    ui_rx.changed().await.unwrap();
+    assert_eq!(ui_rx.borrow().timers.len(), 4);
+    assert_eq!(ui_rx.borrow().timers[0].label, "luộc trứng");
+    drop(ui_rx);
+    task.await.unwrap().unwrap();
+    drop(config_tx);
+    std::fs::remove_dir_all(dir).unwrap();
+}

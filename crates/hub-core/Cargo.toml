@@ -16,3 +16,6 @@ rusqlite = { version = "0.37", features = ["bundled"] }
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["rt", "test-util"] }
+futures-util = { workspace = true }
+tokio-tungstenite = { workspace = true }
+url = { workspace = true }

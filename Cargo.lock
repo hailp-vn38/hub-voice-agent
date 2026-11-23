@@ -1710,12 +1710,15 @@ name = "hub-core"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "futures-util",
  "jiff",
  "rusqlite",
  "schemars",
  "serde",
  "serde_json",
  "tokio",
+ "tokio-tungstenite",
+ "url",
  "voice-client",
 ]
 
