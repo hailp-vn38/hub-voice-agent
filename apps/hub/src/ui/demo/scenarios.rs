@@ -85,6 +85,14 @@ pub fn all() -> Vec<Scenario> {
         ("Lưu → lỗi", super::spawn::save_fail),
         ("Thẻ nổi", super::spawn::floating),
         ("Thẻ nổi mờ", super::spawn::floating_fade),
+        ("Đếm ngược đến Tết", super::fixtures::countdowns::add_tet),
+        ("Sinh nhật 12/3", super::fixtures::countdowns::add_birthday),
+        ("Qua nửa đêm", super::fixtures::countdowns::midnight),
+        ("Còn < 24 giờ", super::fixtures::countdowns::live),
+        ("Hôm nay là Tết", super::fixtures::countdowns::today),
+        ("Chuyến đi đã qua", super::fixtures::countdowns::passed),
+        ("Còn bao nhiêu ngày đến Tết?", super::fixtures::countdowns::focus_tet),
+        ("Xoá chuyến đi", super::fixtures::countdowns::remove_trip),
         ("Chữ lớn", |app| app.global::<Theme>().set_text_scale(1.25)),
     ]
 }

@@ -5,6 +5,7 @@ pub use first_boot::run as run_first_boot;
 pub use menu::idle as menu_idle;
 use crate::App;
 
+pub mod countdowns;
 pub mod home;
 
 pub fn init(app: &App) {
@@ -12,6 +13,9 @@ pub fn init(app: &App) {
     menu::init(app);
     home::init(app);
     first_boot::init(app);
+    countdowns::init(app);
 }
 
-pub fn tick(_app: &App) {}
+pub fn tick(app: &App) {
+    countdowns::tick(app);
+}

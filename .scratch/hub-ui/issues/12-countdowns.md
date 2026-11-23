@@ -1,6 +1,6 @@
 # 12 — Màn Đếm ngược
 
-Status: ready-for-agent
+Status: resolved
 Blocked by: 06
 Spec: [../spec.md](../spec.md)
 Thiết kế: concept.md §6 "Màn Đếm ngược"
@@ -48,3 +48,7 @@ Map: chờ hub-core #07
 | `.confetti-serial` | |
 | `.focus` / `.focus-serial` | |
 | `select` / `open-detail` / `close-detail` / `remove` | |
+
+## Answer
+
+Đã làm contract/countdowns.slint, screens/countdowns.slint, components/confetti.slint, fixture và 8 kịch bản demo. Flip chỉ chạy khi value đổi và mốc không đổi. Pháo giấy 30 mảnh từ Orb, tự gỡ sau 2 giây. Chưa có: ô bị xoá mờ dần (chỉ các ô còn lại dồn lên), hiệu ứng phóng lên khi chạm mốc ở danh sách (hoán đổi tức thì), đo fps trên Pi (ready-for-human).
