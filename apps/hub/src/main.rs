@@ -6,9 +6,12 @@ compile_error!(
 compile_error!("enable exactly one backend feature: `desktop` (default) or `pi`");
 
 mod ui;
+#[cfg(not(feature = "demo"))]
 use hub_core::{ConfigStore, Io, Ports, SystemClock, UiState, UserInput};
 use slint::ComponentHandle;
+#[cfg(not(feature = "demo"))]
 use std::{path::PathBuf, sync::Arc, thread};
+#[cfg(not(feature = "demo"))]
 use tokio::sync::{mpsc, oneshot, watch};
 slint::include_modules!();
 
