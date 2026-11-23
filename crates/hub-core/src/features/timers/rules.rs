@@ -32,18 +32,19 @@ impl Timers {
         Ok(())
     }
     fn find(&self, label: &str) -> Result<usize, String> {
-        let matches: Vec<_> = self
+        let labels: Vec<_> = self
             .items
             .iter()
-            .enumerate()
-            .filter(|(_, t)| t.label.eq_ignore_ascii_case(label))
+            .map(|timer| timer.label.as_str())
             .collect();
-        match matches.as_slice() {
-            [] => Err(format!("Timer not found: {label}")),
-            [(index, _)] => Ok(*index),
-            _ => Err(format!(
-                "Ambiguous timer label: {label}; {} matches",
-                matches.len()
+        match crate::selector::select(&labels, label) {
+            crate::selector::Selection::NotFound => Err(format!("Timer not found: {label}")),
+            crate::selector::Selection::Found(found) => {
+                Ok(labels.iter().position(|item| *item == found).unwrap())
+            }
+            crate::selector::Selection::Ambiguous(found) => Err(format!(
+                "Ambiguous timer label: {label}; choices: {}",
+                found.join(", ")
             )),
         }
     }

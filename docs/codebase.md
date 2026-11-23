@@ -401,3 +401,7 @@ Ví dụ test qua interface của hub-core: gửi `ToolCall("hub_timer_start", {
 - **Giờ trước khi NTP đồng bộ.** Pi 4 không có RTC; khởi động khi mất mạng thì giờ hệ thống sai (fake-hwclock chỉ giữ giờ lúc tắt). Hẹn giờ/Reminder theo giờ tuyệt đối có thể báo sai hoặc gắn "Đã lỡ" sai. Đề xuất: `System` báo trạng thái đồng bộ giờ, `alerts` không xử lý mục quá hạn cho tới khi đã đồng bộ.
 - **Đổi độ phân giải lúc chạy.** Chưa rõ Slint `linuxkms` có đổi mode KMS mà không khởi động lại app không. Nếu phải khởi động lại, luồng "Giữ độ phân giải này? 10" cần lưu mode cũ vào config để quay về sau lần khởi động kế.
 - **Sample rate.** Kiểm sample rate Opus mà Voice Protocol yêu cầu; openWakeWord cần 16 kHz. Khác nhau thì `capture` phải resample một nhánh.
+
+### Giao diện đếm ngược của hub-core
+
+`hub_countdown_create` nhận `label`, `date` (YYYY-MM-DD), `repeat` (`none`, `yearly`, `yearly_lunar`) và `lunar_leap` tùy chọn. Với `yearly_lunar`, `date` là ngày âm lịch Việt Nam UTC+7; ngày 30 trong tháng thiếu được chuyển thành ngày 29, còn tháng nhuận chỉ lặp vào lần có cùng tháng nhuận. Ngày 29/2 dương lịch lặp vào 28/2 trong năm không nhuận. `hub_countdown_remove` tìm nhãn không phân biệt dấu và trả các lựa chọn khi mơ hồ; `hub_countdown_list` trả cùng các mốc và số ngày như `UiState.countdowns`.
