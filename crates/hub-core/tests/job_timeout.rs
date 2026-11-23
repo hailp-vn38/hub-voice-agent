@@ -3,7 +3,7 @@ mod support;
 use futures_util::{SinkExt, StreamExt};
 use hub_core::{
     CalendarDelta, CalendarEvent, CalendarFuture, CalendarQuery, CalendarSettings, CalendarSource,
-    Io, NewCalendarEvent, Ports, Store, UiState, run,
+    Io, NewCalendarEvent, PendingState, Ports, Store, UiState, present, run,
 };
 use serde_json::{Value, json};
 use std::sync::Arc;
@@ -61,7 +61,7 @@ async fn timed_out_calendar_job_replies_to_real_tool_call() {
     let (audio_tx, _audio_rx) = mpsc::channel(16);
     let (_audio_events, audio_rx) = mpsc::channel(16);
     let (_input_tx, input_rx) = mpsc::channel(16);
-    let (ui_tx, _ui_rx) = watch::channel(UiState::default());
+    let (ui_tx, mut ui_rx) = watch::channel(UiState::default());
     let started = Arc::new(tokio::sync::Notify::new());
     let task = tokio::spawn(run(
         config,
@@ -114,5 +114,20 @@ async fn timed_out_calendar_job_replies_to_real_tool_call() {
     };
     assert_eq!(reply["payload"]["error"]["code"], -32603);
     assert_eq!(reply["payload"]["error"]["message"], "Job timed out");
+    tokio::time::timeout(std::time::Duration::from_secs(2), async {
+        loop {
+            if present(&ui_rx.borrow())
+                .calendar
+                .blocks
+                .iter()
+                .any(|block| block.pending == PendingState::Failed)
+            {
+                break;
+            }
+            ui_rx.changed().await.unwrap();
+        }
+    })
+    .await
+    .unwrap();
     task.abort();
 }

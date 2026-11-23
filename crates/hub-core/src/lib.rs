@@ -30,7 +30,11 @@ pub use ports::{
     FetchedImage, HomeEntity, HomeEvent, HomeSource, ImageFetcher, NewCalendarEvent, System,
     SystemClock, WeatherLocation, WeatherSource,
 };
-pub use present::{AlertKind, AlertView, HubView, TimerCardView, TimerPhase, TimersView, present};
+pub use present::{
+    AlertKind, AlertView, CalendarBlockView, CalendarDayView, CalendarDetailView, CalendarKind,
+    CalendarMonthDayView, CalendarUpcomingView, CalendarView, HubView, PendingState, TimerCardView,
+    TimerPhase, TimersView, present,
+};
 pub use runtime::run;
 use tokio::sync::{mpsc, watch};
 pub use ui_state::{

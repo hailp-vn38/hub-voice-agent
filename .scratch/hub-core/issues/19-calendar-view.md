@@ -1,6 +1,6 @@
 # 19 — Lịch: dữ liệu hiển thị
 
-Status: ready-for-agent
+Status: ready-for-human
 Blocked by: 14, 17
 Spec: [../spec.md](../spec.md) · UI: hub-ui #10
 
@@ -13,11 +13,14 @@ Spec: [../spec.md](../spec.md) · UI: hub-ui #10
 
 ## Nghiệm thu
 
-- [ ] Test `present`: 3 sự kiện chồng giờ → `cols == 3`, `col` 0..2; sự kiện cả ngày không vào dòng thời gian.
-- [ ] Test: focus id sự kiện thứ Sáu → `selected-day` là thứ Sáu, `blocks` là của thứ Sáu.
-- [ ] Test: Reminder hôm nay hiện trong `blocks` với `kind == reminder`.
-- [ ] Test qua `run()`: tạo sự kiện → `saving` rồi `saved`; nguồn lỗi → `failed`.
+- [x] Test `present`: 3 sự kiện chồng giờ → `cols == 3`, `col` 0..2; sự kiện cả ngày không vào dòng thời gian.
+- [x] Test: focus id sự kiện thứ Sáu → `selected-day` là thứ Sáu, `blocks` là của thứ Sáu.
+- [x] Test: Reminder hôm nay hiện trong `blocks` với `kind == reminder`.
+- [x] Test qua `run()`: tạo sự kiện → `saving` rồi `saved`; nguồn lỗi → `failed`.
 
 ## Comments
 
 - 2026-11-23: đã chốt ở #14. `selected-day` do hub-core giữ; `month-view`, `detail` do UI giữ. Vì vậy hợp đồng `CalDetail` cần chuyển thành danh sách chi tiết theo `key` (UI chọn theo key đang mở): ghi vào ticket hub-ui #10 khi map.
+
+- 2026-11-23: Đã thêm `CalendarView` cho tuần, lưới tháng, block sự kiện/Reminder, cột chồng giờ, sắp tới, chi tiết theo `key`, trạng thái đồng bộ và focus. `hub_calendar_create` chọn ngày sự kiện ngay khi bắt đầu; trạng thái hiển thị `saving` → `saved`/`failed`, kể cả timeout. Google `CalendarEvent.description` được đưa vào chi tiết. `tests/present_calendar.rs`, `tests/calendar_focus.rs`, `tests/calendar_create.rs` và `tests/job_timeout.rs` kiểm tra qua public `present()`/`run()`.
+- 2026-11-23: Gate tự động: `CARGO_TARGET_DIR=/private/tmp/ai-hub-core-19/target scripts/test.sh -p hub-core` (134 passed), `cargo fmt --all -- --check`, `cargo build -p hub`, `git diff --check` đều qua. Map và kiểm tra trực quan thuộc hub-ui #10, chưa chạy; khi map cần đổi `CalDetail` thành danh sách có `key`.

@@ -244,7 +244,7 @@ Gần như mọi hành vi của sản phẩm — luồng voice, 21 tool `hub_*`,
 
 Ứng dụng mở Setup web trên `0.0.0.0:8080` và gửi thay đổi tới actor; OAuth dùng redirect loopback, có thể dán URL từ điện thoại. Làm mới dữ liệu (thời tiết 30 phút, lịch 5 phút) chạy trên tick của actor qua `Effect::Spawn`; HA đẩy event qua `HomeSource::subscribe()`.
 
-Calendar dùng `CalendarSource` và adapter `GoogleCalendar`: actor làm mới mỗi năm phút, lưu cache cùng sync token trong SQLite, đồng bộ lại đầy đủ (`CalendarQuery::Full`, cửa sổ 30 ngày trước đến 60 ngày sau theo ngày địa phương) khi khởi động, mỗi ngày địa phương mới hoặc khi Google trả 410, và dùng cache khi offline. Setup web lưu refresh token trong `ConfigStore`; tool lịch mở màn ngay cả khi yêu cầu thất bại; sau khi tạo thành công, focus sự kiện mới. `hub_calendar_get` nhận khoảng thời gian và `focus` tùy chọn. `hub_calendar_create` nhận giờ RFC3339 hoặc ngày YYYY-MM-DD (kết thúc độc quyền) cùng địa điểm tùy chọn. `UiState.calendar_online` và `calendar_last_sync` cho phép bridge hiển thị trạng thái và giờ đồng bộ gần nhất; giờ này được lưu cùng cache.
+Calendar dùng `CalendarSource` và adapter `GoogleCalendar`: actor làm mới mỗi năm phút, lưu cache cùng sync token trong SQLite, đồng bộ lại đầy đủ (`CalendarQuery::Full`, cửa sổ 30 ngày trước đến 60 ngày sau theo ngày địa phương) khi khởi động, mỗi ngày địa phương mới hoặc khi Google trả 410, và dùng cache khi offline. `CalendarEvent` giữ địa điểm và mô tả từ Google để `present` dựng chi tiết theo key. Setup web lưu refresh token trong `ConfigStore`; tool lịch mở màn ngay cả khi yêu cầu thất bại; khi bắt đầu tạo sự kiện, ngày của nó được chọn, sau đó focus sự kiện mới nếu tạo thành công. `hub_calendar_get` nhận khoảng thời gian và `focus` tùy chọn. `hub_calendar_create` nhận giờ RFC3339 hoặc ngày YYYY-MM-DD (kết thúc độc quyền) cùng địa điểm tùy chọn. `UiState.calendar_online` và `calendar_last_sync` cho phép bridge hiển thị trạng thái và giờ đồng bộ gần nhất; giờ này được lưu cùng cache. Trạng thái tạo `saving`/`saved`/`failed` là tạm thời trong `UiState`.
 
 #### Kênh audio
 
@@ -266,7 +266,9 @@ pub enum AudioEvent {
 
 Biên độ mic và năng lượng TTS không đi qua `hub-core`: audio ghi thẳng vào `watch<Levels>` mà UI đọc. Hiện tại adapter desktop chỉ tiêu thụ lệnh, chưa thu hoặc phát âm thanh; `UiState.voice` chứa trạng thái hội thoại, transcript và phản hồi.
 
-`UiState.now` là `jiff::Zoned` do actor khởi tạo từ clock và cập nhật mỗi tick; `UiState.events` giữ serial tăng dần cho hiệu ứng một lần. `present(&UiState) -> HubView` chuẩn bị dữ liệu cho các hợp đồng UI gồm `nav`, `status`, `ambient`, `voice`, `response`, `tool_trail`, `timers`, `alert`, `countdowns` và `reminders`; hàm không đọc đồng hồ.
+`UiState.now` là `jiff::Zoned` do actor khởi tạo từ clock và cập nhật mỗi tick; `UiState.events` giữ serial tăng dần cho hiệu ứng một lần. `present(&UiState) -> HubView` chuẩn bị dữ liệu cho các hợp đồng UI gồm `nav`, `status`, `ambient`, `voice`, `response`, `tool_trail`, `timers`, `alert`, `countdowns`, `reminders` và `calendar`; hàm không đọc đồng hồ.
+
+`calendar` chuẩn bị tuần, lưới tháng, các khối sự kiện/Reminder theo ngày chọn, cột chồng giờ, các sự kiện sắp tới và danh sách chi tiết theo `key`. Ngày chọn lấy từ `Focus::Calendar`; `month-view` và mục chi tiết đang mở do UI giữ. Sự kiện mới có trạng thái lưu tạm trong `UiState`, sau đó đi qua `saving` → `saved` hoặc `failed`.
 
 `response` lấy dòng STT hoặc câu TTS mới nhất, tách theo khoảng trắng và giữ speaker, serial cùng trạng thái mờ. Hiện các từ không có metadata nhấn nên `emphasis` luôn `false`; `voice.mic_muted` cũng luôn `false` cho tới ticket G5. `tool_trail` giữ các bước của lượt hiện tại và xoá khi lượt mới bắt đầu. Chạm Orb qua `UserInput::OrbTapped` bắt đầu lượt khi Idle hoặc kết thúc lượt đang chạy.
 

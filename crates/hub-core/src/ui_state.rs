@@ -8,6 +8,7 @@ pub struct UiState {
     pub calendar: Vec<crate::CalendarEvent>,
     pub calendar_online: Option<bool>,
     pub calendar_last_sync: Option<i64>,
+    pub(crate) calendar_pending: Vec<CalendarPendingEvent>,
     pub weather: crate::WeatherView,
     pub home: Vec<crate::HomeEntity>,
     pub photos: Vec<crate::Photo>,
@@ -32,6 +33,7 @@ impl Default for UiState {
             calendar: Vec::new(),
             calendar_online: None,
             calendar_last_sync: None,
+            calendar_pending: Vec::new(),
             weather: crate::WeatherView::default(),
             home: Vec::new(),
             photos: Vec::new(),
@@ -46,6 +48,24 @@ impl Default for UiState {
             tool_trail: Vec::new(),
         }
     }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum CalendarPendingState {
+    Saving,
+    Saved,
+    Failed,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) struct CalendarPendingEvent {
+    pub key: String,
+    pub summary: String,
+    pub location: Option<String>,
+    pub start: String,
+    pub end: String,
+    pub state: CalendarPendingState,
+    pub saved_at: Option<i64>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]

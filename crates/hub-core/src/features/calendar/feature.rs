@@ -5,15 +5,17 @@ use crate::{
     NewCalendarEvent, Screen, Store,
     features::tool_args,
     runtime::{effects::Effect, jobs::JobResult},
+    ui_state::{CalendarPendingEvent, CalendarPendingState},
     view::View,
 };
-use jiff::{Zoned, civil::Date};
+use jiff::{Timestamp, Zoned, civil::Date};
 use std::{sync::Arc, time::Duration};
 use voice_client::ToolCall;
 
 const SYNC_JOB: &str = "calendar-sync";
 const CREATE_JOB_PREFIX: &str = "calendar-create-";
 const SYNC_SECONDS: i64 = 300;
+const SAVED_SECONDS: i64 = 3;
 
 pub struct Feature {
     source: Arc<dyn CalendarSource>,
@@ -26,6 +28,7 @@ pub struct Feature {
     last_full_day: Option<Date>,
     /// Events created here that a sync has not returned yet.
     created: Vec<String>,
+    pending: Vec<CalendarPendingEvent>,
 }
 impl Feature {
     pub fn load(
@@ -44,6 +47,7 @@ impl Feature {
             next_sync: 0,
             last_full_day: None,
             created: Vec::new(),
+            pending: Vec::new(),
         })
     }
     pub fn owns_job(id: &str) -> bool {
@@ -62,6 +66,7 @@ impl Feature {
             next_sync: 0,
             last_full_day: None,
             created: Vec::new(),
+            pending: Vec::new(),
         };
         let mut effects = vec![Effect::CancelJob(SYNC_JOB.into())];
         effects.extend(self.changed());
@@ -72,28 +77,44 @@ impl Feature {
         let events = self.events.clone();
         let last_sync = self.last_sync;
         let online = self.online;
+        let pending = self.pending.clone();
         vec![Effect::Ui(Box::new(move |ui| {
             if ui.calendar == events
                 && ui.calendar_last_sync == last_sync
                 && ui.calendar_online == online
+                && ui.calendar_pending == pending
             {
                 return false;
             }
             ui.calendar = events;
             ui.calendar_last_sync = last_sync;
             ui.calendar_online = online;
+            ui.calendar_pending = pending;
             true
         }))]
     }
     /// Syncs every 5 minutes; the first sync of each local day is a full one.
     pub fn tick(&mut self, now: &Zoned) -> Vec<Effect> {
         let seconds = now.timestamp().as_second();
+        let previous = self.pending.len();
+        self.pending.retain(|pending| {
+            pending.state != CalendarPendingState::Saved
+                || pending
+                    .saved_at
+                    .is_none_or(|saved| seconds.saturating_sub(saved) < SAVED_SECONDS)
+        });
+        let mut effects = if previous != self.pending.len() {
+            self.snapshot()
+        } else {
+            Vec::new()
+        };
         if seconds < self.next_sync || self.settings.refresh_token.is_empty() {
-            return vec![];
+            return effects;
         }
         self.next_sync = seconds.saturating_add(SYNC_SECONDS);
         let full = self.last_full_day != Some(now.date());
-        self.sync(full, now)
+        effects.extend(self.sync(full, now));
+        effects
     }
     fn sync(&self, full: bool, now: &Zoned) -> Vec<Effect> {
         let Some((time_min, time_max)) = window(now) else {
@@ -127,7 +148,7 @@ impl Feature {
     pub fn on_tool(&mut self, view: &mut View, call: ToolCall, now: &Zoned) -> Vec<Effect> {
         match call.name.as_str() {
             "hub_calendar_get" => self.get(view, call, now),
-            "hub_calendar_create" => self.create(call),
+            "hub_calendar_create" => self.create(view, call, now),
             _ => vec![Effect::Reply(
                 call,
                 Err(tool_args::error("Unknown calendar tool")),
@@ -173,7 +194,7 @@ impl Feature {
         ));
         effects
     }
-    fn create(&self, call: ToolCall) -> Vec<Effect> {
+    fn create(&mut self, view: &mut View, call: ToolCall, now: &Zoned) -> Vec<Effect> {
         let args: tools::Create = match tool_args::parse(&call) {
             Ok(args) => args,
             Err(e) => return vec![Effect::Reply(call, Err(e))],
@@ -188,14 +209,50 @@ impl Feature {
             start: args.start,
             end: args.end,
         };
+        let selected_day = if !event.start.contains('T') {
+            event.start.parse::<Date>().map(|date| date.to_string())
+        } else {
+            event.start.parse::<Timestamp>().map(|timestamp| {
+                timestamp
+                    .to_zoned(now.time_zone().clone())
+                    .date()
+                    .to_string()
+            })
+        };
+        let job = format!("{CREATE_JOB_PREFIX}{}", uuid::Uuid::new_v4());
+        self.pending.push(CalendarPendingEvent {
+            key: job.clone(),
+            summary: event.summary.clone(),
+            location: event.location.clone(),
+            start: event.start.clone(),
+            end: event.end.clone(),
+            state: CalendarPendingState::Saving,
+            saved_at: None,
+        });
         let source = self.source.clone();
         let settings = self.settings.clone();
-        vec![Effect::Spawn {
-            job: format!("{CREATE_JOB_PREFIX}{}", uuid::Uuid::new_v4()),
+        let mut effects = selected_day
+            .ok()
+            .map(|day| {
+                view.open(
+                    Screen::Calendar,
+                    Some(Focus::Calendar(day)),
+                    now.timestamp().as_second(),
+                )
+            })
+            .unwrap_or_default();
+        effects.extend(self.snapshot());
+        effects.push(Effect::Ui(Box::new(|ui| {
+            ui.events.spawn = ui.events.spawn.saturating_add(1);
+            true
+        })));
+        effects.push(Effect::Spawn {
+            job,
             work: Box::pin(async move { Ok(Box::new(source.create(settings, event).await?) as _) }),
             reply: Some(call),
             timeout: Duration::from_secs(30),
-        }]
+        });
+        effects
     }
     pub fn on_job(
         &mut self,
@@ -211,6 +268,9 @@ impl Feature {
         let Some(call) = reply else {
             return vec![];
         };
+        let timed_out = result
+            .as_ref()
+            .is_err_and(|error| error.to_string() == "Job timed out");
         let event = result.and_then(|value| {
             value
                 .downcast::<CalendarEvent>()
@@ -218,8 +278,30 @@ impl Feature {
                 .map_err(|_| anyhow::anyhow!("Invalid calendar result"))
         });
         let Ok(event) = event else {
-            return vec![Effect::ReplyError(call, "Calendar request failed")];
+            if let Some(pending) = self.pending.iter_mut().find(|pending| pending.key == id) {
+                pending.state = CalendarPendingState::Failed;
+                pending.saved_at = None;
+            }
+            let mut effects = self.snapshot();
+            effects.push(Effect::ReplyError(
+                call,
+                if timed_out {
+                    "Job timed out"
+                } else {
+                    "Calendar request failed"
+                },
+            ));
+            return effects;
         };
+        if let Some(pending) = self.pending.iter_mut().find(|pending| pending.key == id) {
+            pending.key = event.id.clone();
+            pending.summary = event.summary.clone();
+            pending.location = event.location.clone();
+            pending.start = event.start.clone();
+            pending.end = event.end.clone();
+            pending.state = CalendarPendingState::Saved;
+            pending.saved_at = Some(now.timestamp().as_second());
+        }
         self.created.push(event.id.clone());
         self.upsert(event.clone(), now);
         let mut effects = self.changed();

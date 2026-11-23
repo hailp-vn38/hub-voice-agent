@@ -141,6 +141,9 @@ impl Hub {
             Internal::Timeout(id, reply) if id == "weather" => {
                 (id, Err(anyhow::anyhow!("Job timed out")), reply)
             }
+            Internal::Timeout(id, reply) if calendar::Feature::owns_job(&id) => {
+                (id, Err(anyhow::anyhow!("Job timed out")), reply)
+            }
             Internal::Timeout(_, reply) => {
                 let tool_name = reply.as_ref().map(|call| call.name.clone());
                 let mut effects = reply
