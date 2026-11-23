@@ -7,7 +7,12 @@ version.workspace = true
 voice-client = { path = "../voice-client" }
 jiff = { workspace = true }
 anyhow = { workspace = true }
+serde = { workspace = true }
+toml = "1"
+url = { workspace = true }
+uuid = { version = "1", features = ["v4"] }
 tokio = { workspace = true, features = ["sync", "time", "macros"] }
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["rt", "test-util"] }
+tempfile = "3"

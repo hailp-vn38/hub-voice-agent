@@ -209,7 +209,7 @@ Integration test dùng server WebSocket giả tại `tests/`; test backoff dùng
 
 #### Interface bên ngoài
 
-Interface bên dưới là thiết kế đích. Hiện `run(ports, io)` nhận `clock`, các channel voice, input, audio command và UI; audio command và input chưa có biến thể. Voice event và input chưa được xử lý.
+Interface bên dưới là thiết kế đích. Hiện `run(config, ports, io)` nhận `ConfigStore`, clock và các channel voice, input, audio command và UI. `hub-core` giữ voice settings, phát cấu hình voice qua watch và xử lý lưu URL, kết nối và trạng thái enrollment; các phần còn lại được bổ sung theo ticket.
 
 ```rust
 pub async fn run(config: ConfigStore, store: Store, ports: Ports, io: Io) -> anyhow::Result<()>;
@@ -233,7 +233,7 @@ pub struct Ports {
     pub system: Arc<dyn System>,
 }
 
-pub fn tool_definitions() -> Vec<ToolDef>;   // apps/hub đưa vào VoiceConfig
+pub fn tool_definitions() -> Vec<ToolDef>;   // hub-core đưa vào VoiceConfig
 ```
 
 Gần như mọi hành vi của sản phẩm — luồng voice, 21 tool `hub_*`, điều hướng, báo hết giờ, Reminder, cache offline, Setup web — test được qua đúng interface này: gửi `VoiceEvent`/`AudioEvent`/`UserInput`, tiến clock, rồi kiểm `VoiceCommand`/`AudioCommand` đã gửi và `UiState`.

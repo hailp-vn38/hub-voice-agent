@@ -1669,7 +1669,12 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "jiff",
+ "serde",
+ "tempfile",
  "tokio",
+ "toml",
+ "url",
+ "uuid",
  "voice-client",
 ]
 
