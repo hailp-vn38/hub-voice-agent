@@ -126,7 +126,7 @@ Mỗi ticket có mục **Map với hub-core**: bảng từng field và callback 
 | `AmbientData` | 18 | 05, 14 | chưa |
 | `FirstBootData` | 19 | ADR 0010, **chưa có ticket** | chưa |
 
-Ticket hub-core 14–21 thêm lớp `present` (hàm thuần `UiState` → `HubView`) để bridge chỉ copy field, không định dạng hay suy ra. Các dòng **chưa có ticket** là chỗ hub-core còn thiếu, liệt kê chi tiết (G1–G11) ở [hub-core-gaps.md](hub-core-gaps.md). UI vẫn làm được với demo; cần thêm ticket hub-core trước khi map.
+Ticket hub-core 14–21 thêm lớp `present` (hàm thuần `UiState` → `HubView`) để bridge chỉ copy field, không định dạng hay suy ra. Việc viết bridge cho từng hợp đồng nằm ở ticket [../hub-mac/](../hub-mac/spec.md) 01–06. Các dòng **chưa có ticket** là chỗ hub-core còn thiếu, liệt kê chi tiết (G1–G11) ở [hub-core-gaps.md](hub-core-gaps.md). UI vẫn làm được với demo; cần thêm ticket hub-core trước khi map.
 
 ## Ngoài phạm vi
 

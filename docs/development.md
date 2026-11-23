@@ -31,6 +31,8 @@ ai-hub/
 
 ## 3. Chạy trên Mac
 
+Những gì app thật trên Mac chưa làm được: [limitations.md](limitations.md). Kế hoạch hoàn thiện bản Mac: [.scratch/hub-mac/spec.md](../.scratch/hub-mac/spec.md).
+
 ### Backend Slint theo nơi chạy
 
 | Nơi chạy | Feature Slint | Ghi chú |
