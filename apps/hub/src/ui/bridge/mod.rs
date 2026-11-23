@@ -1,9 +1,11 @@
 //! Adapter thật: UiState → global hợp đồng, callback hợp đồng → UserInput.
+mod calendar;
 mod countdowns;
 mod inputs;
 mod reminders;
 mod timers;
 mod voice;
+mod weather;
 
 pub use inputs::connect_inputs;
 use std::sync::{Arc, Mutex};

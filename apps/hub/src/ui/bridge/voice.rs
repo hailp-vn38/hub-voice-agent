@@ -5,7 +5,10 @@ use crate::{
 };
 use hub_core::{
     ResponseSpeaker, ToolTrailState, UiState, VoiceSettingsState, VoiceState as CoreVoiceState,
-    present::{AlertView, ResponseView, StatusView, TimersView, ToolTrailView, VoiceView},
+    present::{
+        AlertView, CalendarView, ResponseView, StatusView, TimersView, ToolTrailView, VoiceView,
+        WeatherDataView,
+    },
 };
 use slint::{ComponentHandle, ModelRc, VecModel, Weak};
 use std::rc::Rc;
@@ -98,6 +101,8 @@ pub(super) fn apply_changed(
     response: Option<&ResponseView>,
     tool_trail: Option<&ToolTrailView>,
     voice_settings: Option<(&VoiceSettingsState, bool)>,
+    weather: Option<&WeatherDataView>,
+    calendar: Option<&CalendarView>,
     timers: Option<&TimersView>,
     alert: Option<Option<&AlertView>>,
 ) {
@@ -118,6 +123,12 @@ pub(super) fn apply_changed(
     }
     if let Some((settings, url_changed)) = voice_settings {
         apply_voice_settings(app, settings, url_changed);
+    }
+    if let Some(weather) = weather {
+        super::weather::apply(app, weather);
+    }
+    if let Some(calendar) = calendar {
+        super::calendar::apply(app, calendar);
     }
     if let Some(timers) = timers {
         super::timers::apply_timers(app, timers);
@@ -157,6 +168,10 @@ pub fn spawn_bridge(app: Weak<App>, mut rx: watch::Receiver<UiState>, bridge_sta
                 .is_none_or(|previous| previous.ota_url != state.voice_settings.ota_url);
             let voice_settings =
                 settings_changed.then(|| (state.voice_settings.clone(), url_changed));
+            let weather = (previous.is_none_or(|previous| previous.weather != view.weather))
+                .then(|| view.weather.clone());
+            let calendar = (previous.is_none_or(|previous| previous.calendar != view.calendar))
+                .then(|| view.calendar.clone());
             let timers = previous
                 .is_none_or(|previous| previous.timers != view.timers)
                 .then(|| view.timers.clone());
@@ -174,6 +189,8 @@ pub fn spawn_bridge(app: Weak<App>, mut rx: watch::Receiver<UiState>, bridge_sta
                 && countdowns.is_none()
                 && reminders.is_none()
                 && voice_settings.is_none()
+                && weather.is_none()
+                && calendar.is_none()
                 && timers.is_none()
                 && alert.is_none()
             {
@@ -205,6 +222,8 @@ pub fn spawn_bridge(app: Weak<App>, mut rx: watch::Receiver<UiState>, bridge_sta
                         voice_settings
                             .as_ref()
                             .map(|(settings, url_changed)| (settings, *url_changed)),
+                        weather.as_ref(),
+                        calendar.as_ref(),
                         timers.as_ref(),
                         alert.as_ref().map(|alert| alert.as_ref()),
                     );

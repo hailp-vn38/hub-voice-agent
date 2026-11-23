@@ -1,6 +1,6 @@
 use super::BridgeState;
-use crate::{AlertData, App, Nav, SettingsData, TimersData, Voice};
-use hub_core::{Screen as CoreScreen, TimerInput, UserInput};
+use crate::{AlertData, App, CalendarData, Nav, SettingsData, TimersData, Voice, WeatherData};
+use hub_core::{Focus, Screen as CoreScreen, TimerInput, UserInput};
 use slint::ComponentHandle;
 use std::{
     cell::RefCell,
@@ -111,6 +111,50 @@ pub fn connect_inputs(app: &App, input_tx: mpsc::Sender<UserInput>, bridge_state
             inputs.send(UserInput::Open(screen));
         } else {
             eprintln!("hub-core không có màn first-boot; bỏ qua điều hướng");
+        }
+    });
+
+    let weather = app.global::<WeatherData>();
+    let select_weather = inputs.clone();
+    weather.on_select_day(move |key| {
+        let mut inputs = select_weather.borrow_mut();
+        inputs.activity();
+        inputs.send(UserInput::Focus(Some(Focus::Weather(key.to_string()))));
+    });
+
+    let calendar = app.global::<CalendarData>();
+    let weak = app.as_weak();
+    let select_calendar = inputs.clone();
+    calendar.on_select_day(move |day| {
+        if let Some(app) = weak.upgrade() {
+            super::calendar::select_day(&app);
+            let mut inputs = select_calendar.borrow_mut();
+            inputs.activity();
+            inputs.send(UserInput::Focus(Some(Focus::Calendar(day.to_string()))));
+        }
+    });
+    let weak = app.as_weak();
+    let toggle_month = inputs.clone();
+    calendar.on_toggle_month(move || {
+        if let Some(app) = weak.upgrade() {
+            super::calendar::toggle_month(&app);
+            toggle_month.borrow_mut().activity();
+        }
+    });
+    let weak = app.as_weak();
+    let open_detail = inputs.clone();
+    calendar.on_open_detail(move |key| {
+        if let Some(app) = weak.upgrade() {
+            super::calendar::open_detail(&app, key.to_string());
+            open_detail.borrow_mut().activity();
+        }
+    });
+    let weak = app.as_weak();
+    let close_detail = inputs.clone();
+    calendar.on_close_detail(move || {
+        if let Some(app) = weak.upgrade() {
+            super::calendar::close_detail(&app);
+            close_detail.borrow_mut().activity();
         }
     });
 
