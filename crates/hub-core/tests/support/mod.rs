@@ -25,3 +25,52 @@ impl Clock for TestClock {
             .unwrap()
     }
 }
+
+use std::sync::Arc;
+
+use hub_core::{AudioCommand, Io, Ports, UiState, UserInput, run};
+use tokio::{
+    sync::{mpsc, watch},
+    task::JoinHandle,
+};
+use voice_client::{VoiceCommand, VoiceEvent};
+
+#[allow(dead_code)]
+pub struct Hub {
+    pub voice_rx: mpsc::Receiver<VoiceCommand>,
+    pub voice_tx: mpsc::Sender<VoiceEvent>,
+    pub audio_rx: mpsc::Receiver<AudioCommand>,
+    pub input_tx: mpsc::Sender<UserInput>,
+    pub ui_rx: watch::Receiver<UiState>,
+    pub task: JoinHandle<anyhow::Result<()>>,
+}
+
+impl Hub {
+    pub fn start(start: Zoned) -> Self {
+        let (voice_tx, voice_rx) = mpsc::channel(16);
+        let (voice_event_tx, voice_event_rx) = mpsc::channel(16);
+        let (audio_tx, audio_rx) = mpsc::channel(16);
+        let (input_tx, input_rx) = mpsc::channel(16);
+        let (ui_tx, ui_rx) = watch::channel(UiState::default());
+        let task = tokio::spawn(run(
+            Ports {
+                clock: Arc::new(TestClock::at(start)),
+            },
+            Io {
+                voice_tx,
+                voice_rx: voice_event_rx,
+                audio_tx,
+                input_rx,
+                ui_tx,
+            },
+        ));
+        Self {
+            voice_rx,
+            voice_tx: voice_event_tx,
+            audio_rx,
+            input_tx,
+            ui_rx,
+            task,
+        }
+    }
+}

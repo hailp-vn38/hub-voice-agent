@@ -7,15 +7,25 @@ mod ui_state;
 use std::sync::Arc;
 
 pub use ports::{Clock, SystemClock};
-use tokio::sync::watch;
-pub use ui_state::UiState;
 pub use runtime::run;
+use tokio::sync::{mpsc, watch};
+pub use ui_state::UiState;
+use voice_client::{VoiceCommand, VoiceEvent};
 
 pub struct Ports {
     pub clock: Arc<dyn Clock>,
 }
 
+/// Audio commands will be added when audio behavior is implemented.
+pub enum AudioCommand {}
+
+/// User inputs will be added with the corresponding behavior.
+pub enum UserInput {}
+
 pub struct Io {
+    pub voice_tx: mpsc::Sender<VoiceCommand>,
+    pub voice_rx: mpsc::Receiver<VoiceEvent>,
+    pub audio_tx: mpsc::Sender<AudioCommand>,
+    pub input_rx: mpsc::Receiver<UserInput>,
     pub ui_tx: watch::Sender<UiState>,
 }
-
