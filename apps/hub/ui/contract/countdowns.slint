@@ -1,0 +1,30 @@
+// Hợp đồng Đếm ngược. Ticket UI: .scratch/hub-ui/issues/12-countdowns.md.
+// value: days = số ngày ("75"); live = "HH:MM:SS"; today / passed: không dùng.
+export enum CountdownUnit { days, live, today, passed }
+
+export struct Countdown {
+    key: string,
+    label: string,
+    value: string,
+    unit: CountdownUnit,
+    target: string,
+    lunar: string, // "" nếu không phải mốc âm lịch
+    repeat-text: string, // "hằng năm" hoặc ""
+    progress: float,
+    progress-text: string,
+}
+
+export global CountdownsData {
+    in property <string> title;
+    in property <Countdown> main;
+    in property <bool> has-main;
+    in property <[Countdown]> others;
+    in property <bool> detail-open;
+    in property <int> confetti-serial;
+    in property <string> focus;
+    in property <int> focus-serial;
+    callback select(string);
+    callback open-detail();
+    callback close-detail();
+    callback remove(string);
+}

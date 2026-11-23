@@ -6,6 +6,7 @@ pub use first_boot::run as run_first_boot;
 pub use menu::idle as menu_idle;
 use crate::App;
 
+pub mod countdowns;
 pub mod home;
 pub mod weather;
 mod center;
@@ -22,10 +23,12 @@ pub fn init(app: &App) {
     calendar::init(app);
     super::reminders::init(app);
     super::timers::init(app);
+    countdowns::init(app);
 }
 
 pub fn tick(app: &App) {
     center::tick(app);
     calendar::tick(app);
     super::timers::tick(app);
+    countdowns::tick(app);
 }
