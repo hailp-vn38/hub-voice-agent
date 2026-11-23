@@ -1,4 +1,5 @@
 //! Fixture mỗi tính năng một file; ticket sau thêm `mod <feature>;` và gọi vào đây.
+pub mod calendar;
 mod first_boot;
 mod menu;
 pub use first_boot::run as run_first_boot;
@@ -16,11 +17,13 @@ pub fn init(app: &App) {
     first_boot::init(app);
     super::photos::init(app);
     center::init(app);
+    calendar::init(app);
     super::reminders::init(app);
     super::timers::init(app);
 }
 
 pub fn tick(app: &App) {
     center::tick(app);
+    calendar::tick(app);
     super::timers::tick(app);
 }

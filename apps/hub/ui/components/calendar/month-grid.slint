@@ -1,0 +1,26 @@
+import { Theme } from "../../theme.slint";
+import { CalendarData } from "../../contract/calendar.slint";
+
+// Lưới tháng 7 cột; chạm ngày → về dòng thời gian ngày đó.
+export component MonthGrid inherits Rectangle {
+    private property <length> cw: (self.width - 6 * Theme.space-s) / 7;
+    private property <length> ch: (self.height - 5 * Theme.space-s) / 6;
+    for d[i] in CalendarData.month: Rectangle {
+        x: mod(i, 7) * (root.cw + Theme.space-s);
+        y: floor(i / 7) * (root.ch + Theme.space-s);
+        width: root.cw;
+        height: root.ch;
+        background: d.today ? Theme.accent : Theme.card;
+        border-radius: 16px;
+        opacity: d.in-month ? 1 : 0.4;
+        Text {
+            y: 8px; text: d.day; horizontal-alignment: center;
+            color: d.today ? Theme.background : Theme.text; font-size: Theme.font-body;
+        }
+        HorizontalLayout {
+            y: parent.height - 24px; height: 10px; alignment: center; spacing: 6px;
+            for k in min(d.dots, 3): Rectangle { width: 10px; height: 10px; border-radius: 5px; background: d.today ? Theme.background : Theme.warm; }
+        }
+        TouchArea { clicked => { CalendarData.select-day(d.key); } }
+    }
+}
