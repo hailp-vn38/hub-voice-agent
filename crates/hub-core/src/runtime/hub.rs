@@ -29,12 +29,12 @@ pub(super) struct Hub {
 }
 
 impl Hub {
-    pub fn load(config: &Config, store: &Store, ports: &Ports) -> anyhow::Result<Self> {
+    pub fn load(config: &Config, store: &mut Store, ports: &Ports) -> anyhow::Result<Self> {
         let now = ports.clock.now().timestamp().as_second();
         Ok(Self {
             clock: ports.clock.clone(),
             system: ports.system.clone(),
-            timers: timers::Feature::load(store)?,
+            timers: timers::Feature::load(store, now)?,
             countdowns: countdowns::Feature::load(store)?,
             reminders: reminders::Feature::load(store)?,
             speech: Default::default(),
@@ -190,6 +190,9 @@ impl Hub {
 
     pub fn on_input(&mut self, input: UserInput, store: &Store) -> Vec<Effect> {
         let now = self.now().timestamp().as_second();
-        self.track_view(store, |hub| hub.view.on_user(input, now))
+        self.track_view(store, |hub| match input {
+            UserInput::Timer(input) => hub.timers.on_input(&mut hub.view, input, now),
+            input => hub.view.on_user(input, now),
+        })
     }
 }

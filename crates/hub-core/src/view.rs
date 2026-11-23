@@ -103,6 +103,7 @@ impl View {
             | UserInput::SaveVoiceUrl(_)
             | UserInput::VoiceConnect
             | UserInput::Setup(_, _)
+            | UserInput::Timer(_)
             | UserInput::DismissAlert => Vec::new(),
             UserInput::Activity => {
                 self.last_activity = Some(now);

@@ -9,6 +9,7 @@ const MIGRATIONS: &[&str] = &[
     include_str!("migrations/0004_weather.sql"),
     include_str!("migrations/0005_photos.sql"),
     include_str!("migrations/0006_calendar.sql"),
+    include_str!("migrations/0007_timer_duration.sql"),
 ];
 
 pub struct Store {
@@ -41,8 +42,11 @@ impl Store {
         ephemeral_photos: bool,
     ) -> anyhow::Result<Self> {
         connection.pragma_update(None, "journal_mode", "WAL")?;
-        for migration in MIGRATIONS {
+        for migration in &MIGRATIONS[..MIGRATIONS.len() - 1] {
             connection.execute_batch(migration)?;
+        }
+        if !has_timer_duration(&connection)? {
+            connection.execute_batch(MIGRATIONS[MIGRATIONS.len() - 1])?;
         }
         Ok(Self {
             connection,
@@ -50,6 +54,15 @@ impl Store {
             ephemeral_photos,
         })
     }
+}
+
+fn has_timer_duration(connection: &Connection) -> anyhow::Result<bool> {
+    let mut statement = connection.prepare("PRAGMA table_info(timers)")?;
+    let columns = statement.query_map([], |row| row.get::<_, String>(1))?;
+    Ok(columns
+        .collect::<Result<Vec<_>, _>>()?
+        .iter()
+        .any(|column| column == "duration_seconds"))
 }
 
 impl Drop for Store {
