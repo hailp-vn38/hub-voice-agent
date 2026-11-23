@@ -1,10 +1,15 @@
+use super::BridgeState;
 use crate::{
     App, ConnectionSettings, Response, SettingsData, Speaker, StatusBar, StepState, ToolStep,
     ToolTrail, Voice, VoiceState, Word,
 };
 use hub_core::{
-    ResponseSpeaker, ToolTrailState, UiState, VoiceSettingsState, VoiceState as CoreVoiceState,
-    present::{AlertView, ResponseView, StatusView, TimersView, ToolTrailView, VoiceView},
+    PhotoState, ResponseSpeaker, ToolTrailState, UiState, VoiceSettingsState,
+    VoiceState as CoreVoiceState,
+    present::{
+        AlertView, AmbientView, CalendarView, CenterView, HomeView, MenuView, PhotosView,
+        ResponseView, StatusView, TimersView, ToolTrailView, VoiceView, WeatherDataView,
+    },
 };
 use slint::{ComponentHandle, ModelRc, VecModel, Weak};
 use std::rc::Rc;
@@ -97,8 +102,15 @@ pub(super) fn apply_changed(
     response: Option<&ResponseView>,
     tool_trail: Option<&ToolTrailView>,
     voice_settings: Option<(&VoiceSettingsState, bool)>,
+    weather: Option<&WeatherDataView>,
+    calendar: Option<&CalendarView>,
     timers: Option<&TimersView>,
     alert: Option<Option<&AlertView>>,
+    home: Option<&HomeView>,
+    photos: Option<&PhotosView>,
+    center: Option<&CenterView>,
+    menu: Option<&MenuView>,
+    ambient: Option<&AmbientView>,
 ) {
     if let Some(nav) = nav {
         apply_nav(app, nav);
@@ -118,15 +130,48 @@ pub(super) fn apply_changed(
     if let Some((settings, url_changed)) = voice_settings {
         apply_voice_settings(app, settings, url_changed);
     }
+    if let Some(weather) = weather {
+        super::weather::apply(app, weather);
+    }
+    if let Some(calendar) = calendar {
+        super::calendar::apply(app, calendar);
+    }
     if let Some(timers) = timers {
         super::timers::apply_timers(app, timers);
     }
     if let Some(alert) = alert {
         super::timers::apply_alert(app, alert);
     }
+    if let Some(home) = home {
+        super::home::apply_home(app, home);
+    }
+    if let Some(photos) = photos {
+        super::photos::apply_photos(app, photos);
+    }
+    if let Some(center) = center {
+        super::center::apply_center(app, center);
+    }
+    if let Some(menu) = menu {
+        super::center::apply_menu(app, menu);
+    }
+    if let Some(ambient) = ambient {
+        super::center::apply_ambient(app, ambient);
+    }
 }
 
-pub fn spawn_bridge(app: Weak<App>, mut rx: watch::Receiver<UiState>) {
+fn agent_photos_finished(previous: &hub_core::HubView, current: &hub_core::HubView) -> bool {
+    current.photos.viewing
+        && current.photos.viewer.iter().any(|photo| {
+            photo.state == PhotoState::Ready
+                && previous
+                    .photos
+                    .photos
+                    .iter()
+                    .any(|old| old.key == photo.key && old.state == PhotoState::Loading)
+        })
+}
+
+pub fn spawn_bridge(app: Weak<App>, mut rx: watch::Receiver<UiState>, bridge_state: BridgeState) {
     tokio::spawn(async move {
         let mut shown: Option<hub_core::HubView> = None;
         let mut shown_voice_settings: Option<VoiceSettingsState> = None;
@@ -145,18 +190,44 @@ pub fn spawn_bridge(app: Weak<App>, mut rx: watch::Receiver<UiState>) {
             let tool_trail = (previous
                 .is_none_or(|previous| previous.tool_trail != view.tool_trail))
             .then(|| view.tool_trail.clone());
+            let countdowns = (previous
+                .is_none_or(|previous| previous.countdowns != view.countdowns))
+            .then(|| view.countdowns.clone());
+            let reminders = (previous.is_none_or(|previous| previous.reminders != view.reminders))
+                .then(|| view.reminders.clone());
             let settings_changed = shown_voice_settings.as_ref() != Some(&state.voice_settings);
             let url_changed = shown_voice_settings
                 .as_ref()
                 .is_none_or(|previous| previous.ota_url != state.voice_settings.ota_url);
             let voice_settings =
                 settings_changed.then(|| (state.voice_settings.clone(), url_changed));
+            let weather = (previous.is_none_or(|previous| previous.weather != view.weather))
+                .then(|| view.weather.clone());
+            let calendar = (previous.is_none_or(|previous| previous.calendar != view.calendar))
+                .then(|| view.calendar.clone());
             let timers = previous
                 .is_none_or(|previous| previous.timers != view.timers)
                 .then(|| view.timers.clone());
             let alert = previous
                 .is_none_or(|previous| previous.alert != view.alert)
                 .then(|| view.alert.clone());
+            let home = previous
+                .is_none_or(|previous| previous.home != view.home)
+                .then(|| view.home.clone());
+            let photos = previous
+                .is_none_or(|previous| previous.photos != view.photos)
+                .then(|| view.photos.clone());
+            let center = previous
+                .is_none_or(|previous| previous.center != view.center)
+                .then(|| view.center.clone());
+            let menu = previous
+                .is_none_or(|previous| previous.menu != view.menu)
+                .then(|| view.menu.clone());
+            let ambient = previous
+                .is_none_or(|previous| previous.ambient != view.ambient)
+                .then(|| view.ambient.clone());
+            let start_auto_advance =
+                previous.is_some_and(|previous| agent_photos_finished(previous, &view));
             shown = Some(view);
             shown_voice_settings = Some(state.voice_settings.clone());
 
@@ -165,16 +236,40 @@ pub fn spawn_bridge(app: Weak<App>, mut rx: watch::Receiver<UiState>) {
                 && voice.is_none()
                 && response.is_none()
                 && tool_trail.is_none()
+                && countdowns.is_none()
+                && reminders.is_none()
                 && voice_settings.is_none()
+                && weather.is_none()
+                && calendar.is_none()
                 && timers.is_none()
                 && alert.is_none()
+                && home.is_none()
+                && photos.is_none()
+                && center.is_none()
+                && menu.is_none()
+                && ambient.is_none()
             {
                 continue;
             }
 
             let app = app.clone();
+            let bridge_state = bridge_state.clone();
             if slint::invoke_from_event_loop(move || {
                 if let Some(app) = app.upgrade() {
+                    if start_auto_advance {
+                        super::photos::start_auto_advance();
+                    }
+                    if let Some(countdowns) = countdowns.as_ref() {
+                        let display = bridge_state
+                            .countdowns
+                            .lock()
+                            .expect("countdown bridge state poisoned")
+                            .update(countdowns);
+                        super::countdowns::apply(&app, &display);
+                    }
+                    if let Some(reminders) = reminders.as_ref() {
+                        super::reminders::apply(&app, reminders);
+                    }
                     apply_changed(
                         &app,
                         nav,
@@ -185,8 +280,15 @@ pub fn spawn_bridge(app: Weak<App>, mut rx: watch::Receiver<UiState>) {
                         voice_settings
                             .as_ref()
                             .map(|(settings, url_changed)| (settings, *url_changed)),
+                        weather.as_ref(),
+                        calendar.as_ref(),
                         timers.as_ref(),
                         alert.as_ref().map(|alert| alert.as_ref()),
+                        home.as_ref(),
+                        photos.as_ref(),
+                        center.as_ref(),
+                        menu.as_ref(),
+                        ambient.as_ref(),
                     );
                 }
             })

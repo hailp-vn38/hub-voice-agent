@@ -1,5 +1,6 @@
-use crate::{AlertData, App, Nav, SettingsData, TimersData, Voice};
-use hub_core::{Screen as CoreScreen, TimerInput, UserInput};
+use super::BridgeState;
+use crate::{AlertData, App, CalendarData, Nav, SettingsData, TimersData, Voice, WeatherData};
+use hub_core::{Focus, Screen as CoreScreen, TimerInput, UserInput};
 use slint::ComponentHandle;
 use std::{
     cell::RefCell,
@@ -12,7 +13,7 @@ use tokio::sync::mpsc;
 #[path = "inputs_tests.rs"]
 mod tests;
 
-struct Inputs {
+pub(super) struct Inputs {
     tx: mpsc::Sender<UserInput>,
     last_activity: Option<Instant>,
 }
@@ -25,7 +26,7 @@ impl Inputs {
         }
     }
 
-    fn send(&self, input: UserInput) {
+    pub(super) fn send(&self, input: UserInput) {
         if let Err(error) = self.tx.try_send(input) {
             let cause = match error {
                 mpsc::error::TrySendError::Full(_) => "hàng đợi đầy",
@@ -35,7 +36,7 @@ impl Inputs {
         }
     }
 
-    fn activity(&mut self) {
+    pub(super) fn activity(&mut self) {
         self.activity_at(Instant::now());
     }
 
@@ -50,7 +51,7 @@ impl Inputs {
     }
 }
 
-fn to_core_screen(screen: crate::Screen) -> Option<CoreScreen> {
+pub(super) fn to_core_screen(screen: crate::Screen) -> Option<CoreScreen> {
     use crate::Screen as UiScreen;
     match screen {
         UiScreen::Center => Some(CoreScreen::Center),
@@ -96,7 +97,7 @@ pub(super) fn to_ui_screen(screen: CoreScreen) -> crate::Screen {
 }
 
 /// Nối callback hợp đồng vào hub-core. Gọi trên luồng UI trước `app.run()`.
-pub fn connect_inputs(app: &App, input_tx: mpsc::Sender<UserInput>) {
+pub fn connect_inputs(app: &App, input_tx: mpsc::Sender<UserInput>, bridge_state: BridgeState) {
     let inputs = Rc::new(RefCell::new(Inputs::new(input_tx)));
     let nav = app.global::<Nav>();
     let activity = inputs.clone();
@@ -113,6 +114,50 @@ pub fn connect_inputs(app: &App, input_tx: mpsc::Sender<UserInput>) {
         }
     });
 
+    let weather = app.global::<WeatherData>();
+    let select_weather = inputs.clone();
+    weather.on_select_day(move |key| {
+        let mut inputs = select_weather.borrow_mut();
+        inputs.activity();
+        inputs.send(UserInput::Focus(Some(Focus::Weather(key.to_string()))));
+    });
+
+    let calendar = app.global::<CalendarData>();
+    let weak = app.as_weak();
+    let select_calendar = inputs.clone();
+    calendar.on_select_day(move |day| {
+        if let Some(app) = weak.upgrade() {
+            super::calendar::select_day(&app);
+            let mut inputs = select_calendar.borrow_mut();
+            inputs.activity();
+            inputs.send(UserInput::Focus(Some(Focus::Calendar(day.to_string()))));
+        }
+    });
+    let weak = app.as_weak();
+    let toggle_month = inputs.clone();
+    calendar.on_toggle_month(move || {
+        if let Some(app) = weak.upgrade() {
+            super::calendar::toggle_month(&app);
+            toggle_month.borrow_mut().activity();
+        }
+    });
+    let weak = app.as_weak();
+    let open_detail = inputs.clone();
+    calendar.on_open_detail(move |key| {
+        if let Some(app) = weak.upgrade() {
+            super::calendar::open_detail(&app, key.to_string());
+            open_detail.borrow_mut().activity();
+        }
+    });
+    let weak = app.as_weak();
+    let close_detail = inputs.clone();
+    calendar.on_close_detail(move || {
+        if let Some(app) = weak.upgrade() {
+            super::calendar::close_detail(&app);
+            close_detail.borrow_mut().activity();
+        }
+    });
+
     let orb = inputs.clone();
     app.global::<Voice>().on_orb_tapped(move || {
         let mut inputs = orb.borrow_mut();
@@ -120,14 +165,93 @@ pub fn connect_inputs(app: &App, input_tx: mpsc::Sender<UserInput>) {
         inputs.send(UserInput::OrbTapped);
     });
 
+    let countdowns = app.global::<crate::CountdownsData>();
+    let select_state = bridge_state.countdowns.clone();
+    let select_activity = inputs.clone();
+    let select_app = app.as_weak();
+    countdowns.on_select(move |key| {
+        select_activity.borrow_mut().activity();
+        let display = select_state
+            .lock()
+            .expect("countdown bridge state poisoned")
+            .select(key.as_str());
+        if let (Some(display), Some(app)) = (display, select_app.upgrade()) {
+            super::countdowns::apply(&app, &display);
+        }
+    });
+
+    let detail_state = bridge_state.countdowns.clone();
+    let detail_activity = inputs.clone();
+    let detail_app = app.as_weak();
+    countdowns.on_open_detail(move || {
+        detail_activity.borrow_mut().activity();
+        let display = detail_state
+            .lock()
+            .expect("countdown bridge state poisoned")
+            .open_detail();
+        if let (Some(display), Some(app)) = (display, detail_app.upgrade()) {
+            super::countdowns::apply(&app, &display);
+        }
+    });
+
+    let close_state = bridge_state.countdowns.clone();
+    let close_activity = inputs.clone();
+    let close_app = app.as_weak();
+    countdowns.on_close_detail(move || {
+        close_activity.borrow_mut().activity();
+        let display = close_state
+            .lock()
+            .expect("countdown bridge state poisoned")
+            .close_detail();
+        if let (Some(display), Some(app)) = (display, close_app.upgrade()) {
+            super::countdowns::apply(&app, &display);
+        }
+    });
+
+    let remove_state = bridge_state.countdowns.clone();
+    let remove_activity = inputs.clone();
+    let remove_app = app.as_weak();
+    countdowns.on_remove(move |key| {
+        remove_activity.borrow_mut().activity();
+        let key = key.to_string();
+        let removal = remove_state
+            .lock()
+            .expect("countdown bridge state poisoned")
+            .remove(&key);
+        if let Some((display, id)) = removal {
+            if let Some(app) = remove_app.upgrade() {
+                super::countdowns::apply(&app, &display);
+            }
+            remove_activity
+                .borrow()
+                .send(UserInput::RemoveCountdown(id));
+
+            let state = remove_state.clone();
+            let app = remove_app.clone();
+            slint::Timer::single_shot(Duration::from_millis(400), move || {
+                let display = state
+                    .lock()
+                    .expect("countdown bridge state poisoned")
+                    .finish_remove(&key);
+                if let Some(app) = app.upgrade() {
+                    super::countdowns::apply(&app, &display);
+                }
+            });
+        }
+    });
+
     let settings = app.global::<SettingsData>();
     let save = inputs.clone();
     settings.on_save_voice_url(move |url| {
-        save.borrow().send(UserInput::SaveVoiceUrl(url.to_string()));
+        let mut input = save.borrow_mut();
+        input.activity();
+        input.send(UserInput::SaveVoiceUrl(url.to_string()));
     });
     let connect = inputs.clone();
     settings.on_connect_voice(move || {
-        connect.borrow().send(UserInput::VoiceConnect);
+        let mut input = connect.borrow_mut();
+        input.activity();
+        input.send(UserInput::VoiceConnect);
     });
 
     let timers = app.global::<TimersData>();
@@ -165,10 +289,14 @@ pub fn connect_inputs(app: &App, input_tx: mpsc::Sender<UserInput>) {
         }
     });
 
-    let dismiss = inputs;
+    let dismiss = inputs.clone();
     app.global::<AlertData>().on_dismiss(move || {
         let mut input = dismiss.borrow_mut();
         input.activity();
         input.send(UserInput::DismissAlert);
     });
+
+    super::home::connect_inputs(app, inputs.clone());
+    super::photos::connect_inputs(app, inputs.clone());
+    super::center::connect_inputs(app, inputs);
 }

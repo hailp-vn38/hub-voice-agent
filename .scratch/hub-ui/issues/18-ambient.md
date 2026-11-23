@@ -26,13 +26,13 @@ Kịch bản: "Vào Ambient", "Ambient ban đêm", "Chạm để thoát", "Hết
 
 ## Map với hub-core
 
-Map: chờ hub-core #05 (view: Ambient), #09 (nhiệt độ)
+Map: done (hub-core #21; bridge ticket 06, commit `64295fb`)
 
 | Hợp đồng | UiState / UserInput |
 |---|---|
-| `AmbientData.time` / `.temp` / `.icon` | |
-| `.night` | |
-| `wake()` | |
+| `AmbientData.time` / `.temp` / `.icon` | Chép từ lớp `present` của `HubView.ambient`; giờ và thời tiết được suy ra từ `UiState` (#21) |
+| `.night` | `HubView.ambient.night`, hub-core suy ra từ dự báo ngày hiện tại (#21) |
+| `wake()` | `UserInput::Activity`; hub-core thoát Ambient về Center |
 
 ## Answer
 

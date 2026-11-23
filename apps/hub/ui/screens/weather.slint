@@ -21,7 +21,7 @@ export component Weather inherits Rectangle {
     private property <float> days-w: 330;
     private property <int> serial: WeatherData.focus-serial;
     private property <bool> lit: false;
-    changed serial => { root.lit = true; }
+    changed serial => { if (WeatherData.focus != "") { root.lit = true; } }
     Timer { interval: 2500ms; running: root.lit; triggered => { root.lit = false; } }
 
     WeatherBackdrop { bg: WeatherData.background; is-day: WeatherData.is-day; }
