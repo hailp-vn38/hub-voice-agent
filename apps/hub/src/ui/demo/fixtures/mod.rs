@@ -15,20 +15,14 @@ pub fn init(app: &App) {
     menu::init(app);
     home::init(app);
     first_boot::init(app);
-<<<<<<< HEAD
-    countdowns::init(app);
-}
-
-pub fn tick(app: &App) {
-    countdowns::tick(app);
-=======
     center::init(app);
     super::reminders::init(app);
     super::timers::init(app);
+    countdowns::init(app);
 }
 
 pub fn tick(app: &App) {
     center::tick(app);
     super::timers::tick(app);
->>>>>>> feat/hub-ui
+    countdowns::tick(app);
 }
