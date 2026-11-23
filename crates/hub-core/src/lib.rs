@@ -30,12 +30,15 @@ pub use ports::{
     FetchedImage, HomeEntity, HomeEvent, HomeSource, ImageFetcher, NewCalendarEvent, System,
     SystemClock, WeatherLocation, WeatherSource,
 };
-pub use present::{AlertKind, AlertView, HubView, TimerCardView, TimerPhase, TimersView, present};
+pub use present::{
+    AlertKind, AlertView, HomeKind, HomeTileView, HomeView, HubView, PhotoState, PhotoView,
+    PhotosView, TimerCardView, TimerPhase, TimersView, present,
+};
 pub use runtime::run;
 use tokio::sync::{mpsc, watch};
 pub use ui_state::{
-    ResponseSpeaker, ToolTrailState, ToolTrailStep, UiEvents, UiState, VoiceSettingsState,
-    VoiceState, VoiceUiState,
+    PhotoFetch, PhotoFetchState, ResponseSpeaker, ToolTrailState, ToolTrailStep, UiEvents, UiState,
+    VoiceSettingsState, VoiceState, VoiceUiState,
 };
 pub use view::{Focus, Screen, ViewState};
 use voice_client::{VoiceCommand, VoiceConfig, VoiceEvent};
@@ -57,6 +60,10 @@ pub enum UserInput {
     PinPhoto {
         id: String,
         pinned: bool,
+    },
+    ToggleHome(String),
+    RemovePhoto {
+        id: String,
     },
     Open(Screen),
     Back,

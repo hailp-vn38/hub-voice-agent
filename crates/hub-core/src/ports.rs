@@ -43,6 +43,7 @@ pub struct HomeEntity {
     pub id: String,
     pub name: String,
     pub state: String,
+    pub unit: Option<String>,
     pub stale: bool,
 }
 

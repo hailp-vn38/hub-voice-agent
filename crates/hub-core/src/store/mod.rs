@@ -10,6 +10,7 @@ const MIGRATIONS: &[&str] = &[
     include_str!("migrations/0005_photos.sql"),
     include_str!("migrations/0006_calendar.sql"),
     include_str!("migrations/0007_timer_duration.sql"),
+    include_str!("migrations/0008_photo_source.sql"),
 ];
 
 pub struct Store {
@@ -42,10 +43,13 @@ impl Store {
         ephemeral_photos: bool,
     ) -> anyhow::Result<Self> {
         connection.pragma_update(None, "journal_mode", "WAL")?;
-        for migration in &MIGRATIONS[..MIGRATIONS.len() - 1] {
+        for migration in &MIGRATIONS[..MIGRATIONS.len() - 2] {
             connection.execute_batch(migration)?;
         }
-        if !has_timer_duration(&connection)? {
+        if !has_column(&connection, "timers", "duration_seconds")? {
+            connection.execute_batch(MIGRATIONS[MIGRATIONS.len() - 2])?;
+        }
+        if !has_column(&connection, "photos", "source")? {
             connection.execute_batch(MIGRATIONS[MIGRATIONS.len() - 1])?;
         }
         Ok(Self {
@@ -56,13 +60,13 @@ impl Store {
     }
 }
 
-fn has_timer_duration(connection: &Connection) -> anyhow::Result<bool> {
-    let mut statement = connection.prepare("PRAGMA table_info(timers)")?;
+fn has_column(connection: &Connection, table: &str, expected: &str) -> anyhow::Result<bool> {
+    let mut statement = connection.prepare(&format!("PRAGMA table_info({table})"))?;
     let columns = statement.query_map([], |row| row.get::<_, String>(1))?;
     Ok(columns
         .collect::<Result<Vec<_>, _>>()?
         .iter()
-        .any(|column| column == "duration_seconds"))
+        .any(|column| column == expected))
 }
 
 impl Drop for Store {

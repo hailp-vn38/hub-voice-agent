@@ -6,7 +6,7 @@ use rusqlite::{OptionalExtension, params};
 impl Store {
     pub fn photos_load(&self) -> anyhow::Result<Vec<Photo>> {
         let mut stmt = self.connection.prepare(
-            "SELECT id, caption, created, pinned FROM photos ORDER BY created DESC, rowid DESC",
+            "SELECT id, caption, source, created, pinned FROM photos ORDER BY created DESC, rowid DESC",
         )?;
         let rows = stmt.query_map([], |r| {
             let id: String = r.get(0)?;
@@ -23,8 +23,9 @@ impl Store {
                     .into_owned(),
                 id,
                 caption: r.get(1)?,
-                created: r.get(2)?,
-                pinned: r.get(3)?,
+                source: r.get(2)?,
+                created: r.get(3)?,
+                pinned: r.get(4)?,
             })
         })?;
         Ok(rows.collect::<Result<Vec<_>, _>>()?)
@@ -42,6 +43,7 @@ impl Store {
     pub fn photos_add(
         &mut self,
         caption: String,
+        source: String,
         image: FetchedImage,
         now: i64,
     ) -> anyhow::Result<()> {
@@ -60,8 +62,8 @@ impl Store {
             return Err(e.into());
         }
         if let Err(e) = self.connection.execute(
-            "INSERT INTO photos (id,caption,created,pinned,size) VALUES (?1,?2,?3,0,?4)",
-            params![id, caption, now, size],
+            "INSERT INTO photos (id,caption,source,created,pinned,size) VALUES (?1,?2,?3,?4,0,?5)",
+            params![id, caption, source, now, size],
         ) {
             let _ = std::fs::remove_file(main);
             let _ = std::fs::remove_file(thumb);
@@ -93,6 +95,29 @@ impl Store {
                 bail!("photo cache full");
             }
         }
+        Ok(())
+    }
+
+    pub fn photos_remove(&mut self, id: &str) -> anyhow::Result<()> {
+        let stored_id: Option<String> = self
+            .connection
+            .query_row("SELECT id FROM photos WHERE id=?1", [id], |row| row.get(0))
+            .optional()?;
+        let Some(stored_id) = stored_id else {
+            return Ok(());
+        };
+        for path in [
+            self.photos_dir.join(format!("{stored_id}.png")),
+            self.photos_dir.join(format!("{stored_id}-thumb.png")),
+        ] {
+            match std::fs::remove_file(path) {
+                Ok(()) => {}
+                Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+                Err(error) => return Err(error.into()),
+            }
+        }
+        self.connection
+            .execute("DELETE FROM photos WHERE id=?1", [stored_id])?;
         Ok(())
     }
 }

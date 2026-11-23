@@ -100,6 +100,8 @@ impl View {
                 self.snapshot(false)
             }
             UserInput::PinPhoto { .. }
+            | UserInput::ToggleHome(_)
+            | UserInput::RemovePhoto { .. }
             | UserInput::SaveVoiceUrl(_)
             | UserInput::VoiceConnect
             | UserInput::OrbTapped

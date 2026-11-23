@@ -47,6 +47,7 @@ pub async fn run(
             Some(event) = io.audio_rx.recv() => hub.on_audio(event),
             Some(input) = io.input_rx.recv() => match input {
                 UserInput::PinPhoto { id, pinned } => vec![Effect::PinPhoto(id, pinned)],
+                UserInput::RemovePhoto { id } => vec![Effect::RemovePhoto(id)],
                 UserInput::DismissAlert => hub.dismiss_alert(),
                 UserInput::SaveVoiceUrl(input) => {
                     effects::execute_settings(SettingsEffect::SaveUrl(input), &mut config, &io);

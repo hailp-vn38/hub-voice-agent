@@ -33,6 +33,7 @@ pub(super) fn apply(
         }
         if home_changed {
             home_settings.send_replace(config.home.clone());
+            effects.extend(hub.home.settings_changed(&config.home));
         }
         if weather_changed {
             let seconds = now.timestamp().as_second();

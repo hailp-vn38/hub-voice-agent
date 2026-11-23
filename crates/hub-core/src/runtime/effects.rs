@@ -22,10 +22,11 @@ pub(crate) enum Effect {
     Store(StoreWrite),
     PinPhoto(String, bool),
     PersistPhotos(
-        Vec<(String, anyhow::Result<crate::FetchedImage>)>,
+        Vec<(crate::PhotoFetch, anyhow::Result<crate::FetchedImage>)>,
         i64,
         Option<ToolCall>,
     ),
+    RemovePhoto(String),
     CancelJob(JobId),
     Reply(ToolCall, Result<serde_json::Value, ToolError>),
     ReplyError(ToolCall, &'static str),
@@ -74,21 +75,44 @@ pub(super) async fn execute(
         }
         Effect::PersistPhotos(results, now, reply) => {
             let mut loaded = 0;
-            for (caption, image) in results {
-                if let Ok(image) = image
-                    && store.photos_add(caption, image, now).is_ok()
-                {
-                    loaded += 1;
+            let mut loading = Vec::new();
+            let mut failed = Vec::new();
+            for (mut photo, image) in results {
+                loading.push(photo.key.clone());
+                if let Ok(image) = image {
+                    if store
+                        .photos_add(photo.caption.clone(), photo.source.clone(), image, now)
+                        .is_ok()
+                    {
+                        loaded += 1;
+                        continue;
+                    }
                 }
+                photo.state = crate::PhotoFetchState::Failed;
+                failed.push(photo);
             }
             let photos = store.photos_load()?;
-            ui_tx.send_modify(|ui| ui.photos = photos);
+            ui_tx.send_modify(|ui| {
+                ui.photos = photos;
+                ui.photo_fetches
+                    .retain(|photo| !loading.iter().any(|key| key == &photo.key));
+                ui.photo_fetches.extend(failed);
+            });
             if let Some(call) = reply {
                 if loaded > 0 {
                     call.reply(Ok(serde_json::json!({"loaded": loaded})));
                 } else {
                     reply_error(call, "Images unavailable");
                 }
+            }
+        }
+        Effect::RemovePhoto(id) => {
+            if store.photos_remove(&id).is_ok() {
+                let photos = store.photos_load()?;
+                ui_tx.send_modify(|ui| {
+                    ui.photos = photos;
+                    ui.photo_fetches.retain(|photo| photo.key != id);
+                });
             }
         }
         Effect::Reply(call, result) => call.reply(result),

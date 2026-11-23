@@ -120,6 +120,7 @@ async fn tool_calls_service_and_tracks_state_and_disconnect() {
         id: "light.desk".into(),
         name: "Desk".into(),
         state: "off".into(),
+        unit: None,
         stale: false,
     };
     send(&fake, HomeEvent::State(entity.clone())).await;

@@ -10,7 +10,12 @@ pub struct UiState {
     pub calendar_last_sync: Option<i64>,
     pub weather: crate::WeatherView,
     pub home: Vec<crate::HomeEntity>,
+    pub home_connected: bool,
+    pub home_configured: bool,
+    pub home_pending: Vec<String>,
+    pub home_last_updated: Option<i64>,
     pub photos: Vec<crate::Photo>,
+    pub photo_fetches: Vec<PhotoFetch>,
     pub alert: Option<crate::Alert>,
     pub reminders: Vec<crate::Reminder>,
     pub reminder_history: Vec<crate::ReminderHistory>,
@@ -34,7 +39,12 @@ impl Default for UiState {
             calendar_last_sync: None,
             weather: crate::WeatherView::default(),
             home: Vec::new(),
+            home_connected: false,
+            home_configured: false,
+            home_pending: Vec::new(),
+            home_last_updated: None,
             photos: Vec::new(),
+            photo_fetches: Vec::new(),
             alert: None,
             reminders: Vec::new(),
             reminder_history: Vec::new(),
@@ -46,6 +56,21 @@ impl Default for UiState {
             tool_trail: Vec::new(),
         }
     }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PhotoFetch {
+    pub key: String,
+    pub caption: String,
+    pub source: String,
+    pub created: i64,
+    pub state: PhotoFetchState,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum PhotoFetchState {
+    Loading,
+    Failed,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]

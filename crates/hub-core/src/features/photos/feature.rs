@@ -6,6 +6,7 @@ use voice_client::ToolCall;
 pub struct Photo {
     pub id: String,
     pub caption: String,
+    pub source: String,
     pub image_path: String,
     pub thumbnail_path: String,
     pub created: i64,
@@ -51,18 +52,49 @@ impl Feature {
             return vec![Effect::ReplyError(call, "Expected one to six images")];
         }
         let source = self.source.clone();
-        vec![Effect::Spawn {
+        let requests: Vec<_> = args
+            .images
+            .into_iter()
+            .map(|input| {
+                let source = url::Url::parse(&input.url)
+                    .ok()
+                    .and_then(|url| url.host_str().map(str::to_owned))
+                    .unwrap_or_default();
+                Request {
+                    url: input.url,
+                    fetch: crate::PhotoFetch {
+                        key: uuid::Uuid::new_v4().to_string(),
+                        caption: input.caption,
+                        source,
+                        created: now,
+                        state: crate::PhotoFetchState::Loading,
+                    },
+                }
+            })
+            .collect();
+        let pending: Vec<_> = requests
+            .iter()
+            .map(|request| request.fetch.clone())
+            .collect();
+        let mut effects = vec![Effect::Ui(Box::new(move |ui| {
+            ui.photo_fetches
+                .retain(|photo| photo.state != crate::PhotoFetchState::Loading);
+            ui.photo_fetches.extend(pending);
+            true
+        }))];
+        effects.push(Effect::Spawn {
             job: "photos".into(),
             reply: Some(call),
             timeout: Duration::from_secs(120),
             work: Box::pin(async move {
                 let mut results = Vec::new();
-                for input in args.images {
-                    results.push((input.caption, source.fetch(input.url).await));
+                for request in requests {
+                    results.push((request.fetch, source.fetch(request.url).await));
                 }
                 Ok(Box::new(results) as Box<dyn std::any::Any + Send>)
             }),
-        }]
+        });
+        effects
     }
     fn cached_tool(
         &self,
@@ -139,15 +171,32 @@ impl Feature {
         now: i64,
     ) -> Vec<Effect> {
         let result = result.and_then(|r| {
-            r.downcast::<Vec<(String, anyhow::Result<crate::FetchedImage>)>>()
+            r.downcast::<Vec<(crate::PhotoFetch, anyhow::Result<crate::FetchedImage>)>>()
                 .map_err(|_| anyhow::anyhow!("invalid photo result"))
         });
         match result {
             Ok(results) => vec![Effect::PersistPhotos(*results, now, reply)],
-            Err(_) => reply
-                .map(|call| Effect::ReplyError(call, "Images unavailable"))
-                .into_iter()
-                .collect(),
+            Err(_) => {
+                let mut effects = vec![Effect::Ui(Box::new(|ui| {
+                    for photo in &mut ui.photo_fetches {
+                        if photo.state == crate::PhotoFetchState::Loading {
+                            photo.state = crate::PhotoFetchState::Failed;
+                        }
+                    }
+                    true
+                }))];
+                effects.extend(
+                    reply
+                        .map(|call| Effect::ReplyError(call, "Images unavailable"))
+                        .into_iter(),
+                );
+                effects
+            }
         }
     }
+}
+
+struct Request {
+    fetch: crate::PhotoFetch,
+    url: String,
 }

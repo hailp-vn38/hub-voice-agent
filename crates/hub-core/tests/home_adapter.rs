@@ -28,7 +28,10 @@ async fn authenticates_and_delivers_initial_and_changed_states() {
             serde_json::from_str(ws.next().await.unwrap().unwrap().to_text().unwrap()).unwrap();
         for message in [a, b] {
             let result = if message["type"] == "get_states" {
-                json!([{"entity_id":"light.desk","state":"off","attributes":{"friendly_name":"Desk"}}])
+                json!([
+                    {"entity_id":"light.desk","state":"off","attributes":{"friendly_name":"Desk"}},
+                    {"entity_id":"sensor.temp","state":"23.5","attributes":{"friendly_name":"Temperature","unit_of_measurement":"°C"}}
+                ])
             } else {
                 json!(null)
             };
@@ -65,6 +68,10 @@ async fn authenticates_and_delivers_initial_and_changed_states() {
     let first = events.recv().await.unwrap();
     assert!(
         matches!(first, HomeEvent::State(ref entity) if entity.state == "off" && entity.name == "Desk")
+    );
+    let sensor = events.recv().await.unwrap();
+    assert!(
+        matches!(sensor, HomeEvent::State(ref entity) if entity.id == "sensor.temp" && entity.unit.as_deref() == Some("°C"))
     );
     let second = events.recv().await.unwrap();
     assert!(matches!(second, HomeEvent::State(ref entity) if entity.state == "on"));

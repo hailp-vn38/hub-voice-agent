@@ -48,7 +48,7 @@ impl Hub {
                 store,
             )?,
             weather: weather::Feature::load(ports.weather.clone(), &config.weather, store, now)?,
-            home: home::Feature::new(ports.home.clone()),
+            home: home::Feature::new(ports.home.clone(), &config.home),
             photos: photos::Feature::load(ports.images.clone(), store)?,
             conversation: Conversation::default(),
             alerts: Alerts::default(),
@@ -63,7 +63,11 @@ impl Hub {
 
     /// The first UI snapshot from the loaded state.
     pub fn snapshot(&self) -> Vec<Effect> {
-        let mut effects = vec![self.weather.snapshot(), self.photos.snapshot()];
+        let mut effects = vec![
+            self.weather.snapshot(),
+            self.home.snapshot(),
+            self.photos.snapshot(),
+        ];
         effects.extend(self.timers.snapshot());
         effects.extend(self.countdowns.snapshot(self.now().date()));
         effects.extend(self.reminders.snapshot());
@@ -139,6 +143,9 @@ impl Hub {
             Internal::Timeout(id, reply) if id == "weather" => {
                 (id, Err(anyhow::anyhow!("Job timed out")), reply)
             }
+            Internal::Timeout(id, reply) if id == "photos" || id.starts_with("home:") => {
+                (id, Err(anyhow::anyhow!("Job timed out")), reply)
+            }
             Internal::Timeout(_, reply) => {
                 let tool_name = reply.as_ref().map(|call| call.name.clone());
                 let mut effects = reply
@@ -163,7 +170,7 @@ impl Hub {
             } else if id == "photos" {
                 hub.photos.on_job(result, reply, seconds)
             } else if id.starts_with("home:") {
-                hub.home.on_job(result, reply)
+                hub.home.on_job(&id, result, reply)
             } else {
                 Vec::new()
             }
@@ -239,7 +246,8 @@ impl Hub {
     }
 
     pub fn on_home(&mut self, event: HomeEvent) -> Vec<Effect> {
-        self.home.event(event)
+        let now = self.now().timestamp().as_second();
+        self.home.event(event, now)
     }
 
     pub fn on_input(&mut self, input: UserInput, store: &Store) -> Vec<Effect> {
@@ -249,6 +257,11 @@ impl Hub {
         let now = self.now().timestamp().as_second();
         self.track_view(store, |hub| match input {
             UserInput::Timer(input) => hub.timers.on_input(&mut hub.view, input, now),
+            UserInput::ToggleHome(id) => {
+                let mut effects = hub.view.on_user(UserInput::Activity, now);
+                effects.extend(hub.home.toggle(&id));
+                effects
+            }
             input => hub.view.on_user(input, now),
         })
     }

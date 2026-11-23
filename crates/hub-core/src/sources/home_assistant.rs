@@ -147,6 +147,9 @@ fn parse_state(value: &Value) -> Option<HomeEntity> {
             .to_owned(),
         id,
         state: value["state"].as_str()?.to_owned(),
+        unit: value["attributes"]["unit_of_measurement"]
+            .as_str()
+            .map(str::to_owned),
         stale: false,
     })
 }

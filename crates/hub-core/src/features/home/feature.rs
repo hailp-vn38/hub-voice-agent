@@ -5,34 +5,58 @@ use crate::{
     runtime::{effects::Effect, jobs::JobResult},
     selector::{self, Selection},
 };
+use std::collections::HashSet;
 use std::{sync::Arc, time::Duration};
 use voice_client::ToolCall;
 
 pub(crate) struct Feature {
     source: Arc<dyn HomeSource>,
     connected: bool,
+    configured: bool,
     entities: Vec<HomeEntity>,
+    pending: HashSet<String>,
+    last_updated: Option<i64>,
 }
 impl Feature {
-    pub fn new(source: Arc<dyn HomeSource>) -> Self {
+    pub fn new(source: Arc<dyn HomeSource>, settings: &crate::HomeSettings) -> Self {
         Self {
             source,
             connected: false,
+            configured: configured(settings),
             entities: Vec::new(),
+            pending: HashSet::new(),
+            last_updated: None,
         }
     }
-    fn snapshot(&self) -> Effect {
+    pub fn snapshot(&self) -> Effect {
         let entities = self.entities.clone();
+        let connected = self.connected;
+        let configured = self.configured;
+        let pending = self.pending.iter().cloned().collect::<Vec<_>>();
+        let last_updated = self.last_updated;
         Effect::Ui(Box::new(move |ui| {
-            if ui.home == entities {
+            let changed = ui.home != entities
+                || ui.home_connected != connected
+                || ui.home_configured != configured
+                || ui.home_pending != pending
+                || ui.home_last_updated != last_updated;
+            if !changed {
                 false
             } else {
                 ui.home = entities;
+                ui.home_connected = connected;
+                ui.home_configured = configured;
+                ui.home_pending = pending;
+                ui.home_last_updated = last_updated;
                 true
             }
         }))
     }
-    pub fn event(&mut self, event: HomeEvent) -> Vec<Effect> {
+    pub fn settings_changed(&mut self, settings: &crate::HomeSettings) -> Vec<Effect> {
+        self.configured = configured(settings);
+        vec![self.snapshot()]
+    }
+    pub fn event(&mut self, event: HomeEvent, now: i64) -> Vec<Effect> {
         match event {
             HomeEvent::Connected => self.connected = true,
             HomeEvent::Disconnected => {
@@ -43,6 +67,8 @@ impl Feature {
             }
             HomeEvent::State(mut entity) => {
                 entity.stale = false;
+                self.pending.remove(&entity.id);
+                self.last_updated = Some(now);
                 if let Some(old) = self.entities.iter_mut().find(|e| e.id == entity.id) {
                     *old = entity;
                 } else {
@@ -54,7 +80,7 @@ impl Feature {
     }
     /// `hub_home_get` answers from the last known state, marked stale while
     /// disconnected; turning a device on or off needs a live connection.
-    pub fn on_tool(&self, call: ToolCall) -> Vec<Effect> {
+    pub fn on_tool(&mut self, call: ToolCall) -> Vec<Effect> {
         let args: Args = match tool_args::parse(&call) {
             Ok(args) => args,
             Err(e) => return vec![Effect::Reply(call, Err(e))],
@@ -89,25 +115,71 @@ impl Feature {
             let state = serde_json::to_value(entity).expect("entity serializes");
             return vec![Effect::Reply(call, Ok(state))];
         };
-        let source = self.source.clone();
         let entity_id = entity.id.clone();
-        vec![Effect::Spawn {
-            job: format!("home:{entity_id}"),
-            work: Box::pin(async move {
-                source.call_service(entity_id, service.into()).await?;
-                Ok(Box::new(()) as Box<dyn std::any::Any + Send>)
-            }),
-            reply: Some(call),
-            timeout: Duration::from_secs(10),
-        }]
+        self.call_service(entity_id, service.into(), Some(call))
     }
-    pub fn on_job(&self, result: JobResult, reply: Option<ToolCall>) -> Vec<Effect> {
-        let Some(call) = reply else {
+    pub fn toggle(&mut self, entity_id: &str) -> Vec<Effect> {
+        if !self.connected {
+            return Vec::new();
+        }
+        let Some(entity) = self.entities.iter().find(|entity| entity.id == entity_id) else {
             return Vec::new();
         };
-        vec![match result {
+        if !(entity_id.starts_with("light.") || entity_id.starts_with("switch.")) {
+            return Vec::new();
+        }
+        let service = if entity.state == "on" {
+            "turn_off"
+        } else {
+            "turn_on"
+        };
+        self.call_service(entity_id.to_owned(), service.into(), None)
+    }
+    fn call_service(
+        &mut self,
+        entity_id: String,
+        service: String,
+        reply: Option<ToolCall>,
+    ) -> Vec<Effect> {
+        if !self.connected {
+            return reply
+                .map(|call| Effect::ReplyError(call, "Home Assistant disconnected"))
+                .into_iter()
+                .collect();
+        }
+        self.pending.insert(entity_id.clone());
+        let source = self.source.clone();
+        let mut effects = vec![self.snapshot()];
+        effects.push(Effect::Spawn {
+            job: format!("home:{entity_id}"),
+            work: Box::pin(async move {
+                source.call_service(entity_id, service).await?;
+                Ok(Box::new(()) as Box<dyn std::any::Any + Send>)
+            }),
+            reply,
+            timeout: Duration::from_secs(10),
+        });
+        effects
+    }
+    pub fn on_job(&mut self, id: &str, result: JobResult, reply: Option<ToolCall>) -> Vec<Effect> {
+        let mut effects = Vec::new();
+        if result.is_err()
+            && let Some(entity_id) = id.strip_prefix("home:")
+            && self.pending.remove(entity_id)
+        {
+            effects.push(self.snapshot());
+        }
+        let Some(call) = reply else {
+            return effects;
+        };
+        effects.push(match result {
             Ok(_) => Effect::Reply(call, Ok(serde_json::json!({"ok": true}))),
             Err(e) => Effect::Reply(call, Err(tool_args::error(&e.to_string()))),
-        }]
+        });
+        effects
     }
+}
+
+fn configured(settings: &crate::HomeSettings) -> bool {
+    !settings.url.trim().is_empty() && !settings.token.trim().is_empty()
 }

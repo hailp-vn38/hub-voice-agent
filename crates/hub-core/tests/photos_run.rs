@@ -63,7 +63,7 @@ async fn show_image_displays_downloaded_photo() {
     let (audio_tx, _audio_rx) = mpsc::channel(16);
     let (_audio_events, audio_rx) = mpsc::channel(16);
     let (input_tx, input_rx) = mpsc::channel(16);
-    let (ui_tx, ui_rx) = watch::channel(UiState::default());
+    let (ui_tx, mut ui_rx) = watch::channel(UiState::default());
     let task = tokio::spawn(run(
         config,
         Store::open(dir.path()).unwrap(),
@@ -93,7 +93,7 @@ async fn show_image_displays_downloaded_photo() {
     let mut socket = accept_async(stream).await.unwrap();
     socket.next().await.unwrap().unwrap();
     socket.send(Message::Text(json!({"type":"hello","transport":"websocket","session_id":"test","audio_params":{"format":"opus","sample_rate":24000,"channels":1,"frame_duration":60}}).to_string().into())).await.unwrap();
-    socket.send(Message::Text(json!({"type":"mcp","payload":{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"hub_show_image","arguments":{"images":[{"url":"https://example.com/a.png","caption":"Lake"}]}}}}).to_string().into())).await.unwrap();
+    socket.send(Message::Text(json!({"type":"mcp","payload":{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"hub_show_image","arguments":{"images":[{"url":"https://example.com/a.png","caption":"Lake"},{"url":"https://images.example/b.png","caption":"Mountain"}]}}}}).to_string().into())).await.unwrap();
     let reply: Value = loop {
         let message = tokio::time::timeout(std::time::Duration::from_secs(5), socket.next())
             .await
@@ -107,13 +107,30 @@ async fn show_image_displays_downloaded_photo() {
             }
         }
     };
-    assert_eq!(reply["payload"]["result"]["loaded"], 1);
+    assert_eq!(reply["payload"]["result"]["loaded"], 2);
     assert_eq!(ui_rx.borrow().view.screen, Screen::Photos);
-    assert_eq!(ui_rx.borrow().photos[0].caption, "Lake");
+    assert_eq!(ui_rx.borrow().photos.len(), 2);
+    assert!(
+        ui_rx
+            .borrow()
+            .photos
+            .iter()
+            .any(|photo| photo.caption == "Lake")
+    );
+    assert!(
+        ui_rx
+            .borrow()
+            .photos
+            .iter()
+            .any(|photo| photo.source == "images.example")
+    );
     assert!(std::path::Path::new(&ui_rx.borrow().photos[0].image_path).exists());
     let id = ui_rx.borrow().photos[0].id.clone();
     input_tx
-        .send(hub_core::UserInput::PinPhoto { id, pinned: true })
+        .send(hub_core::UserInput::PinPhoto {
+            id: id.clone(),
+            pinned: true,
+        })
         .await
         .unwrap();
     for _ in 0..20 {
@@ -134,7 +151,10 @@ async fn show_image_displays_downloaded_photo() {
             }
         }
     };
-    assert_eq!(list["payload"]["result"]["images"][0]["caption"], "Lake");
+    assert_eq!(
+        list["payload"]["result"]["images"][0]["caption"],
+        "Mountain"
+    );
     socket.send(Message::Text(json!({"type":"mcp","payload":{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"hub_image_control","arguments":{"action":"unpin"}}}}).to_string().into())).await.unwrap();
     let control: Value = loop {
         let message = tokio::time::timeout(std::time::Duration::from_secs(5), socket.next())
@@ -151,5 +171,46 @@ async fn show_image_displays_downloaded_photo() {
     };
     assert_eq!(control["payload"]["result"]["ok"], true);
     assert!(!ui_rx.borrow().photos[0].pinned);
+
+    let photo_to_remove = ui_rx.borrow().photos[1].clone();
+    socket.send(Message::Text(json!({"type":"mcp","payload":{"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"hub_image_control","arguments":{"action":"next","id":id}}}}).to_string().into())).await.unwrap();
+    let next: Value = loop {
+        let message = tokio::time::timeout(std::time::Duration::from_secs(5), socket.next())
+            .await
+            .unwrap()
+            .unwrap()
+            .unwrap();
+        if let Message::Text(text) = message {
+            let value: Value = serde_json::from_str(&text).unwrap();
+            if value["payload"]["id"] == 4 {
+                break value;
+            }
+        }
+    };
+    assert_eq!(next["payload"]["result"]["id"], photo_to_remove.id);
+    assert!(hub_core::present(&ui_rx.borrow()).photos.viewing);
+    assert_eq!(hub_core::present(&ui_rx.borrow()).photos.viewer_index, 1);
+    input_tx
+        .send(hub_core::UserInput::Focus(None))
+        .await
+        .unwrap();
+    while hub_core::present(&ui_rx.borrow()).photos.viewing {
+        ui_rx.changed().await.unwrap();
+    }
+    assert_eq!(ui_rx.borrow().view.screen, Screen::Photos);
+
+    let image_path = photo_to_remove.image_path.clone();
+    let thumbnail_path = photo_to_remove.thumbnail_path.clone();
+    input_tx
+        .send(hub_core::UserInput::RemovePhoto {
+            id: photo_to_remove.id,
+        })
+        .await
+        .unwrap();
+    while ui_rx.borrow().photos.len() != 1 {
+        ui_rx.changed().await.unwrap();
+    }
+    assert!(!std::path::Path::new(&image_path).exists());
+    assert!(!std::path::Path::new(&thumbnail_path).exists());
     task.abort();
 }

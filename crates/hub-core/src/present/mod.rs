@@ -1,6 +1,8 @@
 mod alerts;
 mod ambient;
+mod home;
 mod nav;
+mod photos;
 mod response;
 mod status;
 mod timers;
@@ -10,6 +12,8 @@ mod voice;
 use crate::UiState;
 pub use alerts::{AlertKind, AlertView};
 pub use ambient::AmbientView;
+pub use home::{HomeKind, HomeTileView, HomeView};
+pub use photos::{PhotoState, PhotoView, PhotosView};
 pub use response::{ResponseView, Word};
 pub use status::StatusView;
 pub use timers::{TimerCardView, TimerPhase, TimersView};
@@ -22,6 +26,8 @@ pub struct HubView {
     pub nav: crate::Screen,
     pub status: StatusView,
     pub ambient: AmbientView,
+    pub home: HomeView,
+    pub photos: PhotosView,
     pub timers: TimersView,
     pub alert: Option<AlertView>,
     pub voice: VoiceView,
@@ -35,6 +41,8 @@ pub fn present(state: &UiState) -> HubView {
         nav: nav::screen(state),
         status: status::from_state(state),
         ambient: ambient::from_state(state),
+        home: home::from_state(state),
+        photos: photos::from_state(state),
         timers: timers::from_state(state),
         alert: alerts::from_state(state),
         voice: voice::from_state(state),
