@@ -50,6 +50,7 @@ async fn countdown_updates_at_midnight_through_run() {
         Store::open(&dir).unwrap(),
         Ports {
             clock: Arc::new(TestClock::at(start.clone())),
+            system: Arc::new(support::Synced),
         },
         Io {
             voice_config_tx: config_tx.clone(),
@@ -136,6 +137,7 @@ async fn countdown_updates_at_midnight_through_run() {
         Store::open(&dir).unwrap(),
         Ports {
             clock: Arc::new(TestClock::at(start)),
+            system: Arc::new(support::Synced),
         },
         Io {
             voice_config_tx,

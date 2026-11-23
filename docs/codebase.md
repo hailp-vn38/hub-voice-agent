@@ -209,7 +209,7 @@ Integration test dùng server WebSocket giả tại `tests/`; test backoff dùng
 
 #### Interface bên ngoài
 
-Interface bên dưới là thiết kế đích. Hiện `run(config, store, ports, io)` xử lý voice settings, hội thoại và các tool hẹn giờ. `ConfigStore` giữ cấu hình voice, Google Calendar, Home Assistant và vị trí nhà; `Store::open(dir)` hoặc `Store::in_memory()` mở SQLite; `tool_definitions()` cung cấp schema cho bốn tool hẹn giờ. Báo hết giờ thuộc ticket 06.
+Interface bên dưới là thiết kế đích. Hiện `run(config, store, ports, io)` xử lý voice settings, hội thoại và các tool hẹn giờ, đếm ngược. `ConfigStore` giữ cấu hình voice, Google Calendar, Home Assistant và vị trí nhà; `Store::open(dir)` hoặc `Store::in_memory()` mở SQLite. Hẹn giờ đến hạn được xếp hàng vào `UiState.alert`; `System::time_synced()` chặn báo khi giờ chưa tin cậy. Desktop trả `true`; adapter NTP cho Pi chưa có và hiện trả `false`. `UserInput::DismissAlert` tắt chuông.
 
 ```rust
 pub async fn run(config: ConfigStore, store: Store, ports: Ports, io: Io) -> anyhow::Result<()>;

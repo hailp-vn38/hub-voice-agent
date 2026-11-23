@@ -23,6 +23,7 @@ pub async fn run(
     let mut timers = crate::features::timers::Feature::load(&store)?;
     let mut countdowns = crate::features::countdowns::Feature::load(&store)?;
     let mut conversation = Conversation::default();
+    let mut alerts = crate::alerts::Alerts::default();
     let mut view = crate::view::View::new(ports.clock.now().timestamp().as_second());
     let mut jobs = jobs::Jobs::new();
     let mut tick = time::interval(Duration::from_secs(1));
@@ -49,7 +50,13 @@ pub async fn run(
                 pending.extend(conversation.on(Input::Tick, ports.clock.now()));
                 pending.extend(countdowns.snapshot(ports.clock.now().date()));
                 pending.extend(view.tick(ports.clock.now().timestamp().as_second()));
-                pending.extend(timers.tick(ports.clock.now().timestamp().as_second()));
+                let now = ports.clock.now().timestamp().as_second();
+                let due = timers.due(now);
+                alerts.retain_due(&due);
+                for timer in due { alerts.push(timer); }
+                let (dismissed, effects) = alerts.tick(now, conversation.alert_blocked(), ports.system.time_synced());
+                pending.extend(effects);
+                if let Some(id) = dismissed { pending.extend(timers.dismiss(id)); }
                 for effect in pending { effects::execute(effect, &io.ui_tx, &io.voice_tx, &io.audio_tx, &mut jobs, &mut store).await?; }
             }
             event = jobs.next() => {
@@ -78,6 +85,12 @@ pub async fn run(
                 for effect in audio::on(event, &mut conversation, ports.clock.now()) { effects::execute(effect, &io.ui_tx, &io.voice_tx, &io.audio_tx, &mut jobs, &mut store).await?; }
             }
             Some(input) = io.input_rx.recv() => match input {
+                UserInput::DismissAlert => {
+                    let (dismissed, effects) = alerts.dismiss();
+                    let mut pending = effects;
+                    if let Some(id) = dismissed { pending.extend(timers.dismiss(id)); }
+                    for effect in pending { effects::execute(effect, &io.ui_tx, &io.voice_tx, &io.audio_tx, &mut jobs, &mut store).await?; }
+                }
                 UserInput::SaveVoiceUrl(input) => effects::execute_settings(effects::SettingsEffect::SaveUrl(input), &mut config, &io),
                 UserInput::Setup(update, reply) => {
                     let result = config.update(|c| match update {

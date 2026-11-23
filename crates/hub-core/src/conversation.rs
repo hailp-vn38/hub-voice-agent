@@ -27,6 +27,10 @@ impl Conversation {
         )
     }
 
+    pub(crate) fn alert_blocked(&self) -> bool {
+        self.turn_active() && self.deadline.is_none()
+    }
+
     pub(crate) fn on(&mut self, input: Input, now: Zoned) -> Vec<Effect> {
         let mut effects = Vec::new();
         let mut stt = None;

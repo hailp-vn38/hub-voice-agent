@@ -74,9 +74,10 @@ impl View {
             UserInput::Activity if self.state.screen == Screen::Ambient => {
                 self.open(Screen::Center, None, now)
             }
-            UserInput::SaveVoiceUrl(_) | UserInput::VoiceConnect | UserInput::Setup(_, _) => {
-                Vec::new()
-            }
+            UserInput::SaveVoiceUrl(_)
+            | UserInput::VoiceConnect
+            | UserInput::Setup(_, _)
+            | UserInput::DismissAlert => Vec::new(),
             UserInput::Activity => {
                 self.last_activity = Some(now);
                 Vec::new()
