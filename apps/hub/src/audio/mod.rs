@@ -21,7 +21,6 @@ const WORKER_CHUNK_SAMPLES: usize = 256;
 pub struct AudioConfig;
 
 #[derive(Clone, Copy, Debug, Default)]
-#[allow(dead_code)] // Public fields are consumed by the capture and Orb tickets.
 pub struct Levels {
     pub mic: f32,
     pub tts: f32,

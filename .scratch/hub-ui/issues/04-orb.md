@@ -41,7 +41,7 @@ Kịch bản: "Wake", "Nghe", "Nghĩ", "Nói", "Tool chạy", "Lỗi", "Offline"
 
 ## Map với hub-core
 
-Map: done; bridge hub-mac #01 (levels giữ ở adapter audio).
+Map: done; bridge hub-mac #01, #10 (commit `8c98c87`).
 
 | Hợp đồng | UiState / UserInput |
 |---|---|
@@ -51,7 +51,7 @@ Map: done; bridge hub-mac #01 (levels giữ ở adapter audio).
 | `Voice.tool-serial` | `HubView.voice.tool_serial`. |
 | `Voice.error-serial` | `HubView.voice.error_serial`. |
 | `Voice.orb-tapped()` | `UserInput::OrbTapped`. |
-| `VoiceLevels.mic` / `.tts` | Giữ mặc định `0`; watch `Levels` từ adapter audio, không qua hub-core. |
+| `VoiceLevels.mic` / `.tts` | `Capture::level()` / `Mixer::level()` → watch `Levels` (~30 Hz) → bridge cập nhật Slint qua `invoke_from_event_loop`; không qua hub-core. |
 
 ## Answer
 

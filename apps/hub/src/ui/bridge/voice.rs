@@ -1,4 +1,5 @@
 use super::BridgeState;
+use crate::audio::Levels;
 use crate::{
     App, ConnectionSettings, Response, SettingsData, Speaker, StatusBar, StepState, ToolStep,
     ToolTrail, Voice, VoiceState, Word,
@@ -39,6 +40,12 @@ pub(super) fn apply_voice(app: &App, voice: &VoiceView) {
     voice_ui.set_wake_serial(voice.wake_serial as i32);
     voice_ui.set_tool_serial(voice.tool_serial as i32);
     voice_ui.set_error_serial(voice.error_serial as i32);
+}
+
+fn apply_levels(app: &App, levels: Levels) {
+    let voice_levels = app.global::<crate::VoiceLevels>();
+    voice_levels.set_mic(levels.mic);
+    voice_levels.set_tts(levels.tts);
 }
 
 pub(super) fn apply_response(app: &App, response: &ResponseView) {
@@ -171,7 +178,29 @@ fn agent_photos_finished(previous: &hub_core::HubView, current: &hub_core::HubVi
         })
 }
 
-pub fn spawn_bridge(app: Weak<App>, mut rx: watch::Receiver<UiState>, bridge_state: BridgeState) {
+pub fn spawn_bridge(
+    app: Weak<App>,
+    mut rx: watch::Receiver<UiState>,
+    mut levels_rx: watch::Receiver<Levels>,
+    bridge_state: BridgeState,
+) {
+    let levels_app = app.clone();
+    tokio::spawn(async move {
+        while levels_rx.changed().await.is_ok() {
+            let levels = *levels_rx.borrow_and_update();
+            let app = levels_app.clone();
+            if slint::invoke_from_event_loop(move || {
+                if let Some(app) = app.upgrade() {
+                    apply_levels(&app, levels);
+                }
+            })
+            .is_err()
+            {
+                return;
+            }
+        }
+    });
+
     tokio::spawn(async move {
         let mut shown: Option<hub_core::HubView> = None;
         let mut shown_voice_settings: Option<VoiceSettingsState> = None;
@@ -299,3 +328,7 @@ pub fn spawn_bridge(app: Weak<App>, mut rx: watch::Receiver<UiState>, bridge_sta
         }
     });
 }
+
+#[cfg(test)]
+#[path = "voice_tests.rs"]
+mod tests;
