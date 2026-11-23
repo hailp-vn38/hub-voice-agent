@@ -6,6 +6,7 @@ import { IdleBackground } from "idle-background.slint";
 import { Ambient } from "../screens/ambient.slint";
 import { MenuScreen } from "../screens/menu.slint";
 import { Placeholder } from "../screens/placeholder.slint";
+import { Home } from "../screens/home.slint";
 
 // Khung app: tầng trung tâm ⇄ menu (vuốt theo ngón tay), tầng màn tính năng,
 // hàng dưới cùng dành cho Voice dock (ngoài vùng vuốt), lớp phủ ở trên cùng.
@@ -72,7 +73,8 @@ export component Shell inherits Rectangle {
                 x: (1 - root.feat-p) * root.w;
                 opacity: root.feat-p;
                 background: Theme.background;
-                Placeholder { title: root.title(root.shown); }
+                if root.shown != Screen.home: Placeholder { title: root.title(root.shown); }
+                if root.shown == Screen.home: Home { }
             }
         }
     }

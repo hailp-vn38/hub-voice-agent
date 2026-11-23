@@ -25,6 +25,13 @@ pub fn all() -> Vec<Scenario> {
             let bar = app.global::<StatusBar>();
             bar.set_offline(!bar.get_offline());
         }),
+        ("Nhà: bật đèn phòng khách", |app| {
+            app.set_show_sample(false);
+            app.global::<Nav>().set_screen(Screen::Home);
+            super::fixtures::home::turn_on_living(app)
+        }),
+        ("Nhà: mất kết nối HA", |app| super::fixtures::home::disconnect(app)),
+        ("Nhà: chưa cấu hình", |app| super::fixtures::home::unconfigure(app)),
         ("Vào Ambient", |app| {
             app.set_show_sample(false);
             let a = app.global::<AmbientData>();

@@ -1,0 +1,56 @@
+import { Theme } from "../theme.slint";
+import { Nav, Screen } from "../contract/nav.slint";
+import { HomeData } from "../contract/home.slint";
+import { HomeTileView } from "../components/home-tile.slint";
+
+export component Home inherits Rectangle {
+    VerticalLayout {
+        padding: Theme.space-l;
+        spacing: Theme.space-m;
+        Rectangle {
+            height: Theme.touch-min;
+            Text {
+                text: "‹ Nhà";
+                color: Theme.text;
+                font-size: Theme.font-title;
+                horizontal-alignment: left;
+                vertical-alignment: center;
+            }
+            TouchArea { width: 240px; x: 0; clicked => { Nav.navigate(Screen.menu); } }
+        }
+        if !HomeData.configured: Text {
+            text: "Chưa cấu hình Home Assistant.\nMở Setup web trên điện thoại để kết nối.";
+            color: Theme.text-dim;
+            font-size: Theme.font-body;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+            wrap: word-wrap;
+            vertical-stretch: 1;
+        }
+        if HomeData.configured && !HomeData.connected: Rectangle {
+            height: 64px;
+            background: Theme.error;
+            border-radius: Theme.radius;
+            Text {
+                text: "Mất kết nối Home Assistant · cập nhật lúc " + HomeData.updated;
+                color: Theme.background;
+                font-size: Theme.font-small;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+        }
+        if HomeData.configured: Rectangle {
+            vertical-stretch: 1;
+            for t[i] in HomeData.tiles: HomeTileView {
+                x: mod(i, 4) * (self.width + Theme.space-m);
+                y: floor(i / 4) * (self.height + Theme.space-m);
+                width: (parent.width - 3 * Theme.space-m) / 4;
+                height: Theme.touch-min * 2;
+                tile: t;
+                updated: HomeData.updated;
+                toggle(k) => { HomeData.toggle(k); }
+            }
+        }
+        Rectangle { height: 240px; } // chừa Voice dock
+    }
+}
