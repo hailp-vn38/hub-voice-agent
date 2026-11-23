@@ -30,7 +30,12 @@ pub(super) async fn run(socket: Socket, session_id: String, client: &mut Client)
         session_id,
         tts_active: false,
     };
-    let tools = client.active_config.tools.clone();
+    let tools = client
+        .active_config
+        .as_ref()
+        .expect("configured connection")
+        .tools
+        .clone();
     let (tool_calls, mut replies) = ToolCalls::new();
     let timeouts = client.timeouts;
     let ping_every = timeouts.ping.unwrap_or(DISABLED);
@@ -54,12 +59,15 @@ pub(super) async fn run(socket: Socket, session_id: String, client: &mut Client)
                 let frame = protocol::mcp(&session.session_id, reply);
                 session.send_text(frame).await
             }
-            command = client.commands.recv() => session.on_command(command, client).await,
+            command = client.commands.recv(), if !client.commands.is_closed() || !client.commands.is_empty() => session.on_command(command, client).await,
             _ = client.events.closed() => Err(ConnectionEnd::Stopped),
-            changed = client.config.changed(), if client.config.has_changed().is_ok() => {
-                match changed.ok().and_then(|()| client.changed_config()) {
-                    Some(updated) => Err(ConnectionEnd::Reconfigured(Box::new(updated))),
-                    None => Ok(()),
+            changed = client.config.changed() => {
+                match changed {
+                    Err(_) => Err(ConnectionEnd::Stopped),
+                    Ok(()) => match client.changed_config() {
+                        Some(updated) => Err(ConnectionEnd::Reconfigured(Box::new(updated))),
+                        None => Ok(()),
+                    },
                 }
             }
         };
@@ -172,7 +180,7 @@ impl Session {
 
     async fn on_command(&mut self, command: Option<VoiceCommand>, client: &Client) -> Step {
         let Some(command) = command else {
-            return Err(ConnectionEnd::Stopped);
+            return Ok(());
         };
         let id = &self.session_id;
         let frame = match command {

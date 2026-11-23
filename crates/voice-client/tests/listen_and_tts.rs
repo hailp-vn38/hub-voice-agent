@@ -179,8 +179,8 @@ async fn listen_audio_and_tts_round_trip_preserves_wire_and_event_order() {
     server.await.unwrap();
 }
 
-fn config_receiver(config: VoiceConfig) -> tokio::sync::watch::Receiver<VoiceConfig> {
-    tokio::sync::watch::channel(config).1
+fn config_receiver(config: VoiceConfig) -> tokio::sync::watch::Receiver<Option<VoiceConfig>> {
+    held_config(config)
 }
 
 fn assert_client_text(message: &Message, expected: Value) {
@@ -196,4 +196,12 @@ fn assert_binary(message: &Message, expected: &[u8]) {
         panic!("expected binary frame, got {message:?}")
     };
     assert_eq!(binary.as_ref(), expected);
+}
+
+fn held_config(config: VoiceConfig) -> tokio::sync::watch::Receiver<Option<VoiceConfig>> {
+    let (sender, receiver) = tokio::sync::watch::channel(Some(config));
+    tokio::spawn(async move {
+        sender.closed().await;
+    });
+    receiver
 }

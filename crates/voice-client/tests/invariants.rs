@@ -200,7 +200,7 @@ async fn public_channels_have_the_documented_capacities() {
         device: DeviceIdentity::new("device", "client"),
         tools: Vec::new(),
     };
-    let (commands, events) = voice_client::spawn(tokio::sync::watch::channel(config).1);
+    let (commands, events) = voice_client::spawn(held_config(config));
     assert_eq!(commands.max_capacity(), 64);
     assert_eq!(events.max_capacity(), 256);
 }
@@ -223,11 +223,19 @@ async fn next_event(events: &mut tokio::sync::mpsc::Receiver<VoiceEvent>) -> Voi
         .expect("voice event channel closed")
 }
 
-fn config_receiver(url: String) -> tokio::sync::watch::Receiver<VoiceConfig> {
+fn config_receiver(url: String) -> tokio::sync::watch::Receiver<Option<VoiceConfig>> {
     let config = VoiceConfig {
         ota_url: Url::parse(&url).unwrap(),
         device: DeviceIdentity::new("device", "client"),
         tools: Vec::new(),
     };
-    tokio::sync::watch::channel(config).1
+    held_config(config)
+}
+
+fn held_config(config: VoiceConfig) -> tokio::sync::watch::Receiver<Option<VoiceConfig>> {
+    let (sender, receiver) = tokio::sync::watch::channel(Some(config));
+    tokio::spawn(async move {
+        sender.closed().await;
+    });
+    receiver
 }

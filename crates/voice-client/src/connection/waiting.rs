@@ -50,7 +50,7 @@ impl Client {
         loop {
             tokio::select! {
                 biased;
-                command = self.commands.recv() => match command {
+                command = self.commands.recv(), if !self.commands.is_closed() || !self.commands.is_empty() => match command {
                     Some(VoiceCommand::Connect) if on_connect == OnConnect::RetryEnrollment => {
                         return Err(ConnectionEnd::RetryEnrollment);
                     }
@@ -68,11 +68,12 @@ impl Client {
                         | VoiceCommand::ListenStop
                         | VoiceCommand::Abort,
                     ) => {}
-                    None => return Err(ConnectionEnd::Stopped),
+                    None => {},
                 },
                 _ = self.events.closed() => return Err(ConnectionEnd::Stopped),
-                changed = self.config.changed(), if self.config.has_changed().is_ok() => {
-                    if let Some(updated) = changed.ok().and_then(|()| self.changed_config()) {
+                changed = self.config.changed() => {
+                    if changed.is_err() { return Err(ConnectionEnd::Stopped); }
+                    if let Some(updated) = self.changed_config() {
                         return Err(ConnectionEnd::Reconfigured(Box::new(updated)));
                     }
                 }
