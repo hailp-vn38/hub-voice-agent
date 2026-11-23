@@ -27,8 +27,10 @@ export component CenterScreen inherits Rectangle {
     private property <int> serial: Center.focus-serial;
 
     changed serial => {
-        root.zoom-card = Center.focus;
-        zoom-timer.running = true;
+        if Center.focus != CenterCard.none {
+            root.zoom-card = Center.focus;
+            zoom-timer.running = true;
+        }
     }
     zoom-timer := Timer {
         interval: 1400ms;
