@@ -1,5 +1,6 @@
 import { Theme } from "../theme.slint";
 import { SettingsData } from "../contract/settings.slint";
+import { Confirm } from "../overlays/confirm.slint";
 import { ActionButton } from "../components/action-button.slint";
 import { DisplayPanel } from "settings/display.slint";
 import { AudioPanel } from "settings/audio.slint";
@@ -10,7 +11,6 @@ import { DataPanel } from "settings/data.slint";
 import { SystemPanel } from "settings/system.slint";
 
 // Setting: danh mục trái, bảng giữa (cuộn), ô QR Setup web phải. Áp dụng ngay, không nút Lưu.
-// Thẻ xác nhận ở đây là bản cục bộ cho tới khi ticket 14 có overlays/confirm.slint.
 export component Settings inherits Rectangle {
     private property <[string]> categories: ["Hiển thị", "Âm thanh", "Giọng nói", "Nhà", "Kết nối", "Dữ liệu", "Hệ thống"];
     private property <int> cat: 0;
@@ -95,31 +95,12 @@ export component Settings inherits Rectangle {
     }
 
     // Thẻ xác nhận xoá / khởi động lại / tắt máy.
-    if root.pending-key != "": Rectangle {
-        background: #000000a0;
-        TouchArea { }
-        Rectangle {
-            width: 760px;
-            height: 300px;
-            border-radius: Theme.radius;
-            background: Theme.card;
-            VerticalLayout {
-                padding: Theme.space-l;
-                spacing: Theme.space-m;
-                Text { text: root.pending-title; color: Theme.text; font-size: Theme.font-title; horizontal-alignment: center; }
-                HorizontalLayout {
-                    spacing: Theme.space-m;
-                    ActionButton { text: "Huỷ"; clicked => { root.pending-key = ""; } }
-                    ActionButton {
-                        text: "Đồng ý";
-                        danger: true;
-                        clicked => {
-                            if (root.pending-kind == "clear") { SettingsData.clear(root.pending-key); } else { SettingsData.system-action(root.pending-key); }
-                            root.pending-key = "";
-                        }
-                    }
-                }
-            }
+    if root.pending-key != "": Confirm {
+        title: root.pending-title;
+        cancelled => { root.pending-key = ""; }
+        confirmed => {
+            if (root.pending-kind == "clear") { SettingsData.clear(root.pending-key); } else { SettingsData.system-action(root.pending-key); }
+            root.pending-key = "";
         }
     }
 }
