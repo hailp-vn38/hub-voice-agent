@@ -110,6 +110,12 @@ async fn show_image_displays_downloaded_photo() {
     assert_eq!(reply["payload"]["result"]["loaded"], 2);
     assert_eq!(ui_rx.borrow().view.screen, Screen::Photos);
     assert_eq!(ui_rx.borrow().photos.len(), 2);
+    let photos_view = hub_core::present(&ui_rx.borrow()).photos;
+    assert!(photos_view.viewing);
+    assert_eq!(
+        photos_view.viewer[photos_view.viewer_index as usize].caption,
+        "Lake"
+    );
     assert!(
         ui_rx
             .borrow()
@@ -155,7 +161,7 @@ async fn show_image_displays_downloaded_photo() {
         list["payload"]["result"]["images"][0]["caption"],
         "Mountain"
     );
-    socket.send(Message::Text(json!({"type":"mcp","payload":{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"hub_image_control","arguments":{"action":"unpin"}}}}).to_string().into())).await.unwrap();
+    socket.send(Message::Text(json!({"type":"mcp","payload":{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"hub_image_control","arguments":{"action":"unpin","id":id}}}}).to_string().into())).await.unwrap();
     let control: Value = loop {
         let message = tokio::time::timeout(std::time::Duration::from_secs(5), socket.next())
             .await

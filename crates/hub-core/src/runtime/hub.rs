@@ -170,7 +170,7 @@ impl Hub {
             } else if calendar::Feature::owns_job(&id) {
                 hub.calendar.on_job(&id, result, reply, &mut hub.view, &now)
             } else if id == "photos" {
-                hub.photos.on_job(result, reply, seconds)
+                hub.photos.on_job(result, reply, seconds, &mut hub.view)
             } else if id.starts_with("home:") {
                 hub.home.on_job(&id, result, reply)
             } else {

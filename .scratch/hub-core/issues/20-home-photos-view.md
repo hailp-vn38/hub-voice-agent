@@ -1,6 +1,6 @@
 # 20 — Nhà và Ảnh: dữ liệu hiển thị và thao tác chạm
 
-Status: ready-for-agent
+Status: ready-for-human
 Blocked by: 14
 Spec: [../spec.md](../spec.md) · UI: hub-ui #15, #16
 
@@ -23,5 +23,4 @@ Spec: [../spec.md](../spec.md) · UI: hub-ui #15, #16
 ## Comments
 
 - Đã thêm dữ liệu trình bày Nhà/Ảnh, trạng thái tải ảnh và xoá ảnh cùng hai tệp cache. Viewer focus tiếp tục do `hub-core` giữ qua `Focus`; `auto-advance` tiếp tục thuộc UI.
-- Gates đã qua trước khi ghép tip integration: `scripts/test.sh -p hub-core` (127 passed), `cargo fmt --all -- --check`, `cargo build -p hub` và `git diff --check`.
-- Sẽ chạy lại các gate sau khi ghép tip `feat/hub-core` mới nhất.
+- Gates sau khi ghép `feat/hub-core` ở `8a6f137`: `scripts/test.sh -p hub-core` (132 passed), `cargo fmt --all -- --check`, `cargo build -p hub` và `git diff --check`.

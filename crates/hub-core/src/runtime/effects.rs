@@ -81,7 +81,13 @@ pub(super) async fn execute(
                 loading.push(photo.key.clone());
                 if let Ok(image) = image {
                     if store
-                        .photos_add(photo.caption.clone(), photo.source.clone(), image, now)
+                        .photos_add_with_id(
+                            photo.key.clone(),
+                            photo.caption.clone(),
+                            photo.source.clone(),
+                            image,
+                            now,
+                        )
                         .is_ok()
                     {
                         loaded += 1;

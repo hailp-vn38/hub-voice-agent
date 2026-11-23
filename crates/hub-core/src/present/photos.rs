@@ -74,30 +74,60 @@ pub(super) fn from_state(state: &UiState) -> PhotosView {
 }
 
 fn from_photo(photo: &Photo, state: &UiState) -> PhotoView {
-    PhotoView {
-        key: photo.id.clone(),
-        image_path: photo.image_path.clone(),
-        thumbnail_path: photo.thumbnail_path.clone(),
-        caption: photo.caption.clone(),
-        source: photo.source.clone(),
-        time: super::timers::time_at(&state.now, photo.created),
-        pinned: photo.pinned,
-        state: PhotoState::Ready,
-    }
+    to_view(
+        PhotoViewData {
+            key: &photo.id,
+            image_path: &photo.image_path,
+            thumbnail_path: &photo.thumbnail_path,
+            caption: &photo.caption,
+            source: &photo.source,
+            created: photo.created,
+            pinned: photo.pinned,
+            state: PhotoState::Ready,
+        },
+        state,
+    )
 }
 
 fn from_fetch(fetch: &PhotoFetch, state: &UiState) -> PhotoView {
-    PhotoView {
-        key: fetch.key.clone(),
-        image_path: String::new(),
-        thumbnail_path: String::new(),
-        caption: fetch.caption.clone(),
-        source: fetch.source.clone(),
-        time: super::timers::time_at(&state.now, fetch.created),
-        pinned: false,
-        state: match fetch.state {
-            PhotoFetchState::Loading => PhotoState::Loading,
-            PhotoFetchState::Failed => PhotoState::Failed,
+    to_view(
+        PhotoViewData {
+            key: &fetch.key,
+            image_path: "",
+            thumbnail_path: "",
+            caption: &fetch.caption,
+            source: &fetch.source,
+            created: fetch.created,
+            pinned: false,
+            state: match fetch.state {
+                PhotoFetchState::Loading => PhotoState::Loading,
+                PhotoFetchState::Failed => PhotoState::Failed,
+            },
         },
+        state,
+    )
+}
+
+struct PhotoViewData<'a> {
+    key: &'a str,
+    image_path: &'a str,
+    thumbnail_path: &'a str,
+    caption: &'a str,
+    source: &'a str,
+    created: i64,
+    pinned: bool,
+    state: PhotoState,
+}
+
+fn to_view(photo: PhotoViewData<'_>, state: &UiState) -> PhotoView {
+    PhotoView {
+        key: photo.key.into(),
+        image_path: photo.image_path.into(),
+        thumbnail_path: photo.thumbnail_path.into(),
+        caption: photo.caption.into(),
+        source: photo.source.into(),
+        time: super::timers::time_at(&state.now, photo.created),
+        pinned: photo.pinned,
+        state: photo.state,
     }
 }

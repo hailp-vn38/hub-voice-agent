@@ -76,12 +76,13 @@ impl Feature {
             .iter()
             .map(|request| request.fetch.clone())
             .collect();
-        let mut effects = vec![Effect::Ui(Box::new(move |ui| {
+        let mut effects = view.open(crate::Screen::Photos, None, now);
+        effects.push(Effect::Ui(Box::new(move |ui| {
             ui.photo_fetches
                 .retain(|photo| photo.state != crate::PhotoFetchState::Loading);
             ui.photo_fetches.extend(pending);
             true
-        }))];
+        })));
         effects.push(Effect::Spawn {
             job: "photos".into(),
             reply: Some(call),
@@ -169,13 +170,22 @@ impl Feature {
         result: crate::runtime::jobs::JobResult,
         reply: Option<ToolCall>,
         now: i64,
+        view: &mut crate::view::View,
     ) -> Vec<Effect> {
         let result = result.and_then(|r| {
             r.downcast::<Vec<(crate::PhotoFetch, anyhow::Result<crate::FetchedImage>)>>()
                 .map_err(|_| anyhow::anyhow!("invalid photo result"))
         });
         match result {
-            Ok(results) => vec![Effect::PersistPhotos(*results, now, reply)],
+            Ok(results) => {
+                let mut effects = results
+                    .iter()
+                    .find_map(|(photo, result)| result.is_ok().then(|| photo.key.clone()))
+                    .map(|id| view.open(crate::Screen::Photos, Some(crate::Focus::Photo(id)), now))
+                    .unwrap_or_default();
+                effects.push(Effect::PersistPhotos(*results, now, reply));
+                effects
+            }
             Err(_) => {
                 let mut effects = vec![Effect::Ui(Box::new(|ui| {
                     for photo in &mut ui.photo_fetches {

@@ -47,13 +47,30 @@ impl Store {
         image: FetchedImage,
         now: i64,
     ) -> anyhow::Result<()> {
+        self.photos_add_with_id(
+            uuid::Uuid::new_v4().to_string(),
+            caption,
+            source,
+            image,
+            now,
+        )
+    }
+
+    pub(crate) fn photos_add_with_id(
+        &mut self,
+        id: String,
+        caption: String,
+        source: String,
+        image: FetchedImage,
+        now: i64,
+    ) -> anyhow::Result<()> {
+        uuid::Uuid::parse_str(&id).context("invalid photo id")?;
         let dir = &self.photos_dir;
         let size = image.image.len() + image.thumbnail.len();
         if size > 200 * 1024 * 1024 {
             bail!("image exceeds cache limit");
         }
         std::fs::create_dir_all(dir)?;
-        let id = uuid::Uuid::new_v4().to_string();
         let main = dir.join(format!("{id}.png"));
         let thumb = dir.join(format!("{id}-thumb.png"));
         std::fs::write(&main, &image.image)?;
@@ -99,8 +116,8 @@ impl Store {
     }
 
     pub fn photos_remove(&mut self, id: &str) -> anyhow::Result<()> {
-        let stored_id: Option<String> = self
-            .connection
+        let tx = self.connection.transaction()?;
+        let stored_id: Option<String> = tx
             .query_row("SELECT id FROM photos WHERE id=?1", [id], |row| row.get(0))
             .optional()?;
         let Some(stored_id) = stored_id else {
@@ -116,8 +133,8 @@ impl Store {
                 Err(error) => return Err(error.into()),
             }
         }
-        self.connection
-            .execute("DELETE FROM photos WHERE id=?1", [stored_id])?;
+        tx.execute("DELETE FROM photos WHERE id=?1", [stored_id])?;
+        tx.commit()?;
         Ok(())
     }
 }

@@ -1,6 +1,6 @@
 use super::tools::Args;
 use crate::{
-    HomeEntity, HomeEvent, HomeSource,
+    HomeDomain, HomeEntity, HomeEvent, HomeSource,
     features::tool_args,
     runtime::{effects::Effect, jobs::JobResult},
     selector::{self, Selection},
@@ -125,7 +125,7 @@ impl Feature {
         let Some(entity) = self.entities.iter().find(|entity| entity.id == entity_id) else {
             return Vec::new();
         };
-        if !(entity_id.starts_with("light.") || entity_id.starts_with("switch.")) {
+        if !matches!(entity.domain(), HomeDomain::Light | HomeDomain::Switch) {
             return Vec::new();
         }
         let service = if entity.state == "on" {

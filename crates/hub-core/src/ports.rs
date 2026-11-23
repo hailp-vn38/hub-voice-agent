@@ -47,6 +47,23 @@ pub struct HomeEntity {
     pub stale: bool,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum HomeDomain {
+    Light,
+    Switch,
+    Sensor,
+}
+
+impl HomeEntity {
+    pub(crate) fn domain(&self) -> HomeDomain {
+        match self.id.split_once('.').map(|(domain, _)| domain) {
+            Some("light") => HomeDomain::Light,
+            Some("switch") => HomeDomain::Switch,
+            _ => HomeDomain::Sensor,
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 pub enum HomeEvent {
     Connected,

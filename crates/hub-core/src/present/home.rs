@@ -1,4 +1,4 @@
-use crate::{HomeEntity, UiState};
+use crate::{HomeDomain, HomeEntity, UiState};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct HomeView {
@@ -45,10 +45,10 @@ pub(super) fn from_state(state: &UiState) -> HomeView {
 }
 
 fn tile(entity: &HomeEntity, state: &UiState) -> HomeTileView {
-    let kind = match entity.id.split_once('.').map(|(domain, _)| domain) {
-        Some("light") => HomeKind::Light,
-        Some("switch") => HomeKind::Switch,
-        _ => HomeKind::Sensor,
+    let kind = match entity.domain() {
+        HomeDomain::Light => HomeKind::Light,
+        HomeDomain::Switch => HomeKind::Switch,
+        HomeDomain::Sensor => HomeKind::Sensor,
     };
     let value = if kind == HomeKind::Sensor {
         let localized = if entity.state.parse::<f64>().is_ok() {

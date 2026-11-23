@@ -27,8 +27,8 @@ pub use config::{
 };
 pub use ports::{
     CalendarDelta, CalendarEvent, CalendarFuture, CalendarQuery, CalendarSource, Clock,
-    FetchedImage, HomeEntity, HomeEvent, HomeSource, ImageFetcher, NewCalendarEvent, System,
-    SystemClock, WeatherLocation, WeatherSource,
+    FetchedImage, HomeDomain, HomeEntity, HomeEvent, HomeSource, ImageFetcher, NewCalendarEvent,
+    System, SystemClock, WeatherLocation, WeatherSource,
 };
 pub use present::{
     AlertKind, AlertView, CountdownItemView, CountdownUnit, CountdownsView, HomeKind, HomeTileView,
