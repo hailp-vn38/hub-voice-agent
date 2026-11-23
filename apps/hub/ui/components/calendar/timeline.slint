@@ -30,7 +30,7 @@ component BlockView inherits Rectangle {
     private property <color> tone: root.b.fresh ? Theme.done : root.reminder ? Theme.warm
         : root.b.ongoing ? Theme.accent-cyan : Theme.accent;
     changed serial => {
-        if (CalendarData.focus == root.b.key) {
+        if (CalendarData.focus != "" && CalendarData.focus == root.b.key) {
             root.t0 = animation-tick();
             root.scroll-to(root.y);
         }

@@ -43,7 +43,7 @@ Xem toàn bộ giao diện với dữ liệu giả: `scripts/run.sh run --featur
 |---|---|---|
 | Màn Setting chỉ có phần Kết nối voice; Hiển thị, Âm thanh, Giọng nói, Nhà, Dữ liệu, Hệ thống chưa hoạt động | Cấu hình qua Setup web (`http://<máy>:8080`) | G4–G8 |
 | Chưa có tool `hub_open_screen`, `hub_show_card`, `hub_set_brightness`, `hub_set_volume` | Agent không mở màn tuỳ ý, không đưa thẻ nội dung, không chỉnh sáng/âm lượng | G1–G3 |
-| Focus bằng giọng chưa làm sáng mục ở màn Đếm ngược và Reminder | Hỏi về một mốc hay Reminder mở đúng màn nhưng không đánh dấu mục | hub-core: thêm `focus` vào `CountdownsView`, `RemindersView`, chưa có ticket |
+| Focus bằng giọng chưa làm sáng mục ở màn Đếm ngược và Reminder | Hỏi về một mốc hay Reminder mở đúng màn nhưng không đánh dấu mục; bridge để `focus` / `focus-serial` ở mặc định vì `CountdownsView` và `RemindersView` chưa cung cấp chúng | hub-core: thêm trường focus vào hai view; bridge hub-mac 03 đã ghi nhận phần còn thiếu |
 | Thanh trạng thái: Wi-Fi luôn đầy, không có biểu tượng tắt mic, nền không đổi theo giờ | Chỉ là hiển thị | G9, G5, G11 |
 | Ambient không có lịch ban đêm; luôn vào sau 5 phút | — | G4 |
 | Màn trung tâm hiện 4 thiết bị Home Assistant đầu tiên, không chọn được | — | G6 |

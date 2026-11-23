@@ -52,6 +52,8 @@ fn main() -> anyhow::Result<()> {
     let (stop_tx, stop_rx) = oneshot::channel::<()>();
     let setup_tx = input_tx.clone();
     let weak = app.as_weak();
+    let bridge_state = ui::BridgeState::default();
+    let spawn_state = bridge_state.clone();
     let core = thread::spawn(move || -> anyhow::Result<()> {
         let rt = tokio::runtime::Builder::new_multi_thread()
             .enable_all()
@@ -68,7 +70,7 @@ fn main() -> anyhow::Result<()> {
             let audio_tx = audio.commands;
             let audio_rx = audio.events;
             let _audio_levels = audio.levels;
-            ui::spawn_bridge(weak, ui_rx);
+            ui::spawn_bridge(weak, ui_rx, spawn_state);
             let ports = Ports { clock: Arc::new(SystemClock), system: Arc::new(HostSystem), calendar: Arc::new(hub_core::GoogleCalendar::default()), weather: Arc::new(hub_core::OpenMeteo::default()), home: Arc::new(hub_core::HomeAssistant::default()), images: Arc::new(hub_core::HttpImageFetcher) };
             tokio::select! {
                 result = hub_core::run(config, store, ports, Io { voice_config_tx: config_tx, voice_tx, voice_rx, audio_tx, audio_rx, input_rx, ui_tx }) => result,
@@ -76,7 +78,7 @@ fn main() -> anyhow::Result<()> {
             }
         })
     });
-    ui::connect_inputs(&app, input_tx);
+    ui::connect_inputs(&app, input_tx, bridge_state);
     app.run()?;
     let _ = stop_tx.send(());
     core.join()

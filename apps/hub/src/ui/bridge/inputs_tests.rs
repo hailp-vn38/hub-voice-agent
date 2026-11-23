@@ -70,7 +70,7 @@ fn activity_is_sent_once_during_a_one_second_burst() {
 fn home_and_photo_callbacks_map_to_hub_inputs() {
     let app = app();
     let (tx, mut rx) = tokio::sync::mpsc::channel(16);
-    super::connect_inputs(&app, tx);
+    super::connect_inputs(&app, tx, crate::ui::bridge::BridgeState::default());
 
     let photos = app.global::<crate::PhotosData>();
     let photo = |key: &str, pinned| crate::Photo {

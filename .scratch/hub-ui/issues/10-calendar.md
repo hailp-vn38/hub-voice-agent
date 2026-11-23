@@ -34,20 +34,20 @@ Fixture: tuần có sự kiện cả ngày, sự kiện trùng giờ, Reminder. 
 
 ## Map với hub-core
 
-Map: chờ hub-core #10 (lịch), #08 (Reminder trên dòng thời gian)
+Map: done (hub-mac #04, commit `1a6cd0c`)
 
 | Hợp đồng | UiState / UserInput |
 |---|---|
-| `CalendarData.month-title` / `.synced` / `.stale` | |
-| `.week` / `.selected-day` | |
-| `.blocks` / `.now-min` | |
-| `.upcoming` | |
-| `.month-view` / `.month` | |
-| `.detail` | |
-| `.focus` / `.focus-serial` | |
-| `select-day` / `toggle-month` / `open-detail` / `close-detail` | |
-| `CalBlock.col` / `.cols` (cột khi trùng giờ) | |
-| `CalUpcoming.fresh` | |
+| `CalendarData.month-title` / `.synced` / `.stale` | `HubView.calendar.month_title` / `.synced` / `.stale` |
+| `.week` / `.selected-day` | `HubView.calendar.week` / `.selected_day` |
+| `.blocks` / `.now-min` | `HubView.calendar.blocks` / `.now_min` (gồm Calendar và Reminder) |
+| `.upcoming` | `HubView.calendar.upcoming` |
+| `.month-view` / `.month` | `month-view` do bridge giữ; `.month` từ `HubView.calendar.month` |
+| `.detail` | Bridge giữ key; ưu tiên `.details[]`, nếu là Sắp tới dùng tiêu đề/ngày/giờ từ `.upcoming[]` (địa điểm/mô tả để trống) |
+| `.focus` / `.focus-serial` | `HubView.calendar.focus` / `.focus_serial` |
+| `select-day` / `toggle-month` / `open-detail` / `close-detail` | Chọn ngày gửi `UserInput::Focus(Some(Focus::Calendar(day)))`; ba thao tác còn lại chỉ đổi trạng thái bridge |
+| `CalBlock.col` / `.cols` (cột khi trùng giờ) | `HubView.calendar.blocks[].col` / `.cols` |
+| `CalUpcoming.fresh` | `HubView.calendar.upcoming[].fresh` |
 
 ## Answer
 

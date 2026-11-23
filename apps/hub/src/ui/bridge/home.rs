@@ -1,7 +1,12 @@
 use crate::{App, HomeData, HomeKind, HomeTile};
-use hub_core::present::{HomeKind as CoreHomeKind, HomeView};
+use hub_core::{
+    UserInput,
+    present::{HomeKind as CoreHomeKind, HomeView},
+};
 use slint::{ComponentHandle, Model, ModelRc, VecModel};
-use std::rc::Rc;
+use std::{cell::RefCell, rc::Rc};
+
+use super::inputs::Inputs;
 
 thread_local! {
     static HOME_TILES: Rc<VecModel<HomeTile>> = Rc::new(VecModel::default());
@@ -38,5 +43,13 @@ pub(super) fn apply_home(app: &App, home: &HomeView) {
             }
         }
         data.set_tiles(ModelRc::from(tiles.clone()));
+    });
+}
+
+pub(super) fn connect_inputs(app: &App, inputs: Rc<RefCell<Inputs>>) {
+    app.global::<HomeData>().on_toggle(move |key| {
+        let mut input = inputs.borrow_mut();
+        input.activity();
+        input.send(UserInput::ToggleHome(key.to_string()));
     });
 }
