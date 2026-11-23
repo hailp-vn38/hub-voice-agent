@@ -5,6 +5,7 @@ mod levels;
 mod qr;
 mod scenarios;
 mod settings;
+mod spawn;
 
 use crate::{App, DemoPanel, Nav, StatusBar};
 use slint::{ComponentHandle, ModelRc, SharedString, Timer, TimerMode, VecModel};

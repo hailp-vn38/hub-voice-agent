@@ -1,0 +1,32 @@
+import { Theme } from "../theme.slint";
+import { FloatingCards } from "../contract/spawn.slint";
+import { Card } from "card.slint";
+import { SpawnIn } from "spawn.slint";
+import { Icon } from "icon.slint";
+
+// Thẻ nổi phía trên Voice dock (hub_show_card); mờ đi khi fading.
+export component FloatingCardsView inherits Rectangle {
+    in property <length> dock-height: 240px;
+    opacity: FloatingCards.fading ? 0 : 1;
+    animate opacity { duration: Theme.anim-screen; }
+    VerticalLayout {
+        y: parent.height - root.dock-height - self.height - Theme.space-m;
+        alignment: end;
+        spacing: Theme.space-s;
+        for c in FloatingCards.cards: SpawnIn {
+            key: c.key;
+            height: 120px;
+            Card {
+                HorizontalLayout {
+                    padding: Theme.space-m;
+                    spacing: Theme.space-m;
+                    Icon { name: c.icon; color: Theme.accent; }
+                    VerticalLayout {
+                        Text { text: c.title; color: Theme.text; font-size: Theme.font-body; font-weight: 600; }
+                        Text { text: c.body; color: Theme.text-dim; font-size: Theme.font-small; }
+                    }
+                }
+            }
+        }
+    }
+}

@@ -80,6 +80,11 @@ pub fn all() -> Vec<Scenario> {
         ("Đổi độ phân giải", super::settings::change_resolution),
         ("Chưa đăng ký voice", super::settings::not_enrolled),
         ("Tắt mic", super::settings::mute_mic),
+        ("Sinh vào ô 3", super::spawn::spawn_cell3),
+        ("Lưu → thành công", super::spawn::save_ok),
+        ("Lưu → lỗi", super::spawn::save_fail),
+        ("Thẻ nổi", super::spawn::floating),
+        ("Thẻ nổi mờ", super::spawn::floating_fade),
         ("Chữ lớn", |app| app.global::<Theme>().set_text_scale(1.25)),
     ]
 }

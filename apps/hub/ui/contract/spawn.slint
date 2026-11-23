@@ -1,0 +1,19 @@
+// Hợp đồng Spawn. Ticket UI: .scratch/hub-ui/issues/06-spawn-cards.md.
+export enum PendingState { none, saving, saved, failed }
+
+export global Spawn {
+    in property <int> serial;
+    in property <string> key;
+}
+
+export struct FloatingCard {
+    key: string,
+    title: string,
+    body: string,
+    icon: string,
+}
+
+export global FloatingCards {
+    in property <[FloatingCard]> cards;
+    in property <bool> fading;
+}
