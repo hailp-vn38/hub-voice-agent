@@ -71,7 +71,22 @@ Chọn bằng feature của crate `apps/hub` (dự kiến `desktop` mặc địn
 
 - TTS Opus cần thư viện hệ thống: cài bằng `brew install opus` trước khi build.
 - Lần đầu dùng mic, macOS hỏi quyền Microphone cho terminal/IDE đang chạy app.
-- Wake word `hey_jarvis` (openWakeWord qua `ort`) chạy được trên macOS arm64; model ONNX tải về thư mục `models/` (không commit).
+- Wake word `hey_jarvis` dùng openWakeWord qua `ort`. Ba model ONNX được đọc từ `AI_HUB_MODELS_DIR`, mặc định là `models/`; model không commit.
+- Nếu thiếu model, tải openWakeWord v0.5.1 vào thư mục `models/`:
+
+  ```sh
+  mkdir -p models
+  base=https://github.com/dscripka/openWakeWord/releases/download/v0.5.1
+  curl -L "$base/melspectrogram.onnx" -o models/melspectrogram.onnx
+  curl -L "$base/embedding_model.onnx" -o models/embedding_model.onnx
+  curl -L "$base/hey_jarvis_v0.1.onnx" -o models/hey_jarvis.onnx
+  ```
+
+- Trong worktree ticket/integration hiện tại, chạy app với bộ model đã có ở checkout chính:
+
+  ```sh
+  AI_HUB_MODELS_DIR=/Users/lamphuchai/Desktop/project_rust/ai-hub/models scripts/run.sh run
+  ```
 
 ### Dịch vụ bên ngoài
 
