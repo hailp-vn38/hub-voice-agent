@@ -20,6 +20,8 @@ pub async fn run(
     mut io: Io,
 ) -> anyhow::Result<()> {
     effects::execute_settings(effects::SettingsEffect::Initialize, &mut config, &io);
+    let mut speech = crate::features::reminders::speech::Speech::default();
+    let mut reminders = crate::features::reminders::Feature::load(&store)?;
     let mut timers = crate::features::timers::Feature::load(&store)?;
     let mut countdowns = crate::features::countdowns::Feature::load(&store)?;
     let mut calendar = crate::features::calendar::Feature::load(&store)?;
@@ -47,6 +49,7 @@ pub async fn run(
                 .snapshot()
                 .into_iter()
                 .chain(countdowns.snapshot(ports.clock.now().date()))
+                .chain(reminders.snapshot())
                 .chain(calendar.snapshot()),
         )
     {
@@ -72,11 +75,15 @@ pub async fn run(
                 pending.extend(weather.tick(ports.clock.now().timestamp().as_second()));
                 let now = ports.clock.now().timestamp().as_second();
                 let due = timers.due(now);
-                alerts.retain_due(&due);
+                let due_reminders = reminders.due(ports.clock.now());
+                alerts.retain_due(&due, &due_reminders);
                 for timer in due { alerts.push(timer); }
+                if ports.system.time_synced() { pending.extend(reminders.mark_missed(ports.clock.now())); }
+                for reminder in due_reminders { alerts.push_reminder(reminder); }
                 let (dismissed, effects) = alerts.tick(now, conversation.alert_blocked(), ports.system.time_synced());
                 pending.extend(effects);
-                if let Some(id) = dismissed { pending.extend(timers.dismiss(id)); }
+                pending.extend(speech.tick(alerts.active(), now, config.get().voice.reminder_speech));
+                if let Some(alert) = dismissed { match alert { crate::Alert::Timer(timer) => pending.extend(timers.dismiss(timer.id)), crate::Alert::Reminder(reminder) => pending.extend(reminders.finish(reminder.id, ports.clock.now().timestamp().as_second(), false)) } }
                 pending.extend(calendar.tick(ports.calendar.clone(), config.get().calendar.clone(), now));
                 for effect in pending { effects::execute(effect, &io.ui_tx, &io.voice_tx, &io.audio_tx, &mut jobs, &mut store).await?; }
             }
@@ -99,6 +106,7 @@ pub async fn run(
                 }
             },
             Some(event) = io.voice_rx.recv() => {
+                speech.event(&event, ports.clock.now().timestamp().as_second());
                 match &event {
                     VoiceEvent::Connection(connection) => effects::execute_settings(effects::SettingsEffect::Connection(connection.clone()), &mut config, &io),
                     VoiceEvent::Activation { code } => effects::execute_settings(effects::SettingsEffect::Activation(code.clone()), &mut config, &io),
@@ -107,7 +115,7 @@ pub async fn run(
                 let old_screen = view.screen();
                 let mut pending = match event {
                     VoiceEvent::ToolCall(call) if call.name.starts_with("hub_calendar_") => calendar.on_tool(&mut view, call, ports.calendar.clone(), config.get().calendar.clone(), ports.clock.now().timestamp().as_second()),
-                    VoiceEvent::ToolCall(call) => tools::route(&mut timers, &mut countdowns, &mut view, &mut weather, &home, &photos, &store, call, ports.clock.now()),
+                    VoiceEvent::ToolCall(call) => tools::route(&mut timers, &mut reminders, &mut countdowns, &mut view, &mut alerts, &mut weather, &home, &photos, &store, call, ports.clock.now()),
                     event => voice::on(event, &mut conversation, ports.clock.now()),
                 };
                 if old_screen == crate::Screen::Weather && view.screen() != crate::Screen::Weather { pending.extend(weather.leave(&store, ports.clock.now().timestamp().as_second())); }
@@ -126,7 +134,7 @@ pub async fn run(
                 UserInput::DismissAlert => {
                     let (dismissed, effects) = alerts.dismiss();
                     let mut pending = effects;
-                    if let Some(id) = dismissed { pending.extend(timers.dismiss(id)); }
+                    if let Some(alert) = dismissed { match alert { crate::Alert::Timer(timer) => pending.extend(timers.dismiss(timer.id)), crate::Alert::Reminder(reminder) => pending.extend(reminders.finish(reminder.id, ports.clock.now().timestamp().as_second(), false)) } }
                     for effect in pending { effects::execute(effect, &io.ui_tx, &io.voice_tx, &io.audio_tx, &mut jobs, &mut store).await?; }
                 }
                 UserInput::SaveVoiceUrl(input) => effects::execute_settings(effects::SettingsEffect::SaveUrl(input), &mut config, &io),

@@ -13,7 +13,13 @@ pub struct VoiceSettings {
     pub device_id: String,
     pub client_id: String,
     pub ota_url: Option<String>,
+    #[serde(default = "default_reminder_speech")]
+    pub reminder_speech: bool,
 }
+fn default_reminder_speech() -> bool {
+    true
+}
+
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct CalendarSettings {
@@ -57,6 +63,7 @@ impl ConfigStore {
                 device_id: Uuid::new_v4().to_string(),
                 client_id: Uuid::new_v4().to_string(),
                 ota_url: None,
+                reminder_speech: true,
             },
         };
         let value = Config {

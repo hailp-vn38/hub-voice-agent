@@ -77,6 +77,9 @@ pub struct Io {
 
 pub use features::countdowns::{Countdown, CountdownView};
 pub use features::photos::Photo;
+pub use features::reminders::{
+    Due as ReminderDue, Reminder, ReminderHistory, Repeat as ReminderRepeat,
+};
 pub use features::timers::Timer;
 pub use features::weather::WeatherView;
 pub use sources::{HomeAssistant, HttpImageFetcher, OpenMeteo};
@@ -85,6 +88,7 @@ pub use store::Store;
 pub fn tool_definitions() -> Vec<voice_client::ToolDef> {
     let mut tools = features::timers::tools::definitions();
     tools.extend(features::countdowns::tools::definitions());
+    tools.extend(features::reminders::tools::definitions());
     tools.extend(features::calendar::tools::definitions());
     tools.extend(features::weather::tools::definitions());
     tools.extend(features::home::tools::definitions());

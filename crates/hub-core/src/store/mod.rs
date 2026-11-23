@@ -33,6 +33,7 @@ impl Store {
         connection.pragma_update(None, "journal_mode", "WAL")?;
         connection.execute_batch(include_str!("migrations/0001_init.sql"))?;
         connection.execute_batch(include_str!("migrations/0002_countdowns.sql"))?;
+        connection.execute_batch(include_str!("migrations/0003_reminders.sql"))?;
         connection.execute_batch("CREATE TABLE IF NOT EXISTS calendar_cache (id INTEGER PRIMARY KEY, events TEXT NOT NULL, token TEXT)")?;
         connection.execute_batch(include_str!("migrations/0003_weather.sql"))?;
         connection.execute_batch(include_str!("migrations/0004_photos.sql"))?;

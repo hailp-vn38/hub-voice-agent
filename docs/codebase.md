@@ -367,6 +367,8 @@ tick 1 Hz → reminders.due(now) → alerts.push(Reminder)
   → ~60 s → alert vào "Đã nhắc gần đây"
 ```
 
+`voice.reminder_speech` trong `config.toml` bật hoặc tắt đọc Reminder; mặc định bật. Tool `hub_reminder_snooze` dời Reminder đang báo theo số phút cung cấp.
+
 Actor tick 1 Hz cho mọi thứ theo giờ (hẹn giờ, Reminder, tự quay về, chữ số đếm ngược, làm mới thời tiết/lịch); vòng tròn hẹn giờ mượt nhờ Slint `animate` tuyến tính 1 s giữa hai tick. Tick chỉ là nhịp: luật luôn so sánh với giờ tuyệt đối từ `Clock`, không đếm tick.
 
 ## 5. Dữ liệu trên thiết bị
