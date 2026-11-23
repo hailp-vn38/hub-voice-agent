@@ -1,0 +1,156 @@
+import { Theme } from "../theme.slint";
+import { Screen } from "../contract/nav.slint";
+import { Center, CenterCard } from "../contract/center.slint";
+import { CenterCardBox } from "../components/center-card.slint";
+import { CenterTimerTile } from "../components/center-timer.slint";
+import { HomeTileView } from "../components/home-tile.slint";
+import { Icon } from "../components/icon.slint";
+
+// Màn trung tâm 16:9: không tab, không cuộn. Hàng dưới cùng chừa cho Voice dock.
+export component CenterScreen inherits Rectangle {
+    in property <length> dock-height: 240px;
+    private property <length> tw: 300px;
+    private property <length> gap: Theme.space-m;
+    private property <int> extra: (Center.timer.visible ? 1 : 0) + (Center.countdown.visible ? 1 : 0);
+    private property <CenterCard> zoom-card: CenterCard.none;
+    private property <int> serial: Center.focus-serial;
+
+    changed serial => {
+        root.zoom-card = Center.focus;
+        zoom-timer.running = true;
+    }
+    zoom-timer := Timer {
+        interval: 1400ms;
+        running: false;
+        triggered => {
+            self.running = false;
+            root.zoom-card = CenterCard.none;
+        }
+    }
+
+    VerticalLayout {
+        padding-top: 72px;
+        padding-left: Theme.space-l;
+        padding-right: Theme.space-l;
+        padding-bottom: root.dock-height;
+        spacing: root.gap;
+
+        HorizontalLayout {
+            vertical-stretch: 1;
+            spacing: root.gap;
+            CenterCardBox {
+                horizontal-stretch: 3;
+                zoomed: root.zoom-card == CenterCard.weather;
+                tapped => { Center.open(Screen.weather); }
+                VerticalLayout {
+                    padding: Theme.space-m;
+                    alignment: start;
+                    Text { text: Center.time; color: Theme.text; font-size: Theme.font-hero; overflow: elide; }
+                    Text { text: Center.date; color: Theme.text-dim; font-size: Theme.font-body; overflow: elide; }
+                }
+                VerticalLayout {
+                    padding: Theme.space-m;
+                    x: parent.width - self.width;
+                    width: parent.width * 0.45;
+                    alignment: start;
+                    HorizontalLayout {
+                        alignment: end;
+                        spacing: Theme.space-s;
+                        Icon { name: Center.weather.icon; size: 64px; color: Theme.warm; }
+                        Text { text: Center.weather.temp; color: Theme.text; font-size: Theme.font-hero * 0.6; overflow: elide; }
+                    }
+                    Text {
+                        text: Center.weather.summary;
+                        color: Theme.text-dim;
+                        font-size: Theme.font-body;
+                        horizontal-alignment: right;
+                        overflow: elide;
+                    }
+                    if Center.weather.stale: Text {
+                        text: "cập nhật lúc " + Center.weather.updated;
+                        color: Theme.warm;
+                        font-size: Theme.font-small;
+                        horizontal-alignment: right;
+                    }
+                }
+            }
+            VerticalLayout {
+                horizontal-stretch: 2;
+                spacing: root.gap;
+                CenterCardBox {
+                    zoomed: root.zoom-card == CenterCard.calendar;
+                    tapped => { Center.open(Screen.calendar); }
+                    VerticalLayout {
+                        padding: Theme.space-m;
+                        alignment: start;
+                        for e[i] in Center.today: Text {
+                            visible: i < 3;
+                            height: i < 3 ? self.preferred-height : 0px;
+                            text: e.time + "  " + e.title;
+                            color: e.now ? Theme.warm : Theme.text;
+                            font-size: Theme.font-body;
+                            overflow: elide;
+                        }
+                    }
+                }
+                CenterCardBox {
+                    zoomed: root.zoom-card == CenterCard.reminders;
+                    tapped => { Center.open(Screen.reminders); }
+                    VerticalLayout {
+                        padding: Theme.space-m;
+                        alignment: start;
+                        for r[i] in Center.reminders: Text {
+                            visible: i < 2;
+                            height: i < 2 ? self.preferred-height : 0px;
+                            text: r.time + "  " + r.text;
+                            color: Theme.text;
+                            font-size: Theme.font-body;
+                            overflow: elide;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Hàng ô động: các ô dời mượt khi thêm/bớt.
+        Rectangle {
+            height: 160px;
+            CenterCardBox {
+                x: 0;
+                width: root.tw;
+                opacity: Center.timer.visible ? 1 : 0;
+                visible: self.opacity > 0;
+                zoomed: root.zoom-card == CenterCard.timer;
+                animate opacity { duration: Theme.anim-screen; }
+                tapped => { Center.open(Screen.timers); }
+                CenterTimerTile { timer: Center.timer; }
+            }
+            CenterCardBox {
+                x: Center.timer.visible ? root.tw + root.gap : 0px;
+                width: root.tw;
+                opacity: Center.countdown.visible ? 1 : 0;
+                visible: self.opacity > 0;
+                zoomed: root.zoom-card == CenterCard.countdown;
+                animate x { duration: Theme.anim-screen; easing: ease-out; }
+                animate opacity { duration: Theme.anim-screen; }
+                tapped => { Center.open(Screen.countdowns); }
+                Text {
+                    text: Center.countdown.today ? "Hôm nay: " + Center.countdown.label : Center.countdown.value + "\n" + Center.countdown.label;
+                    color: Center.countdown.today ? Theme.warm : Theme.text;
+                    font-size: Theme.font-small;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                    wrap: word-wrap;
+                }
+            }
+            for t[i] in Center.home: HomeTileView {
+                x: (root.extra + i) * (root.tw + root.gap);
+                width: root.tw;
+                tile: t;
+                updated: Center.weather.updated;
+                animate x { duration: Theme.anim-screen; easing: ease-out; }
+                toggle(k) => { Center.toggle-home(k); }
+            }
+        }
+    }
+}

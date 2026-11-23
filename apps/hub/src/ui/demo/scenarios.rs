@@ -102,6 +102,7 @@ pub fn all() -> Vec<Scenario> {
         ("Lưu → lỗi", super::spawn::save_fail),
         ("Thẻ nổi", super::spawn::floating),
         ("Thẻ nổi mờ", super::spawn::floating_fade),
+<<<<<<< HEAD
         ("Đếm ngược đến Tết", super::fixtures::countdowns::add_tet),
         ("Sinh nhật 12/3", super::fixtures::countdowns::add_birthday),
         ("Qua nửa đêm", super::fixtures::countdowns::midnight),
@@ -110,6 +111,28 @@ pub fn all() -> Vec<Scenario> {
         ("Chuyến đi đã qua", super::fixtures::countdowns::passed),
         ("Còn bao nhiêu ngày đến Tết?", super::fixtures::countdowns::focus_tet),
         ("Xoá chuyến đi", super::fixtures::countdowns::remove_trip),
+=======
+        ("Trung tâm: thêm hẹn giờ", super::fixtures::add_timer),
+        ("Trung tâm: hết hẹn giờ", super::fixtures::end_timer),
+        ("Trung tâm: hôm nay là Tết", super::fixtures::countdown_today),
+        ("Trung tâm: hỏi mai có mưa", super::fixtures::focus_weather),
+        ("Trung tâm: offline", super::fixtures::stale),
+        ("Reminder: nhắc uống thuốc 21:00", |app| { app.global::<Nav>().set_screen(Screen::Reminders); super::reminders::add_medicine(app) }),
+        ("Reminder: mỗi sáng 7 giờ", |app| { app.global::<Nav>().set_screen(Screen::Reminders); super::reminders::add_gym(app) }),
+        ("Reminder: tối nay có gì?", super::reminders::focus_tonight),
+        ("Reminder: huỷ uống thuốc", super::reminders::cancel_medicine),
+        ("Reminder: hoãn 10 phút", super::reminders::postpone),
+        ("Reminder: một mục đã lỡ", super::reminders::missed),
+        ("Reminder: trống", super::reminders::empty),
+        ("Hẹn giờ: luộc trứng 7 phút", super::timers::boil_egg),
+        ("Hẹn giờ: thêm một cái", super::timers::add_another),
+        ("Hẹn giờ: 10 giây cuối", super::timers::final_seconds),
+        ("Hẹn giờ: tạm dừng / tiếp tục", super::timers::pause_resume),
+        ("Hẹn giờ: thêm 2 phút", super::timers::add_two_minutes),
+        ("Hẹn giờ: huỷ trứng", super::timers::cancel_egg),
+        ("Hẹn giờ: hết giờ", super::timers::finish),
+        ("Hẹn giờ: trứng còn bao lâu?", super::timers::focus_egg),
+>>>>>>> feat/hub-ui
         ("Chữ lớn", |app| app.global::<Theme>().set_text_scale(1.25)),
     ]
 }

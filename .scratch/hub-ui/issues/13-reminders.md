@@ -1,6 +1,6 @@
 # 13 — Màn Reminder
 
-Status: ready-for-agent
+Status: resolved
 Blocked by: 06
 Spec: [../spec.md](../spec.md)
 Thiết kế: concept.md §6 "Màn Reminder" (trạng thái nhắc toàn màn ở ticket 14)
@@ -39,3 +39,7 @@ Map: chờ hub-core #08
 | `.groups` | |
 | `.recent` | |
 | `.focus` / `.focus-serial` | |
+
+## Answer
+
+Đã làm `screens/reminders.slint`, `contract/reminders.slint` (thêm `fading: bool` vào `ReminderItem` để huỷ mờ dần), fixture và 7 kịch bản trong `demo/reminders.rs`. Mục mới dùng `SpawnIn`; focus viền sáng theo `RemindersData.focus` (không dùng `focus-serial`). Chưa có test Rust (không có logic thuần). Map hub-core chờ #08.

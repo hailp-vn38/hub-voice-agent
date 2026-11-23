@@ -4,10 +4,12 @@ mod clock;
 mod fixtures;
 mod levels;
 mod qr;
+mod reminders;
 mod response;
 mod scenarios;
 mod settings;
 mod spawn;
+mod timers;
 
 use crate::{App, DemoPanel, Nav, StatusBar};
 use slint::{ComponentHandle, ModelRc, SharedString, Timer, TimerMode, VecModel};
