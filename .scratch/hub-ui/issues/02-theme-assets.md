@@ -1,6 +1,6 @@
 # 02 — Theme, font, icon
 
-Status: ready-for-agent
+Status: resolved
 Blocked by: 01
 Spec: [../spec.md](../spec.md)
 Thiết kế: concept.md §6 "Nguyên tắc", "Phong cách"
@@ -27,3 +27,7 @@ Map: chờ hub-core (Setting cỡ chữ, chưa có ticket)
 | Hợp đồng | UiState / UserInput |
 |---|---|
 | `Theme.text-scale` | |
+
+## Answer
+
+Đã thêm `Theme` (màu, cỡ chữ nhân `text-scale`, spacing, animation, `touch-min`), font Be Vietnam Pro nhúng, 10 icon Tabler + `Icon`, `assets/README.md`, màn `screens/sample.slint`. Demo panel: "Bảng mẫu", "Chữ nhỏ/vừa/lớn". `app.slint` và `voice-settings.slint` dùng token. Build demo OK; chưa kiểm bằng mắt, chưa kiểm trên Pi.

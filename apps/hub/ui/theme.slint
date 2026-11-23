@@ -1,6 +1,30 @@
 export global Theme {
+    // Màu
     out property <color> background: #0b0f14;
+    out property <color> card: #151c24;
     out property <color> text: #e8edf2;
+    out property <color> text-dim: #8fa0b0;
     out property <color> accent: #4cc2ff;
+    out property <color> warm: #ffb454;
     out property <color> error: #ff8c8c;
+    out property <color> done: #6fd98c;
+
+    // Cỡ chữ: Setting ghi text-scale (nhỏ 0.85 / vừa 1.0 / lớn 1.25)
+    in-out property <float> text-scale: 1.0;
+    out property <length> font-hero: 200px * text-scale;
+    out property <length> font-title: 48px * text-scale;
+    out property <length> font-body: 32px * text-scale;
+    out property <length> font-small: 24px * text-scale;
+
+    // Khoảng cách, bo góc, vùng chạm
+    out property <length> space-s: 12px;
+    out property <length> space-m: 24px;
+    out property <length> space-l: 48px;
+    out property <length> radius: 24px;
+    out property <length> touch-min: 88px;
+
+    // Animation
+    out property <duration> anim-screen: 400ms;
+    out property <duration> anim-bounce: 600ms;
+    out property <duration> anim-shake: 550ms;
 }

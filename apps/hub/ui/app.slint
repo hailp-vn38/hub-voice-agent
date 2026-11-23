@@ -2,7 +2,11 @@ import { Button } from "std-widgets.slint";
 import { Theme } from "theme.slint";
 import { VoiceSettings } from "screens/voice-settings.slint";
 import { Nav, Screen } from "contract/nav.slint";
+import { Sample } from "screens/sample.slint";
+import "../assets/fonts/BeVietnamPro-Regular.ttf";
+import "../assets/fonts/BeVietnamPro-SemiBold.ttf";
 export { Nav, Screen } from "contract/nav.slint";
+export { Theme } from "theme.slint";
 export { DemoPanel } from "demo/panel.slint";
 
 export component App inherits Window {
@@ -14,14 +18,17 @@ export component App inherits Window {
     in property <string> voice-error;
     in property <bool> enrolling;
     in property <bool> demo-mode;
+    in property <bool> show-sample;
     private property <bool> settings-open: false;
     callback save-voice-url(string);
     callback connect-voice();
     preferred-width: 1920px;
     preferred-height: 1080px;
     background: Theme.background;
+    default-font-family: "Be Vietnam Pro";
 
-    if root.demo-mode: Text {
+    if root.demo-mode && root.show-sample: Sample { }
+    if root.demo-mode && !root.show-sample: Text {
         text: Nav.screen == Screen.center ? "center" : Nav.screen == Screen.menu ? "menu" : Nav.screen == Screen.weather ? "weather"
             : Nav.screen == Screen.calendar ? "calendar" : Nav.screen == Screen.home ? "home" : Nav.screen == Screen.timers ? "timers"
             : Nav.screen == Screen.countdowns ? "countdowns" : Nav.screen == Screen.reminders ? "reminders" : Nav.screen == Screen.photos ? "photos"
