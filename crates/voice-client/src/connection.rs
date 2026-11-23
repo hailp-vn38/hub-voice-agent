@@ -1,6 +1,6 @@
 //! One WebSocket connection: request, hello exchange, then the Ready voice loop.
 
-use std::{fmt, future::Future, time::Duration};
+use std::{fmt, time::Duration};
 
 use futures_util::{SinkExt, StreamExt};
 use tokio::{
@@ -26,6 +26,7 @@ use crate::{
 
 mod timeouts;
 mod voice;
+mod waiting;
 
 pub(crate) use timeouts::{Timeouts, bounded};
 
@@ -143,69 +144,9 @@ impl Client {
     }
 
     /// The watched config, if it now differs from the active one.
-    fn changed_config(&mut self) -> Option<VoiceConfig> {
+    pub(super) fn changed_config(&mut self) -> Option<VoiceConfig> {
         let updated = self.config.borrow_and_update().clone();
         (updated != self.active_config).then_some(updated)
-    }
-
-    /// Runs `future` while not Ready: commands that need a session are refused
-    /// or dropped, and a config change or shutdown ends the wait early.
-    pub(crate) async fn operation<F, T>(&mut self, future: F) -> Result<T, ConnectionEnd>
-    where
-        F: Future<Output = Result<T, Failure>>,
-    {
-        self.operation_inner(future, false).await
-    }
-
-    pub(crate) async fn wait_for_enrollment(&mut self) -> ConnectionEnd {
-        match self
-            .operation_inner(std::future::pending::<Result<(), Failure>>(), true)
-            .await
-        {
-            Err(end) => end,
-            Ok(()) => unreachable!(),
-        }
-    }
-
-    async fn operation_inner<F, T>(
-        &mut self,
-        future: F,
-        enrolling: bool,
-    ) -> Result<T, ConnectionEnd>
-    where
-        F: Future<Output = Result<T, Failure>>,
-    {
-        tokio::pin!(future);
-        loop {
-            tokio::select! {
-                biased;
-                command = self.commands.recv() => match command {
-                    Some(VoiceCommand::Connect) if enrolling => return Err(ConnectionEnd::RetryEnrollment),
-                    Some(VoiceCommand::Connect) => {},
-                    Some(VoiceCommand::DirectSpeech { request_id, .. }) => {
-                        self.emit(VoiceEvent::DirectSpeechRejected {
-                            request_id,
-                            reason: crate::DirectSpeechError::Offline,
-                        })
-                        .await?;
-                    }
-                    Some(
-                        VoiceCommand::Audio(_)
-                        | VoiceCommand::ListenStart
-                        | VoiceCommand::ListenStop
-                        | VoiceCommand::Abort,
-                    ) => {}
-                    None => return Err(ConnectionEnd::Stopped),
-                },
-                _ = self.events.closed() => return Err(ConnectionEnd::Stopped),
-                changed = self.config.changed(), if self.config.has_changed().is_ok() => {
-                    if let Some(updated) = changed.ok().and_then(|()| self.changed_config()) {
-                        return Err(ConnectionEnd::Reconfigured(Box::new(updated)));
-                    }
-                }
-                result = &mut future => return result.map_err(ConnectionEnd::failed),
-            }
-        }
     }
 }
 

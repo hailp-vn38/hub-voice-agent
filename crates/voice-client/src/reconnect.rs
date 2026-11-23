@@ -68,10 +68,10 @@ async fn client_loop(mut client: Client, mut jitter: impl FnMut(Duration) -> Dur
             ),
         );
         let end = match client.operation(discover).await {
-            Ok(ota::Discovery::Websocket(url, token)) => {
+            Ok(ota::Discovery::Websocket { url, token }) => {
                 connection::connect_and_wait(&mut client, url, token).await
             }
-            Ok(ota::Discovery::Activation(code)) => {
+            Ok(ota::Discovery::Activation { code, expires_in }) => {
                 if client
                     .emit(VoiceEvent::Connection(ConnectionState::Enrolling))
                     .await
@@ -80,7 +80,7 @@ async fn client_loop(mut client: Client, mut jitter: impl FnMut(Duration) -> Dur
                 {
                     return;
                 }
-                client.wait_for_enrollment().await
+                client.wait_for_enrollment(expires_in).await
             }
             Err(end) => end,
         };

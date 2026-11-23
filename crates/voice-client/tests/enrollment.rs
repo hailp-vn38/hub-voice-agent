@@ -12,7 +12,8 @@ use tokio::{
 };
 use url::Url;
 use voice_client::{
-    ConnectionState, DeviceIdentity, DirectSpeechError, VoiceCommand, VoiceConfig, VoiceEvent,
+    ConnectionState, DeviceIdentity, DirectSpeechError, OpusFrame, VoiceCommand, VoiceConfig,
+    VoiceEvent,
 };
 
 async fn ota(responses: Vec<Value>) -> (Url, mpsc::UnboundedReceiver<String>) {
@@ -77,6 +78,23 @@ async fn activation_waits_without_retrying() {
     tokio::time::advance(Duration::from_secs(60)).await;
     tokio::task::yield_now().await;
     assert!(requests.try_recv().is_err());
+    // Still Enrolling: no Connecting/Ready, so no WebSocket was opened.
+    assert!(events.try_recv().is_err());
+}
+
+#[tokio::test]
+async fn expired_activation_code_is_refreshed_from_ota() {
+    let (url, mut requests) = ota(vec![
+        json!({"activation":{"code":"old","timeout_ms":200}}),
+        json!({"activation":{"code":"fresh"}}),
+    ])
+    .await;
+    let (_config_tx, config_rx) = watch::channel(config(url));
+    let (_commands, mut events) = voice_client::spawn(config_rx);
+    activation(&mut events, "old").await;
+    activation(&mut events, "fresh").await;
+    requests.recv().await.unwrap();
+    requests.recv().await.unwrap();
 }
 
 #[tokio::test]
@@ -106,20 +124,28 @@ async fn connect_rechecks_activation_then_enters_ready_and_ignores_connect() {
     ));
     requests.recv().await.unwrap();
     commands.send(VoiceCommand::Connect).await.unwrap();
-    tokio::time::pause();
-    tokio::time::advance(Duration::from_secs(1)).await;
-    tokio::task::yield_now().await;
-    assert!(requests.try_recv().is_err());
+    let late = tokio::time::timeout(Duration::from_millis(500), requests.recv()).await;
+    assert!(late.is_err(), "Connect while Ready must not call OTA");
+    // The `ignored` code in the websocket response is never surfaced.
+    assert!(events.try_recv().is_err());
 }
 
 #[tokio::test]
-async fn enrolling_rejects_direct_speech_and_reconnects_on_new_config() {
+async fn enrolling_drops_session_commands_and_reconnects_on_new_config() {
     let (first, mut first_requests) = ota(vec![json!({"activation":{"code":"first"}})]).await;
     let (second, mut second_requests) = ota(vec![json!({"activation":{"code":"new"}})]).await;
     let (config_tx, config_rx) = watch::channel(config(first));
     let (commands, mut events) = voice_client::spawn(config_rx);
     activation(&mut events, "first").await;
     first_requests.recv().await.unwrap();
+    for command in [
+        VoiceCommand::ListenStart,
+        VoiceCommand::Audio(OpusFrame(vec![0; 8])),
+        VoiceCommand::ListenStop,
+        VoiceCommand::Abort,
+    ] {
+        commands.send(command).await.unwrap();
+    }
     commands
         .send(VoiceCommand::DirectSpeech {
             request_id: "request".into(),

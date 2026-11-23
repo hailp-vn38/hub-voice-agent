@@ -1,24 +1,35 @@
 use tokio::sync::{mpsc, watch};
+use url::Url;
 use voice_client::{ConnectionState, DeviceIdentity, VoiceCommand, VoiceConfig, VoiceEvent};
 
 use super::VoiceSettings;
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum SettingsStatus {
-    Unconfigured,
-    Connecting,
-    Ready,
-    Enrolling,
-    Offline { retry_in: std::time::Duration },
-}
 
 #[derive(Clone, Debug)]
 pub struct SettingsState {
     pub ota_url: String,
     pub device_id: String,
-    pub status: SettingsStatus,
+    /// `None` until an OTA URL is saved and voice-client is running.
+    pub status: Option<ConnectionState>,
     pub activation: Option<String>,
     pub error: Option<String>,
+}
+
+impl SettingsState {
+    pub fn status_label(&self) -> String {
+        match &self.status {
+            None => "Chưa cấu hình".to_owned(),
+            Some(ConnectionState::Connecting) => "Đang kết nối".to_owned(),
+            Some(ConnectionState::Ready) => "Đã kết nối".to_owned(),
+            Some(ConnectionState::Enrolling) => "Chờ kích hoạt".to_owned(),
+            Some(ConnectionState::Offline { retry_in }) => {
+                format!("Offline (thử lại sau {} s)", retry_in.as_secs())
+            }
+        }
+    }
+
+    pub fn is_enrolling(&self) -> bool {
+        self.status == Some(ConnectionState::Enrolling)
+    }
 }
 
 pub enum SettingsCommand {
@@ -33,11 +44,9 @@ pub fn start(
     watch::Receiver<SettingsState>,
 ) {
     let state = SettingsState {
-        ota_url: settings
-            .ota_url()
-            .map_or_else(String::new, |url| url.to_string()),
+        ota_url: settings.ota_url().map(String::from).unwrap_or_default(),
         device_id: settings.device_id().to_owned(),
-        status: SettingsStatus::Unconfigured,
+        status: None,
         activation: None,
         error: None,
     };
@@ -47,71 +56,91 @@ pub fn start(
     (commands_tx, state_rx)
 }
 
+/// Handles to a running voice-client.
+struct Voice {
+    config: watch::Sender<VoiceConfig>,
+    commands: mpsc::Sender<VoiceCommand>,
+    events: mpsc::Receiver<VoiceEvent>,
+}
+
+impl Voice {
+    fn spawn(config: VoiceConfig) -> Self {
+        let (config_tx, config_rx) = watch::channel(config);
+        let (commands, events) = voice_client::spawn(config_rx);
+        Self {
+            config: config_tx,
+            commands,
+            events,
+        }
+    }
+}
+
 async fn run(
     mut settings: VoiceSettings,
     state: watch::Sender<SettingsState>,
     mut commands: mpsc::UnboundedReceiver<SettingsCommand>,
 ) {
     let device = DeviceIdentity::new(settings.device_id(), settings.client_id());
-    let mut voice = settings.ota_url().map(|ota_url| {
-        spawn_voice(VoiceConfig {
-            ota_url,
-            device: device.clone(),
-            tools: vec![],
-        })
-    });
+    let config = |ota_url: Url| VoiceConfig {
+        ota_url,
+        device: device.clone(),
+        tools: vec![],
+    };
+    let mut voice = settings.ota_url().map(|url| Voice::spawn(config(url)));
     loop {
         tokio::select! {
             command = commands.recv() => match command {
                 Some(SettingsCommand::SaveUrl(input)) => match settings.save_url(&input) {
                     Ok(ota_url) => {
-                        let config = VoiceConfig { ota_url: ota_url.clone(), device: device.clone(), tools: vec![] };
-                        if let Some((config_tx, _, _)) = &voice { config_tx.send_replace(config); }
-                        else { voice = Some(spawn_voice(config)); }
-                        state.send_modify(|s| { s.ota_url = ota_url.to_string(); s.error = None; });
+                        let shown = ota_url.to_string();
+                        match &voice {
+                            Some(voice) => {
+                                voice.config.send_replace(config(ota_url));
+                            }
+                            None => voice = Some(Voice::spawn(config(ota_url))),
+                        }
+                        state.send_modify(|s| {
+                            s.ota_url = shown;
+                            s.error = None;
+                        });
                     }
                     Err(error) => state.send_modify(|s| s.error = Some(error.to_string())),
                 },
+                // voice-client decides whether Connect applies (only while
+                // Enrolling). `try_send` keeps this loop responsive; a full
+                // queue means a Connect is already pending.
                 Some(SettingsCommand::Connect) => {
-                    if state.borrow().status == SettingsStatus::Enrolling
-                        && let Some((_, voice_tx, _)) = &voice {
-                        let _ = voice_tx.send(VoiceCommand::Connect).await;
+                    if let Some(voice) = &voice {
+                        let _ = voice.commands.try_send(VoiceCommand::Connect);
                     }
                 }
                 None => break,
             },
             event = async {
                 match &mut voice {
-                    Some((_, _, events)) => events.recv().await,
+                    Some(voice) => voice.events.recv().await,
                     None => std::future::pending().await,
                 }
             } => match event {
                 Some(VoiceEvent::Connection(connection)) => state.send_modify(|s| {
-                    s.status = match connection {
-                        ConnectionState::Connecting => SettingsStatus::Connecting,
-                        ConnectionState::Ready => SettingsStatus::Ready,
-                        ConnectionState::Enrolling => SettingsStatus::Enrolling,
-                        ConnectionState::Offline { retry_in } => SettingsStatus::Offline { retry_in },
-                    };
+                    s.status = Some(connection);
                     s.activation = None;
                 }),
-                Some(VoiceEvent::Activation { code }) => state.send_modify(|s| s.activation = Some(code)),
-                Some(_) => {},
-                None => break,
+                Some(VoiceEvent::Activation { code }) => {
+                    state.send_modify(|s| s.activation = Some(code));
+                }
+                Some(_) => {}
+                // voice-client stopped: drop it so the next save restarts it.
+                None => {
+                    voice = None;
+                    state.send_modify(|s| {
+                        s.status = None;
+                        s.activation = None;
+                        s.error = Some("Voice client đã dừng; lưu lại URL để khởi động lại".into());
+                    });
+                }
             },
             _ = state.closed() => break,
         }
     }
-}
-
-type Voice = (
-    watch::Sender<VoiceConfig>,
-    mpsc::Sender<VoiceCommand>,
-    mpsc::Receiver<VoiceEvent>,
-);
-
-fn spawn_voice(config: VoiceConfig) -> Voice {
-    let (config_tx, config_rx) = watch::channel(config);
-    let (voice_tx, events) = voice_client::spawn(config_rx);
-    (config_tx, voice_tx, events)
 }

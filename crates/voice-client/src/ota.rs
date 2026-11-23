@@ -1,5 +1,7 @@
 //! OTA discovery: which WebSocket to open, and with which token.
 
+use std::time::Duration;
+
 use serde::Deserialize;
 use url::Url;
 
@@ -14,11 +16,19 @@ struct OtaResponse {
 #[derive(Deserialize)]
 struct OtaActivation {
     code: String,
+    timeout_ms: Option<u64>,
 }
 
 pub(crate) enum Discovery {
-    Websocket(Url, String),
-    Activation(String),
+    Websocket {
+        url: Url,
+        token: String,
+    },
+    /// Device not linked yet; `expires_in` is when the server drops the code.
+    Activation {
+        code: String,
+        expires_in: Option<Duration>,
+    },
 }
 
 #[derive(Deserialize)]
@@ -44,9 +54,15 @@ pub(crate) async fn discover(ota_url: Url, device: DeviceIdentity) -> Result<Dis
     } = serde_json::from_slice(&body).map_err(|_| Failure::OtaResponse)?;
     if let Some(websocket) = websocket {
         let url = Url::parse(&websocket.url).map_err(|_| Failure::OtaResponse)?;
-        Ok(Discovery::Websocket(url, websocket.token))
+        Ok(Discovery::Websocket {
+            url,
+            token: websocket.token,
+        })
     } else if let Some(activation) = activation {
-        Ok(Discovery::Activation(activation.code))
+        Ok(Discovery::Activation {
+            code: activation.code,
+            expires_in: activation.timeout_ms.map(Duration::from_millis),
+        })
     } else {
         Err(Failure::OtaResponse)
     }

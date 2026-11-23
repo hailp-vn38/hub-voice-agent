@@ -134,4 +134,4 @@ Ticket cuối cập nhật docs/codebase.md theo bảng này.
 | 06 | [Device MCP và tool status](issues/06-device-mcp.md) | 01 | ready-for-human |
 | 07 | [Direct Speech](issues/07-direct-speech.md) | 05 | ready-for-human |
 | 08 | [Đóng lượt TTS khi mất kết nối, cập nhật codebase.md](issues/08-invariants-and-docs.md) | 04, 05, 06, 07 | ready-for-human |
-| 13 | [Settings: Kết nối voice và mã kích hoạt](issues/13-settings-voice-connection.md) | 03 | needs-triage |
+| 13 | [Settings: Kết nối voice và mã kích hoạt](issues/13-settings-voice-connection.md) | 03 | ready-for-human |

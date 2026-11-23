@@ -1,4 +1,87 @@
-use hub::voice_settings::VoiceSettings;
+use std::time::Duration;
+
+use futures_util::{SinkExt, StreamExt};
+use hub::voice_settings::{SettingsCommand, SettingsState, VoiceSettings, start};
+use serde_json::{Value, json};
+use tokio::{
+    io::{AsyncReadExt, AsyncWriteExt},
+    net::TcpListener,
+    sync::{mpsc, watch},
+};
+use tokio_tungstenite::{accept_async, tungstenite::Message};
+use voice_client::ConnectionState;
+
+/// Fake OTA server: answers each request with the next body in `responses`
+/// and forwards the raw request text.
+async fn ota(responses: Vec<Value>) -> (String, mpsc::UnboundedReceiver<String>) {
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let address = listener.local_addr().unwrap();
+    let (requests_tx, requests) = mpsc::unbounded_channel();
+    tokio::spawn(async move {
+        let mut responses = responses.into_iter();
+        while let Ok((mut stream, _)) = listener.accept().await {
+            let mut request = [0; 4096];
+            let count = stream.read(&mut request).await.unwrap();
+            let _ = requests_tx.send(String::from_utf8_lossy(&request[..count]).into_owned());
+            let body = responses.next().unwrap_or_else(|| json!({})).to_string();
+            let response = format!(
+                "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+                body.len()
+            );
+            let _ = stream.write_all(response.as_bytes()).await;
+        }
+    });
+    (format!("http://{address}/voice/ota"), requests)
+}
+
+/// Fake WebSocket server that completes the hello and holds the session open.
+async fn websocket() -> String {
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let address = listener.local_addr().unwrap();
+    tokio::spawn(async move {
+        let (stream, _) = listener.accept().await.unwrap();
+        let mut socket = accept_async(stream).await.unwrap();
+        assert!(matches!(socket.next().await, Some(Ok(Message::Text(_)))));
+        let hello = json!({
+            "type": "hello",
+            "transport": "websocket",
+            "session_id": "s1",
+            "audio_params": {
+                "format": "opus",
+                "sample_rate": 24000,
+                "channels": 1,
+                "frame_duration": 60
+            }
+        });
+        socket
+            .send(Message::Text(hello.to_string().into()))
+            .await
+            .unwrap();
+        while socket.next().await.is_some() {}
+    });
+    format!("ws://{address}")
+}
+
+async fn wait_until(
+    state: &mut watch::Receiver<SettingsState>,
+    done: impl Fn(&SettingsState) -> bool,
+) {
+    tokio::time::timeout(Duration::from_secs(5), async {
+        while !done(&state.borrow_and_update()) {
+            state.changed().await.unwrap();
+        }
+    })
+    .await
+    .expect("settings state did not reach the expected value");
+}
+
+fn saved_url(dir: &tempfile::TempDir) -> String {
+    VoiceSettings::open(dir.path())
+        .unwrap()
+        .ota_url()
+        .unwrap()
+        .into()
+}
 
 #[test]
 fn identity_and_url_survive_restart_and_invalid_url_is_not_saved() {
@@ -16,208 +99,99 @@ fn identity_and_url_survive_restart_and_invalid_url_is_not_saved() {
     let reopened = VoiceSettings::open(dir.path()).unwrap();
     assert_eq!(reopened.device_id(), device);
     assert_eq!(reopened.client_id(), client);
-    assert_eq!(
-        reopened.ota_url().unwrap().as_str(),
-        "http://localhost:8080/voice/ota"
-    );
+    assert_eq!(saved_url(&dir), "http://localhost:8080/voice/ota");
+}
+
+#[test]
+fn status_labels_match_settings_screen() {
+    let mut state = SettingsState {
+        ota_url: String::new(),
+        device_id: String::new(),
+        status: None,
+        activation: None,
+        error: None,
+    };
+    let cases = [
+        (None, "Chưa cấu hình"),
+        (Some(ConnectionState::Connecting), "Đang kết nối"),
+        (Some(ConnectionState::Ready), "Đã kết nối"),
+        (Some(ConnectionState::Enrolling), "Chờ kích hoạt"),
+        (
+            Some(ConnectionState::Offline {
+                retry_in: Duration::from_secs(4),
+            }),
+            "Offline (thử lại sau 4 s)",
+        ),
+    ];
+    for (status, label) in cases {
+        state.status = status;
+        assert_eq!(state.status_label(), label);
+    }
+    assert!(!state.is_enrolling());
+    state.status = Some(ConnectionState::Enrolling);
+    assert!(state.is_enrolling());
 }
 
 #[tokio::test]
 async fn settings_connects_after_activation_and_shows_ready() {
-    use futures_util::{SinkExt, StreamExt};
-    use hub::voice_settings::{SettingsCommand, SettingsStatus, start};
-    use tokio::{
-        io::{AsyncReadExt, AsyncWriteExt},
-        net::TcpListener,
-    };
-    use tokio_tungstenite::{accept_async, tungstenite::Message};
-
-    let ws = TcpListener::bind("127.0.0.1:0").await.unwrap();
-    let ws_address = ws.local_addr().unwrap();
-    tokio::spawn(async move {
-        let (stream, _) = ws.accept().await.unwrap();
-        let mut socket = accept_async(stream).await.unwrap();
-        assert!(matches!(socket.next().await, Some(Ok(Message::Text(_)))));
-        socket.send(Message::Text(serde_json::json!({"type":"hello","transport":"websocket","session_id":"s1","audio_params":{"format":"opus","sample_rate":24000,"channels":1,"frame_duration":60}}).to_string().into())).await.unwrap();
-        while socket.next().await.is_some() {}
-    });
-    let ota = TcpListener::bind("127.0.0.1:0").await.unwrap();
-    let address = ota.local_addr().unwrap();
-    tokio::spawn(async move {
-        for index in 0..2 {
-            let (mut stream, _) = ota.accept().await.unwrap();
-            let mut request = [0; 4096];
-            assert!(stream.read(&mut request).await.unwrap() > 0);
-            let body = if index == 0 { serde_json::json!({"activation":{"code":"ABC-123"}}) } else { serde_json::json!({"websocket":{"url":format!("ws://{ws_address}"),"token":"token"}}) }.to_string();
-            stream
-                .write_all(
-                    format!(
-                        "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
-                        body.len()
-                    )
-                    .as_bytes(),
-                )
-                .await
-                .unwrap();
-        }
-    });
+    let ws = websocket().await;
+    let (url, _requests) = ota(vec![
+        json!({"activation":{"code":"ABC-123"}}),
+        json!({"websocket":{"url":ws,"token":"token"}}),
+    ])
+    .await;
     let dir = tempfile::tempdir().unwrap();
     let mut settings = VoiceSettings::open(dir.path()).unwrap();
-    settings
-        .save_url(&format!("http://{address}/voice/ota"))
-        .unwrap();
+    settings.save_url(&url).unwrap();
     let (commands, mut state) = start(settings);
-    tokio::time::timeout(std::time::Duration::from_secs(5), async {
-        loop {
-            if state.borrow().activation.as_deref() == Some("ABC-123") {
-                break;
-            }
-            state.changed().await.unwrap();
-        }
-        assert_eq!(state.borrow().status, SettingsStatus::Enrolling);
-        commands.send(SettingsCommand::Connect).unwrap();
-        loop {
-            if state.borrow().status == SettingsStatus::Ready {
-                break;
-            }
-            state.changed().await.unwrap();
-        }
-        assert_eq!(state.borrow().activation, None);
-    })
-    .await
-    .unwrap();
+    wait_until(&mut state, |s| s.activation.as_deref() == Some("ABC-123")).await;
+    assert!(state.borrow().is_enrolling());
+    assert_eq!(state.borrow().status_label(), "Chờ kích hoạt");
+    commands.send(SettingsCommand::Connect).unwrap();
+    wait_until(&mut state, |s| s.status == Some(ConnectionState::Ready)).await;
+    assert_eq!(state.borrow().activation, None);
+    assert_eq!(state.borrow().status_label(), "Đã kết nối");
 }
 
 #[tokio::test]
 async fn saving_url_starts_voice_and_invalid_edit_preserves_config() {
-    use hub::voice_settings::{SettingsCommand, SettingsStatus, start};
-    use tokio::{
-        io::{AsyncReadExt, AsyncWriteExt},
-        net::TcpListener,
-    };
-    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
-    let address = listener.local_addr().unwrap();
-    let (request_tx, request_rx) = tokio::sync::oneshot::channel();
-    tokio::spawn(async move {
-        let (mut stream, _) = listener.accept().await.unwrap();
-        let mut request = [0; 4096];
-        let count = stream.read(&mut request).await.unwrap();
-        request_tx
-            .send(String::from_utf8_lossy(&request[..count]).into_owned())
-            .unwrap();
-        let body = r#"{"activation":{"code":"SAVE-123"}}"#;
-        stream
-            .write_all(
-                format!(
-                    "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
-                    body.len()
-                )
-                .as_bytes(),
-            )
-            .await
-            .unwrap();
-    });
+    let (url, mut requests) = ota(vec![json!({"activation":{"code":"SAVE-123"}})]).await;
     let dir = tempfile::tempdir().unwrap();
     let settings = VoiceSettings::open(dir.path()).unwrap();
     let expected_device = settings.device_id().to_string();
     let (commands, mut state) = start(settings);
-    let url = format!("http://{address}/voice/ota");
+    assert_eq!(state.borrow().status, None);
     commands
         .send(SettingsCommand::SaveUrl(url.clone()))
         .unwrap();
-    tokio::time::timeout(std::time::Duration::from_secs(5), async {
-        let request = request_rx.await.unwrap().to_lowercase();
-        assert!(request.contains(&format!("device-id: {expected_device}")));
-        loop {
-            if state.borrow().activation.as_deref() == Some("SAVE-123") {
-                break;
-            }
-            state.changed().await.unwrap();
-        }
-        commands
-            .send(SettingsCommand::SaveUrl("not a url".into()))
-            .unwrap();
-        loop {
-            if state.borrow().error.is_some() {
-                break;
-            }
-            state.changed().await.unwrap();
-        }
-        assert_eq!(state.borrow().status, SettingsStatus::Enrolling);
-        assert_eq!(state.borrow().ota_url, url);
-        assert_eq!(
-            VoiceSettings::open(dir.path())
-                .unwrap()
-                .ota_url()
-                .unwrap()
-                .as_str(),
-            url
-        );
-    })
-    .await
-    .unwrap();
+    let request = requests.recv().await.unwrap().to_lowercase();
+    assert!(request.contains(&format!("device-id: {expected_device}")));
+    wait_until(&mut state, |s| s.activation.as_deref() == Some("SAVE-123")).await;
+    commands
+        .send(SettingsCommand::SaveUrl("not a url".into()))
+        .unwrap();
+    wait_until(&mut state, |s| s.error.is_some()).await;
+    assert!(state.borrow().is_enrolling());
+    assert_eq!(state.borrow().ota_url, url);
+    assert_eq!(saved_url(&dir), url);
 }
 
 #[tokio::test]
 async fn saving_a_different_url_reconnects_an_existing_client() {
-    use hub::voice_settings::{SettingsCommand, start};
-    use tokio::{
-        io::{AsyncReadExt, AsyncWriteExt},
-        net::TcpListener,
-        sync::oneshot,
-    };
-    async fn server(code: &'static str) -> (String, oneshot::Receiver<()>) {
-        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
-        let address = listener.local_addr().unwrap();
-        let (tx, rx) = oneshot::channel();
-        tokio::spawn(async move {
-            let (mut stream, _) = listener.accept().await.unwrap();
-            let mut request = [0; 4096];
-            assert!(stream.read(&mut request).await.unwrap() > 0);
-            tx.send(()).unwrap();
-            let body = format!(r#"{{"activation":{{"code":"{code}"}}}}"#);
-            stream
-                .write_all(
-                    format!(
-                        "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
-                        body.len()
-                    )
-                    .as_bytes(),
-                )
-                .await
-                .unwrap();
-        });
-        (format!("http://{address}/voice/ota"), rx)
-    }
-    let (first, first_request) = server("first").await;
-    let (second, second_request) = server("second").await;
+    let (first, mut first_requests) = ota(vec![json!({"activation":{"code":"first"}})]).await;
+    let (second, mut second_requests) = ota(vec![json!({"activation":{"code":"second"}})]).await;
     let dir = tempfile::tempdir().unwrap();
     let mut settings = VoiceSettings::open(dir.path()).unwrap();
     settings.save_url(&first).unwrap();
     let (commands, mut state) = start(settings);
-    tokio::time::timeout(std::time::Duration::from_secs(5), async {
-        first_request.await.unwrap();
-        while state.borrow().activation.as_deref() != Some("first") {
-            state.changed().await.unwrap();
-        }
-        commands
-            .send(SettingsCommand::SaveUrl(second.clone()))
-            .unwrap();
-        second_request.await.unwrap();
-        while state.borrow().activation.as_deref() != Some("second") {
-            state.changed().await.unwrap();
-        }
-        assert_eq!(
-            VoiceSettings::open(dir.path())
-                .unwrap()
-                .ota_url()
-                .unwrap()
-                .as_str(),
-            second
-        );
-    })
-    .await
-    .unwrap();
+    first_requests.recv().await.unwrap();
+    wait_until(&mut state, |s| s.activation.as_deref() == Some("first")).await;
+    commands
+        .send(SettingsCommand::SaveUrl(second.clone()))
+        .unwrap();
+    second_requests.recv().await.unwrap();
+    wait_until(&mut state, |s| s.activation.as_deref() == Some("second")).await;
+    assert_eq!(saved_url(&dir), second);
 }
 
 #[test]

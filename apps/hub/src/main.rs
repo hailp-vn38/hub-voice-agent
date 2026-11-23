@@ -28,14 +28,6 @@ fn main() -> anyhow::Result<()> {
         .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from(".data"));
     let settings = VoiceSettings::open(&data_dir)?;
-    app.set_ota_url(
-        settings
-            .ota_url()
-            .map_or_else(String::new, |url| url.to_string())
-            .into(),
-    );
-    app.set_device_id(settings.device_id().into());
-    app.set_voice_status("Chưa cấu hình".into());
     let (ui_tx, ui_rx) = watch::channel(UiState::default());
     let (stop_tx, stop_rx) = oneshot::channel::<()>();
     let (settings_tx, settings_rx) = mpsc::sync_channel(1);
@@ -63,10 +55,17 @@ fn main() -> anyhow::Result<()> {
     let commands = settings_rx.recv()?;
     let save_commands = commands.clone();
     app.on_save_voice_url(move |url| {
-        let _ = save_commands.send(SettingsCommand::SaveUrl(url.to_string()));
+        if save_commands
+            .send(SettingsCommand::SaveUrl(url.to_string()))
+            .is_err()
+        {
+            eprintln!("voice settings controller stopped; URL not saved");
+        }
     });
     app.on_connect_voice(move || {
-        let _ = commands.send(SettingsCommand::Connect);
+        if commands.send(SettingsCommand::Connect).is_err() {
+            eprintln!("voice settings controller stopped; Connect ignored");
+        }
     });
 
     app.run()?;
