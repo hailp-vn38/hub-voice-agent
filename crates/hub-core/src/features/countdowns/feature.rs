@@ -31,12 +31,14 @@ impl Feature {
     pub fn snapshot(&self, today: Date) -> Vec<Effect> {
         let countdowns = self.views(today);
         vec![Effect::Ui(Box::new(move |state| {
+            // Only a countdown already shown on a later day "arrives": boot and
+            // creation for today have no earlier state to arrive from.
             let arrived_today = countdowns.iter().any(|countdown| {
                 countdown.days == 0
-                    && !state
+                    && state
                         .countdowns
                         .iter()
-                        .any(|current| current.id == countdown.id && current.days == 0)
+                        .any(|current| current.id == countdown.id && current.days > 0)
             });
             let changed = state.countdowns != countdowns;
             if !changed && !arrived_today {

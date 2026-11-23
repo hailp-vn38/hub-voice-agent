@@ -92,12 +92,7 @@ pub(super) fn from_state(state: &UiState) -> CalendarView {
     let selected = blocks::selected_day(state);
     let synced = state
         .calendar_last_sync
-        .and_then(|seconds| jiff::Timestamp::from_second(seconds).ok())
-        .map(|time| {
-            time.to_zoned(state.now.time_zone().clone())
-                .strftime("%H:%M")
-                .to_string()
-        })
+        .map(|seconds| super::timers::time_at(&state.now, seconds))
         .unwrap_or_default();
     let stale = state.calendar_online != Some(true)
         || state

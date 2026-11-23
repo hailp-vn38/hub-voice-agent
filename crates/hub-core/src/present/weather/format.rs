@@ -30,12 +30,8 @@ pub(super) fn day_label(date: &str, today: &str, tomorrow: Option<&str>) -> Stri
 }
 
 pub(super) fn updated_time(now: &Zoned, updated: Option<i64>) -> String {
-    let Some(updated) = updated else {
-        return String::new();
-    };
-    now.checked_add(Span::new().seconds(updated.saturating_sub(now.timestamp().as_second())))
-        .ok()
-        .map(|time| time.strftime("%H:%M").to_string())
+    updated
+        .map(|updated| crate::present::timers::time_at(now, updated))
         .unwrap_or_default()
 }
 
