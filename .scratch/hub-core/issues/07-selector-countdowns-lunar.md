@@ -8,7 +8,7 @@ Spec: [../spec.md](../spec.md)
 
 - `src/selector.rs`: `select(items, query) -> Found / Ambiguous(Vec) / NotFound`; áp dụng lại cho tool hẹn giờ (huỷ/chỉnh theo nhãn).
 - `src/lunar.rs`: thuật toán Hồ Ngọc Đức, UTC+7, `to_lunar(date)`, `to_solar(lunar_date)` (xử lý tháng nhuận).
-- `src/features/countdowns.rs`: ≤ 8 mốc, `none` / `yearly` / `yearly_lunar`, `next_occurrence(now)`; `store/countdowns.rs`.
+- `src/features/countdowns/` (khuôn ticket 04): ≤ 8 mốc, `none` / `yearly` / `yearly_lunar`, `next_occurrence(now)`; `features/countdowns/store.rs`.
 - Tool mốc đếm ngược + `UiState.countdowns`.
 
 ## Nghiệm thu

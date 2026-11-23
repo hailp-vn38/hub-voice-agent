@@ -6,8 +6,8 @@ Spec: [../spec.md](../spec.md)
 
 ## Việc
 
-- Port `HomeSource`; adapter `sources/home_assistant.rs` (WebSocket API: auth, subscribe state, call service), tự kết nối lại.
-- `src/features/home.rs`: entity hiển thị, đánh dấu trạng thái cũ khi mất kết nối.
+- Port `HomeSource`: `subscribe() -> mpsc::Receiver<HomeEvent>` (`Connected`, `State`, `Disconnected`) + `async fn call_service(..)`. Adapter `sources/home_assistant.rs` (WebSocket API: auth, subscribe state, call service) tự kết nối lại; actor chỉ thấy event.
+- `src/features/home/` (khuôn ticket 04): entity hiển thị, đánh dấu trạng thái cũ khi mất kết nối.
 - Tool bật/tắt/xem thiết bị, chọn entity bằng `selector`.
 
 ## Nghiệm thu

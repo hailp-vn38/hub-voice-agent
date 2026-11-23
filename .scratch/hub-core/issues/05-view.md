@@ -7,7 +7,7 @@ Spec: [../spec.md](../spec.md)
 ## Việc
 
 - `src/view.rs`: màn hiện tại, focus, tự về màn trung tâm sau ~60 s không thao tác, Ambient, "tạm xem". API `open(screen, focus)`, `on_user(..)`, `tick(now)`, trả `Vec<Effect>`.
-- `src/server_tools.rs`: `screen_for(name)` cho `VoiceEvent::ServerTool`.
+- `view::screen_for_server_tool(name)`: `match` tên tool phía server → màn, cho `VoiceEvent::ServerTool` (không có module `server_tools` riêng).
 - Tool `hub_*` mở màn liên quan (vd. hẹn giờ → màn Hẹn giờ, focus thẻ mới).
 - `UserInput` điều hướng (chạm menu, quay lại). `UiState.view { screen, focus }`.
 

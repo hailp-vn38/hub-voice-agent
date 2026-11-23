@@ -7,7 +7,7 @@ Spec: [../spec.md](../spec.md)
 ## Việc
 
 - Port `ImageFetcher`; adapter `sources/image_fetch.rs`: giới hạn kích thước, chặn LAN/localhost, thu nhỏ + thumbnail.
-- `src/features/photos.rs`: chỉ mục ảnh, ghim, ≤ 100 ảnh / 200 MB, xoá ảnh cũ nhất chưa ghim; `store/photos.rs` + thư mục `<data>/photos/`.
+- `src/features/photos/` (khuôn ticket 04): chỉ mục ảnh, ghim, ≤ 100 ảnh / 200 MB, xoá ảnh cũ nhất chưa ghim; `features/photos/store.rs` + thư mục `<data>/photos/`.
 - Tool hiển thị ảnh từ URL.
 
 ## Nghiệm thu

@@ -6,7 +6,7 @@ Spec: [../spec.md](../spec.md)
 
 ## Việc
 
-- `src/features/reminders.rs`: `none` / `daily` / `weekly`, trạng thái đã nhắc / đã lỡ (lỡ < 1 giờ thì nhắc một lần), `create/cancel/snooze/due(now)`; `store/reminders.rs`.
+- `src/features/reminders/` (khuôn ticket 04): `none` / `daily` / `weekly`, trạng thái đã nhắc / đã lỡ (lỡ < 1 giờ thì nhắc một lần), `create/cancel/snooze/due(now)`; `features/reminders/store.rs`.
 - Đến hạn → `alerts.push(Reminder)` → `Play(ReminderChime)`; nếu online và setting đọc bằng giọng bật → `VoiceCommand::DirectSpeech{request_id}`. `DirectSpeechRejected(SessionBusy)` → thử lại sau; `Offline` → chỉ chuông + chữ. Alert tự tắt sau ~60 s, mục vào "Đã nhắc gần đây".
 - Tool Reminder + `UiState.reminders`.
 
