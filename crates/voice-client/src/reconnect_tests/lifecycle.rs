@@ -7,7 +7,7 @@ use crate::connection::tests::fake_server;
 use crate::{DeviceIdentity, VoiceConfig, VoiceEvent, spawn_with_jitter};
 
 #[tokio::test]
-async fn dropping_command_sender_closes_websocket_and_ends_task() {
+async fn dropping_command_sender_keeps_task_alive_until_config_closes() {
     let websocket = fake_server::FakeServer::start(fake_server::ServerAction::HoldOpen).await;
     let ota_url = ota_for(&websocket.url).await;
     let config = VoiceConfig {
@@ -15,7 +15,7 @@ async fn dropping_command_sender_closes_websocket_and_ends_task() {
         device: DeviceIdentity::new("drop-command-device", "drop-client"),
         tools: Vec::new(),
     };
-    let (_config_tx, config_rx) = watch::channel(config);
+    let (config_tx, config_rx) = watch::channel(Some(config));
     let (commands, mut events) = spawn_with_jitter(config_rx, |nominal| nominal);
     assert!(matches!(
         timeout(Duration::from_secs(2), events.recv())
@@ -30,6 +30,12 @@ async fn dropping_command_sender_closes_websocket_and_ends_task() {
         Some(VoiceEvent::Connection(crate::ConnectionState::Ready))
     ));
     drop(commands);
+    assert!(
+        timeout(Duration::from_millis(50), events.recv())
+            .await
+            .is_err()
+    );
+    drop(config_tx);
     assert!(
         timeout(Duration::from_secs(2), events.recv())
             .await
@@ -51,7 +57,7 @@ async fn dropping_event_receiver_closes_websocket() {
         device: DeviceIdentity::new("drop-event-device", "drop-client"),
         tools: Vec::new(),
     };
-    let (_config_tx, config_rx) = watch::channel(config);
+    let (_config_tx, config_rx) = watch::channel(Some(config));
     let (_commands, mut events) = crate::spawn(config_rx);
     assert!(matches!(
         events.recv().await,
@@ -79,7 +85,7 @@ async fn different_config_closes_current_socket_and_connects_to_new_server() {
         device: DeviceIdentity::new("change-device", "change-client"),
         tools: Vec::new(),
     };
-    let (config_tx, config_rx) = watch::channel(initial.clone());
+    let (config_tx, config_rx) = watch::channel(Some(initial.clone()));
     let (_commands, mut events) = crate::spawn(config_rx);
     assert!(matches!(
         events.recv().await,
@@ -90,14 +96,14 @@ async fn different_config_closes_current_socket_and_connects_to_new_server() {
         Some(VoiceEvent::Connection(crate::ConnectionState::Ready))
     ));
 
-    config_tx.send(initial.clone()).unwrap();
+    config_tx.send(Some(initial.clone())).unwrap();
     tokio::task::yield_now().await;
     assert!(events.try_recv().is_err());
     config_tx
-        .send(VoiceConfig {
+        .send(Some(VoiceConfig {
             ota_url: second_ota,
             ..initial
-        })
+        }))
         .unwrap();
     first_server.closed.await.unwrap();
     assert!(matches!(

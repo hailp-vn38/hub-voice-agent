@@ -201,7 +201,7 @@ Features `mcp`, `tool_status`, `direct_tts` và `aec` luôn bật trong ClientHe
 4. Sự kiện theo đúng thứ tự frame server gửi.
 5. Channel giới hạn 64 command và 256 event; audio bị drop trước khi làm nghẽn reader.
 6. Chỉ giá trị `VoiceConfig` thay đổi mới làm kết nối lại.
-7. Task client và hai channel sống tới khi receiver config đóng. `None` → không kết nối, phát `Connection(Unconfigured)`; `Some → None` đóng socket theo bất biến 1. `Unconfigured` xử lý command như trước `Ready`.
+7. Task client và hai channel sống tới khi các sender config đóng; drop event receiver cũng dừng task. `None` → không kết nối, phát `Connection(Unconfigured)`; `Some → None` đóng socket theo bất biến 1. `Unconfigured` xử lý command như trước `Ready`.
 
 Integration test dùng server WebSocket giả tại `tests/`; test backoff dùng tokio time paused.
 

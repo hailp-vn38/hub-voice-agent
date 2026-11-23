@@ -89,8 +89,7 @@ fn start(ota_url: Url) -> tokio::sync::mpsc::Receiver<VoiceEvent> {
         device: DeviceIdentity::new("device-1", "client-1"),
         tools: Vec::new(),
     };
-    let (commands, events) =
-        crate::spawn_with(tokio::sync::watch::channel(config).1, |_| RETRY, SHORT);
+    let (commands, events) = crate::spawn_with(held_config(config), |_| RETRY, SHORT);
     std::mem::forget(commands);
     events
 }
@@ -226,4 +225,12 @@ async fn quiet_but_healthy_socket_stays_ready() {
     assert_eq!(next_connection(&mut events).await, ConnectionState::Ready);
     let quiet = tokio::time::timeout(Duration::from_secs(1), events.recv()).await;
     assert!(quiet.is_err(), "unexpected event: {quiet:?}");
+}
+
+fn held_config(config: VoiceConfig) -> tokio::sync::watch::Receiver<Option<VoiceConfig>> {
+    let (sender, receiver) = tokio::sync::watch::channel(Some(config));
+    tokio::spawn(async move {
+        sender.closed().await;
+    });
+    receiver
 }

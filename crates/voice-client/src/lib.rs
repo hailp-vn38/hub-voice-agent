@@ -17,7 +17,7 @@ use reconnect::{spawn_with, spawn_with_jitter};
 /// Starts the client task. It connects, reconnects with backoff, and follows
 /// `config` until the command sender or the event receiver is dropped.
 pub fn spawn(
-    config: watch::Receiver<VoiceConfig>,
+    config: watch::Receiver<Option<VoiceConfig>>,
 ) -> (mpsc::Sender<VoiceCommand>, mpsc::Receiver<VoiceEvent>) {
     reconnect::spawn(config)
 }

@@ -74,6 +74,7 @@ impl fmt::Display for Failure {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ConnectionState {
+    Unconfigured,
     Connecting,
     Ready,
     Offline { retry_in: Duration },
@@ -86,7 +87,7 @@ pub(crate) enum ConnectionEnd {
         /// Whether the connection stayed Ready for `Timeouts::stable_after`.
         was_stable: bool,
     },
-    Reconfigured(Box<VoiceConfig>),
+    Reconfigured(Box<Option<VoiceConfig>>),
     RetryEnrollment,
     Stopped,
 }
@@ -114,14 +115,14 @@ where
 pub(crate) struct Client {
     pub events: mpsc::Sender<VoiceEvent>,
     pub commands: mpsc::Receiver<VoiceCommand>,
-    pub config: watch::Receiver<VoiceConfig>,
-    pub active_config: VoiceConfig,
+    pub config: watch::Receiver<Option<VoiceConfig>>,
+    pub active_config: Option<VoiceConfig>,
     pub timeouts: Timeouts,
 }
 
 impl Client {
     pub(crate) fn new(
-        mut config: watch::Receiver<VoiceConfig>,
+        mut config: watch::Receiver<Option<VoiceConfig>>,
         commands: mpsc::Receiver<VoiceCommand>,
         events: mpsc::Sender<VoiceEvent>,
         timeouts: Timeouts,
@@ -144,7 +145,7 @@ impl Client {
     }
 
     /// The watched config, if it now differs from the active one.
-    pub(super) fn changed_config(&mut self) -> Option<VoiceConfig> {
+    pub(super) fn changed_config(&mut self) -> Option<Option<VoiceConfig>> {
         let updated = self.config.borrow_and_update().clone();
         (updated != self.active_config).then_some(updated)
     }
@@ -155,7 +156,15 @@ pub(crate) async fn connect_and_wait(
     url: Url,
     token: String,
 ) -> ConnectionEnd {
-    let request = match websocket_request(&url, &token, &client.active_config.device) {
+    let request = match websocket_request(
+        &url,
+        &token,
+        &client
+            .active_config
+            .as_ref()
+            .expect("configured connection")
+            .device,
+    ) {
         Ok(request) => request,
         Err(cause) => return ConnectionEnd::failed(cause),
     };

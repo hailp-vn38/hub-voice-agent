@@ -25,21 +25,21 @@ const MIN_BACKOFF: Duration = Duration::from_secs(1);
 const MAX_BACKOFF: Duration = Duration::from_secs(60);
 
 pub(crate) fn spawn(
-    config: watch::Receiver<VoiceConfig>,
+    config: watch::Receiver<Option<VoiceConfig>>,
 ) -> (mpsc::Sender<VoiceCommand>, mpsc::Receiver<VoiceEvent>) {
     spawn_with(config, random_jitter, Timeouts::PRODUCTION)
 }
 
 #[cfg(test)]
 pub(crate) fn spawn_with_jitter(
-    config: watch::Receiver<VoiceConfig>,
+    config: watch::Receiver<Option<VoiceConfig>>,
     jitter: impl FnMut(Duration) -> Duration + Send + 'static,
 ) -> (mpsc::Sender<VoiceCommand>, mpsc::Receiver<VoiceEvent>) {
     spawn_with(config, jitter, Timeouts::NONE)
 }
 
 pub(crate) fn spawn_with(
-    config: watch::Receiver<VoiceConfig>,
+    config: watch::Receiver<Option<VoiceConfig>>,
     jitter: impl FnMut(Duration) -> Duration + Send + 'static,
     timeouts: Timeouts,
 ) -> (mpsc::Sender<VoiceCommand>, mpsc::Receiver<VoiceEvent>) {
@@ -53,6 +53,26 @@ pub(crate) fn spawn_with(
 async fn client_loop(mut client: Client, mut jitter: impl FnMut(Duration) -> Duration) {
     let mut backoff = MIN_BACKOFF;
     loop {
+        if client.active_config.is_none() {
+            if client
+                .emit(VoiceEvent::Connection(ConnectionState::Unconfigured))
+                .await
+                .is_err()
+            {
+                return;
+            }
+            match client
+                .operation(std::future::pending::<Result<(), connection::Failure>>())
+                .await
+            {
+                Err(ConnectionEnd::Reconfigured(updated)) => {
+                    client.active_config = *updated;
+                    backoff = MIN_BACKOFF;
+                    continue;
+                }
+                _ => return,
+            }
+        }
         if client
             .emit(VoiceEvent::Connection(ConnectionState::Connecting))
             .await
@@ -63,8 +83,18 @@ async fn client_loop(mut client: Client, mut jitter: impl FnMut(Duration) -> Dur
         let discover = connection::bounded(
             client.timeouts.ota,
             ota::discover(
-                client.active_config.ota_url.clone(),
-                client.active_config.device.clone(),
+                client
+                    .active_config
+                    .as_ref()
+                    .expect("configured connection")
+                    .ota_url
+                    .clone(),
+                client
+                    .active_config
+                    .as_ref()
+                    .expect("configured connection")
+                    .device
+                    .clone(),
             ),
         );
         let end = match client.operation(discover).await {

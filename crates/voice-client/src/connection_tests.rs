@@ -106,8 +106,8 @@ async fn ota_response_without_websocket_emits_offline() {
     ));
 }
 
-fn config_receiver(config: VoiceConfig) -> tokio::sync::watch::Receiver<VoiceConfig> {
-    tokio::sync::watch::channel(config).1
+fn config_receiver(config: VoiceConfig) -> tokio::sync::watch::Receiver<Option<VoiceConfig>> {
+    held_config(config)
 }
 
 #[tokio::test(start_paused = true)]
@@ -227,4 +227,12 @@ async fn server_protocol_close_after_client_hello_emits_offline() {
             crate::ConnectionState::Offline { .. }
         ))
     ));
+}
+
+fn held_config(config: VoiceConfig) -> tokio::sync::watch::Receiver<Option<VoiceConfig>> {
+    let (sender, receiver) = tokio::sync::watch::channel(Some(config));
+    tokio::spawn(async move {
+        sender.closed().await;
+    });
+    receiver
 }
