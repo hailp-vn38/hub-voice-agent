@@ -1,0 +1,53 @@
+import { Theme } from "../theme.slint";
+import { Nav, Screen } from "../contract/nav.slint";
+import { Menu } from "../contract/menu.slint";
+import { Icon } from "../components/icon.slint";
+
+component Tile inherits Rectangle {
+    in property <string> icon;
+    in property <string> name;
+    in property <string> info;
+    callback tapped;
+    background: touch.pressed ? Theme.card.brighter(0.2) : Theme.card;
+    border-radius: Theme.radius;
+    min-height: Theme.touch-min;
+    VerticalLayout {
+        alignment: center;
+        spacing: Theme.space-s;
+        padding: Theme.space-m;
+        Icon { name: root.icon; color: Theme.accent; size: 64px; }
+        Text { text: root.name; color: Theme.text; font-size: Theme.font-body; font-weight: 600; horizontal-alignment: center; }
+        Text {
+            text: root.info;
+            color: Theme.text-dim;
+            font-size: Theme.font-small;
+            horizontal-alignment: center;
+            overflow: elide;
+        }
+    }
+    touch := TouchArea { clicked => { root.tapped(); } }
+}
+
+// Menu tính năng: lưới 4 x 2, chừa hàng dưới cùng cho Voice dock.
+export component MenuScreen inherits Rectangle {
+    in property <length> dock-height: 240px;
+    GridLayout {
+        padding-top: 96px;
+        padding-left: Theme.space-l;
+        padding-right: Theme.space-l;
+        padding-bottom: root.dock-height + Theme.space-m;
+        spacing: Theme.space-m;
+        Row {
+            Tile { icon: "sun"; name: "Thời tiết"; info: Menu.weather; tapped => { Nav.navigate(Screen.weather); } }
+            Tile { icon: "calendar"; name: "Lịch"; info: Menu.calendar; tapped => { Nav.navigate(Screen.calendar); } }
+            Tile { icon: "home"; name: "Nhà"; info: Menu.home; tapped => { Nav.navigate(Screen.home); } }
+            Tile { icon: "clock"; name: "Hẹn giờ"; info: Menu.timers; tapped => { Nav.navigate(Screen.timers); } }
+        }
+        Row {
+            Tile { icon: "alarm"; name: "Đếm ngược"; info: Menu.countdowns; tapped => { Nav.navigate(Screen.countdowns); } }
+            Tile { icon: "bell"; name: "Reminder"; info: Menu.reminders; tapped => { Nav.navigate(Screen.reminders); } }
+            Tile { icon: "photo"; name: "Ảnh"; info: Menu.photos; tapped => { Nav.navigate(Screen.photos); } }
+            Tile { icon: "settings"; name: "Setting"; info: Menu.settings; tapped => { Nav.navigate(Screen.settings); } }
+        }
+    }
+}
