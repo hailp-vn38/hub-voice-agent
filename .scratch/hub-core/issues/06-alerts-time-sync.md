@@ -14,11 +14,11 @@ Spec: [../spec.md](../spec.md)
 ## Nghiệm thu
 
 - [x] Test codebase.md §6: hẹn giờ 7 phút, tiến clock 7 phút → `UiState.alert` hết giờ và có `Play(TimerChime)`.
-- [ ] Đang trong lượt nói → alert chờ tới `TtsStop` rồi mới hiện.
+- [x] Đang trong lượt nói → alert chờ tới `TtsStop` rồi mới hiện.
 - [x] Hai hẹn giờ cùng hết → báo lần lượt.
 - [x] `time_synced == false` → không báo; chuyển `true` → báo.
 - [x] Không thao tác 2 phút → tự tắt.
 
 ## Comments
 
-Đã kiểm thử qua `run` với clock giả: hết giờ, hàng đợi, chưa đồng bộ, tự tắt và dismiss. Chưa có test qua `run` cho trường hợp đợi `TtsStop`; logic dùng `conversation.turn_active()` trên tick. Adapter NTP Pi chưa triển khai (ngoài phạm vi spec); placeholder Pi trả `false`, desktop trả `true`. Audio desktop hiện chỉ tiêu thụ lệnh, chưa phát âm thanh thật.
+Đã kiểm thử qua `run` với clock giả: hết giờ, hàng đợi, chưa đồng bộ, tự tắt và dismiss. Đã kiểm thử qua `run` việc đợi `TtsStop` trong khi mic vẫn mở để nghe tiếp. Adapter NTP Pi chưa triển khai (ngoài phạm vi spec); placeholder Pi trả `false`, desktop trả `true`. Audio desktop hiện chỉ tiêu thụ lệnh, chưa phát âm thanh thật.

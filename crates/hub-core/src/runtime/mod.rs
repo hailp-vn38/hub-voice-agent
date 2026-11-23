@@ -48,7 +48,7 @@ pub async fn run(
                 let due = timers.due(now);
                 alerts.retain_due(&due);
                 for timer in due { alerts.push(timer); }
-                let (dismissed, effects) = alerts.tick(now, conversation.turn_active(), ports.system.time_synced());
+                let (dismissed, effects) = alerts.tick(now, conversation.alert_blocked(), ports.system.time_synced());
                 pending.extend(effects);
                 if let Some(id) = dismissed { pending.extend(timers.dismiss(id)); }
                 for effect in pending { effects::execute(effect, &io.ui_tx, &io.voice_tx, &io.audio_tx, &mut jobs, &mut store).await?; }
