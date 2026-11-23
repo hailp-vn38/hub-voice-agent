@@ -20,4 +20,4 @@ Spec: [../spec.md](../spec.md) · UI: hub-ui #12, #13
 
 - 2026-11-23: `RemoveCountdown(id)` xoá ngay khỏi Store và `UiState`. Theo ADR 0002, UI sở hữu animation mờ dần; hub-core không giữ mốc thêm một nhịp. Khi xoá mốc đang focus, focus cũng được gỡ.
 - 2026-11-23: Đã thêm ngày tạo mốc để tính `progress`; bản ghi cũ không có metadata dùng tiến độ 0 cho mốc tương lai. Snapshot đầu khởi tạo `UiState.now` từ `Clock`, để presenter có giờ đúng ngay khi chạy.
-- 2026-11-23: Gate tự động: `scripts/test.sh -p hub-core` (119 passed), `cargo fmt --all -- --check`, `cargo build -p hub`, `git diff --check` đều qua. Kiểm tra map/hiển thị Slint thuộc hub-ui #12/#13, chưa nằm trong gate của ticket này.
+- 2026-11-23: Sau khi merge integration mới nhất, gate tự động: `scripts/test.sh -p hub-core` (126 passed), `cargo fmt --all -- --check`, `cargo build -p hub`, `git diff --check` đều qua. Kiểm tra map/hiển thị Slint thuộc hub-ui #12/#13, chưa nằm trong gate của ticket này.

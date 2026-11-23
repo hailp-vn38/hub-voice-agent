@@ -83,6 +83,7 @@ impl Alerts {
             let sound = alert.sound();
             effects.push(Effect::Ui(Box::new(move |ui| {
                 ui.alert = Some(alert);
+                ui.events.alert = ui.events.alert.saturating_add(1);
                 true
             })));
             effects.push(Effect::Audio(AudioCommand::Play(sound)));
