@@ -1,8 +1,7 @@
-//! Adapter thật: UiState → global hợp đồng, callback hợp đồng → UserInput (bước map).
-use crate::{App, ConnectionSettings, Nav, SettingsData, StatusBar};
-use hub_core::{UiState, UserInput};
+use crate::{App, ConnectionSettings, SettingsData, StatusBar};
+use hub_core::UiState;
 use slint::{ComponentHandle, Weak};
-use tokio::sync::{mpsc, watch};
+use tokio::sync::watch;
 
 fn apply(app: &App, state: &UiState, url_changed: bool) {
     app.global::<StatusBar>().set_time(state.now.strftime("%H:%M").to_string().into());
@@ -39,29 +38,6 @@ pub fn spawn_bridge(app: Weak<App>, mut rx: watch::Receiver<UiState>) {
             {
                 return;
             }
-        }
-    });
-}
-
-/// Nối callback hợp đồng vào hub-core. Gọi trên luồng UI trước `app.run()`.
-pub fn connect_inputs(app: &App, input_tx: mpsc::Sender<UserInput>) {
-    // Tạm: hub-core chưa có `view` (#05) nên Nav đổi màn ngay tại UI.
-    let weak = app.as_weak();
-    app.global::<Nav>().on_navigate(move |s| {
-        if let Some(app) = weak.upgrade() {
-            app.global::<Nav>().set_screen(s);
-        }
-    });
-    let settings = app.global::<SettingsData>();
-    let save_tx = input_tx.clone();
-    settings.on_save_voice_url(move |url| {
-        if save_tx.try_send(UserInput::SaveVoiceUrl(url.to_string())).is_err() {
-            eprintln!("hub-core không nhận được URL");
-        }
-    });
-    settings.on_connect_voice(move || {
-        if input_tx.try_send(UserInput::VoiceConnect).is_err() {
-            eprintln!("hub-core không nhận được lệnh kết nối");
         }
     });
 }
