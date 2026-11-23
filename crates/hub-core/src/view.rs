@@ -102,6 +102,7 @@ impl View {
             UserInput::PinPhoto { .. }
             | UserInput::ToggleHome(_)
             | UserInput::RemovePhoto { .. }
+            | UserInput::RemoveCountdown(_)
             | UserInput::SaveVoiceUrl(_)
             | UserInput::VoiceConnect
             | UserInput::OrbTapped

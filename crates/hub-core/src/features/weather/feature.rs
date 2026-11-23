@@ -1,3 +1,4 @@
+use super::model::WeatherForecast;
 use crate::{WeatherLocation, WeatherSource, runtime::effects::Effect};
 use serde_json::Value;
 use std::{sync::Arc, time::Duration};
@@ -6,13 +7,13 @@ use voice_client::ToolCall;
 /// How long a fetched forecast stays fresh.
 const REFRESH_SECONDS: i64 = 1800;
 
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct WeatherView {
     pub location: Option<String>,
-    pub forecast: Option<Value>,
+    pub preview: bool,
+    pub updated: Option<i64>,
+    pub forecast: Option<WeatherForecast>,
     pub stale: bool,
-    pub icon: String,
-    pub background: String,
 }
 
 pub(crate) struct Feature {
@@ -53,28 +54,22 @@ impl Feature {
         self.view = WeatherView::default();
         self.next_refresh = now;
         if let Some((updated, data)) = store.weather_get(&self.active)? {
-            self.apply(data, now.saturating_sub(updated) >= REFRESH_SECONDS);
+            self.apply(
+                data,
+                now.saturating_sub(updated) >= REFRESH_SECONDS,
+                updated,
+            );
             self.next_refresh = updated.saturating_add(REFRESH_SECONDS);
         }
         Ok(())
     }
-    fn apply(&mut self, data: Value, stale: bool) {
-        let code = data["current"]["weather_code"].as_i64().unwrap_or(-1);
-        let (icon, background) = match code {
-            0 => ("sun", "clear"),
-            1..=3 => ("cloud", "cloudy"),
-            45 | 48 => ("fog", "fog"),
-            51..=67 | 80..=82 => ("rain", "rain"),
-            71..=77 | 85..=86 => ("snow", "snow"),
-            95..=99 => ("storm", "storm"),
-            _ => ("unknown", "unknown"),
-        };
+    fn apply(&mut self, data: Value, stale: bool, updated: i64) {
         self.view = WeatherView {
             location: data["location"].as_str().map(str::to_owned),
-            forecast: Some(data),
+            preview: self.active.starts_with("city:"),
+            updated: Some(updated),
+            forecast: Some(WeatherForecast::from_open_meteo(&data)),
             stale,
-            icon: icon.into(),
-            background: background.into(),
         };
     }
     pub fn snapshot(&self) -> Effect {
@@ -197,7 +192,7 @@ impl Feature {
                             store.weather_save(&saved.0, now, &saved.1)
                         })];
                         if key == self.active {
-                            self.apply(data.clone(), false);
+                            self.apply(data.clone(), false, now);
                             effects.push(self.snapshot());
                         }
                         if let Some(call) = reply {

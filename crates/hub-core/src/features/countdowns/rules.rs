@@ -17,6 +17,8 @@ pub struct Countdown {
     pub date: String,
     pub repeat: Repeat,
     pub lunar_leap: bool,
+    #[serde(default)]
+    pub created_at: String,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -26,6 +28,10 @@ pub struct CountdownView {
     pub target: String,
     pub days: i32,
     pub repeat: Repeat,
+    #[serde(skip)]
+    pub(crate) created_at: String,
+    #[serde(skip)]
+    pub(crate) progress_start: String,
 }
 
 impl Countdown {
@@ -82,8 +88,45 @@ impl Countdown {
             target: target.to_string(),
             days: julian_day(target) - julian_day(today),
             repeat: self.repeat.clone(),
+            created_at: self.created_at.clone(),
+            progress_start: self.progress_start(target).to_string(),
         })
     }
+
+    fn progress_start(&self, target: Date) -> Date {
+        match self.repeat {
+            Repeat::None => self
+                .created_at
+                .parse::<jiff::Zoned>()
+                .map(|created| created.date())
+                .unwrap_or(target),
+            Repeat::Yearly => {
+                let Ok(original) = self.date.parse::<Date>() else {
+                    return target;
+                };
+                annual_date(original, target.year() - 1).unwrap_or(target)
+            }
+            Repeat::YearlyLunar => {
+                let Some(base) = self.lunar_date() else {
+                    return target;
+                };
+                let year = to_lunar(target).year - 1;
+                lunar_anniversary(LunarDate { year, ..base }).unwrap_or(target)
+            }
+        }
+    }
+}
+
+fn annual_date(original: Date, year: i16) -> Option<Date> {
+    let day = if original.month() == 2
+        && original.day() == 29
+        && date(year, 2, 1).days_in_month() == 28
+    {
+        28
+    } else {
+        original.day()
+    };
+    Date::new(year, original.month(), day).ok()
 }
 
 /// The solar date of a lunar anniversary in `lunar.year`. A leap month that the

@@ -2,7 +2,7 @@
 mod support;
 
 use futures_util::{SinkExt, StreamExt};
-use hub_core::{Io, Ports, Store, UiState, run};
+use hub_core::{Io, Ports, Store, UiState, present, run};
 use serde_json::{Value, json};
 use std::sync::Arc;
 use support::{FakeWeather, TestClock};
@@ -94,6 +94,9 @@ async fn weather_preview_returns_home_and_uses_cache() {
     }
     assert_eq!(ui_rx.borrow().view.screen, hub_core::Screen::Weather);
     assert_eq!(ui_rx.borrow().weather.location.as_deref(), Some("Đà Nẵng"));
+    let weather_view = present(&ui_rx.borrow()).weather;
+    assert!(weather_view.preview);
+    assert_eq!(weather_view.location, "Đà Nẵng");
     input_tx.send(hub_core::UserInput::Back).await.unwrap();
     for _ in 0..10 {
         tokio::task::yield_now().await;
@@ -140,8 +143,15 @@ async fn weather_preview_returns_home_and_uses_cache() {
     }
     assert!(ui_rx.borrow().weather.stale);
     assert_eq!(
-        ui_rx.borrow().weather.forecast.as_ref().unwrap()["current"]["temperature_2m"],
-        20
+        ui_rx
+            .borrow()
+            .weather
+            .forecast
+            .as_ref()
+            .unwrap()
+            .current
+            .temperature,
+        Some(20.0)
     );
     drop(ui_rx);
     task.await.unwrap().unwrap();

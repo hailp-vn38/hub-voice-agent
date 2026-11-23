@@ -2,8 +2,8 @@ use super::{
     audio, effects::Effect, jobs::Internal, tick, tool_trail, tool_trail::ToolTrail, voice,
 };
 use crate::{
-    Alert, AudioEvent, Clock, Config, HomeEvent, Ports, Screen, Store, System, ToolTrailState,
-    UserInput,
+    Alert, AudioEvent, Clock, Config, Focus, HomeEvent, Ports, Screen, Store, System,
+    ToolTrailState, UserInput,
     alerts::Alerts,
     conversation::{Conversation, Input},
     features::{calendar, countdowns, home, photos, reminders, timers, weather},
@@ -63,13 +63,15 @@ impl Hub {
 
     /// The first UI snapshot from the loaded state.
     pub fn snapshot(&self) -> Vec<Effect> {
-        let mut effects = vec![
+        let now = self.now();
+        let mut effects = tick::tick(&now);
+        effects.extend([
             self.weather.snapshot(),
             self.home.snapshot(),
             self.photos.snapshot(),
-        ];
+        ]);
         effects.extend(self.timers.snapshot());
-        effects.extend(self.countdowns.snapshot(self.now().date()));
+        effects.extend(self.countdowns.snapshot(now.date()));
         effects.extend(self.reminders.snapshot());
         effects.extend(self.calendar.snapshot());
         effects
@@ -254,15 +256,24 @@ impl Hub {
         if matches!(&input, UserInput::OrbTapped) {
             return self.on_orb_tapped(store);
         }
-        let now = self.now().timestamp().as_second();
+        let now = self.now();
+        let seconds = now.timestamp().as_second();
         self.track_view(store, |hub| match input {
-            UserInput::Timer(input) => hub.timers.on_input(&mut hub.view, input, now),
+            UserInput::RemoveCountdown(id) => {
+                let mut effects = hub.countdowns.remove_id(id, now.date());
+                effects.extend(hub.view.on_user(UserInput::Activity, seconds));
+                if hub.view.focus() == Some(&Focus::Countdown(id)) {
+                    effects.extend(hub.view.on_user(UserInput::Focus(None), seconds));
+                }
+                effects
+            }
+            UserInput::Timer(input) => hub.timers.on_input(&mut hub.view, input, seconds),
             UserInput::ToggleHome(id) => {
-                let mut effects = hub.view.on_user(UserInput::Activity, now);
+                let mut effects = hub.view.on_user(UserInput::Activity, seconds);
                 effects.extend(hub.home.toggle(&id));
                 effects
             }
-            input => hub.view.on_user(input, now),
+            input => hub.view.on_user(input, seconds),
         })
     }
 

@@ -1,5 +1,5 @@
 /// Snapshot of everything the UI renders. The UI only reads it.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct UiState {
     /// Current local time supplied by the actor's clock port.
     pub now: jiff::Zoned,
