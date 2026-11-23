@@ -258,7 +258,7 @@ pub enum AudioEvent {
 }
 ```
 
-Biên độ mic và năng lượng TTS không đi qua `hub-core`: audio ghi thẳng vào `watch<Levels>` mà UI đọc.
+Biên độ mic và năng lượng TTS không đi qua `hub-core`: audio ghi thẳng vào `watch<Levels>` mà UI đọc. Hiện tại adapter desktop chỉ tiêu thụ lệnh, chưa thu hoặc phát âm thanh; `UiState.voice` chứa trạng thái hội thoại, transcript và phản hồi.
 
 #### Module bên trong
 

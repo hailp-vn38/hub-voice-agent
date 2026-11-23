@@ -1,22 +1,30 @@
-mod effects;
+mod audio;
+pub(crate) mod effects;
 mod jobs;
 mod tick;
+mod voice;
 
 use std::time::Duration;
 
 use tokio::time;
 
-use crate::{Io, Ports};
+use crate::{
+    Io, Ports,
+    conversation::{Conversation, Input},
+};
 
 /// Runs the hub actor until the UI side drops its receiver.
 pub async fn run(ports: Ports, mut io: Io) -> anyhow::Result<()> {
+    let mut conversation = Conversation::default();
     let mut jobs = jobs::Jobs::new();
     let mut tick = time::interval(Duration::from_secs(1));
     tick.set_missed_tick_behavior(time::MissedTickBehavior::Skip);
     loop {
         tokio::select! {
             _ = tick.tick() => {
-                for effect in tick::tick(ports.clock.as_ref()) {
+                let mut pending = tick::tick(ports.clock.as_ref());
+                pending.extend(conversation.on(Input::Tick, ports.clock.now()));
+                for effect in pending {
                     effects::execute(effect, &io.ui_tx, &io.voice_tx, &io.audio_tx, &mut jobs).await;
                 }
             }
@@ -27,7 +35,14 @@ pub async fn run(ports: Ports, mut io: Io) -> anyhow::Result<()> {
                     jobs::Internal::JobDone(_id, _result, _reply) => {},
                 }
             }
-            Some(_) = io.voice_rx.recv() => {}
+            Some(event) = io.voice_rx.recv() => {
+                let pending = voice::on(event, &mut conversation, ports.clock.now());
+                for effect in pending { effects::execute(effect, &io.ui_tx, &io.voice_tx, &io.audio_tx, &mut jobs).await; }
+            }
+            Some(event) = io.audio_rx.recv() => {
+                let pending = audio::on(event, &mut conversation, ports.clock.now());
+                for effect in pending { effects::execute(effect, &io.ui_tx, &io.voice_tx, &io.audio_tx, &mut jobs).await; }
+            }
             Some(_) = io.input_rx.recv() => {}
             _ = io.ui_tx.closed() => return Ok(()),
         }
