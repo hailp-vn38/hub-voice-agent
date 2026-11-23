@@ -4,7 +4,20 @@ mod support;
 use futures_util::{SinkExt, StreamExt};
 use hub_core::{Focus, Io, Ports, Screen, Store, UiState, run};
 use serde_json::{Value, json};
-use std::{sync::Arc, time::Duration};
+use std::{
+    sync::{
+        Arc,
+        atomic::{AtomicBool, Ordering},
+    },
+    time::Duration,
+};
+
+struct TestSystem(AtomicBool);
+impl hub_core::System for TestSystem {
+    fn time_synced(&self) -> bool {
+        self.0.load(Ordering::SeqCst)
+    }
+}
 use support::TestClock;
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
@@ -13,7 +26,7 @@ use tokio::{
 };
 use tokio_tungstenite::{accept_async, tungstenite::Message};
 
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn timers_are_saved_reloaded_and_limit_is_reported() {
     let dir = std::env::temp_dir().join(format!(
         "hub-timers-{}-{:?}",
@@ -38,18 +51,20 @@ async fn timers_are_saved_reloaded_and_limit_is_reported() {
         .unwrap();
     let (config_tx, config_rx) = watch::channel(None);
     let (voice_tx, voice_rx) = voice_client::spawn(config_rx);
-    let (audio_tx, _audio_rx) = mpsc::channel(16);
+    let (audio_tx, mut _audio_rx) = mpsc::channel(16);
     let (_audio_events, audio_rx) = mpsc::channel(16);
-    let (_input_tx, input_rx) = mpsc::channel(16);
+    let (input_tx, input_rx) = mpsc::channel(16);
     let (ui_tx, ui_rx) = watch::channel(UiState::default());
     let start: jiff::Zoned = "2026-11-22T12:00:00+07:00[Asia/Ho_Chi_Minh]"
         .parse()
         .unwrap();
+    let system = Arc::new(TestSystem(AtomicBool::new(false)));
     let task = tokio::spawn(run(
         config,
         Store::open(&dir).unwrap(),
         Ports {
             clock: Arc::new(TestClock::at(start.clone())),
+            system: system.clone(),
         },
         Io {
             voice_config_tx: config_tx.clone(),
@@ -115,6 +130,40 @@ async fn timers_are_saved_reloaded_and_limit_is_reported() {
         }
     }
     assert_eq!(ui_rx.borrow().timers.len(), 4);
+    tokio::time::advance(Duration::from_secs(420)).await;
+    tokio::task::yield_now().await;
+    assert!(ui_rx.borrow().alert.is_none());
+    assert!(_audio_rx.try_recv().is_err());
+    system.0.store(true, Ordering::SeqCst);
+    tokio::time::advance(Duration::from_secs(1)).await;
+    assert_eq!(
+        _audio_rx.recv().await,
+        Some(hub_core::AudioCommand::Play(hub_core::Sound::TimerChime))
+    );
+    let first = ui_rx.borrow().alert.clone().unwrap();
+    tokio::time::advance(Duration::from_secs(120)).await;
+    assert_eq!(
+        _audio_rx.recv().await,
+        Some(hub_core::AudioCommand::StopSound(
+            hub_core::Sound::TimerChime
+        ))
+    );
+    assert_eq!(
+        _audio_rx.recv().await,
+        Some(hub_core::AudioCommand::Play(hub_core::Sound::TimerChime))
+    );
+    assert_ne!(ui_rx.borrow().alert.as_ref(), Some(&first));
+    input_tx
+        .send(hub_core::UserInput::DismissAlert)
+        .await
+        .unwrap();
+    assert_eq!(
+        _audio_rx.recv().await,
+        Some(hub_core::AudioCommand::StopSound(
+            hub_core::Sound::TimerChime
+        ))
+    );
+    assert!(ui_rx.borrow().alert.is_none());
     drop(ui_rx);
     task.await.unwrap().unwrap();
     let (voice_tx, _commands) = mpsc::channel(1);
@@ -129,6 +178,7 @@ async fn timers_are_saved_reloaded_and_limit_is_reported() {
         Store::open(&dir).unwrap(),
         Ports {
             clock: Arc::new(TestClock::at(start)),
+            system: Arc::new(support::Synced),
         },
         Io {
             voice_config_tx: config_tx.clone(),
@@ -140,10 +190,10 @@ async fn timers_are_saved_reloaded_and_limit_is_reported() {
             ui_tx,
         },
     ));
-    while ui_rx.borrow_and_update().timers.len() != 4 {
+    while ui_rx.borrow_and_update().timers.len() != 2 {
         ui_rx.changed().await.unwrap();
     }
-    assert_eq!(ui_rx.borrow().timers.len(), 4);
+    assert_eq!(ui_rx.borrow().timers.len(), 2);
     assert_eq!(ui_rx.borrow().timers[0].label, "luộc trứng");
     drop(ui_rx);
     task.await.unwrap().unwrap();

@@ -13,3 +13,8 @@ impl Clock for SystemClock {
         Zoned::now()
     }
 }
+
+/// Reports whether wall time is reliable.
+pub trait System: Send + Sync {
+    fn time_synced(&self) -> bool;
+}

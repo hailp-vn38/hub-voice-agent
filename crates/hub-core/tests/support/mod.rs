@@ -64,6 +64,7 @@ impl Hub {
             hub_core::Store::in_memory().unwrap(),
             Ports {
                 clock: Arc::new(TestClock::at(start)),
+                system: Arc::new(Synced),
             },
             Io {
                 voice_config_tx,
@@ -86,5 +87,12 @@ impl Hub {
             _dir: dir,
             task,
         }
+    }
+}
+
+pub struct Synced;
+impl hub_core::System for Synced {
+    fn time_synced(&self) -> bool {
+        true
     }
 }

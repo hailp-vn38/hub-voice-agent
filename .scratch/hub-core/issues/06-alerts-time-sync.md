@@ -1,6 +1,6 @@
 # 06 — Alerts + đồng bộ giờ
 
-Status: ready-for-agent
+Status: ready-for-human
 Blocked by: 03, 05
 Spec: [../spec.md](../spec.md)
 
@@ -13,8 +13,12 @@ Spec: [../spec.md](../spec.md)
 
 ## Nghiệm thu
 
-- [ ] Test codebase.md §6: hẹn giờ 7 phút, tiến clock 7 phút → `UiState.alert` hết giờ và có `Play(TimerChime)`.
+- [x] Test codebase.md §6: hẹn giờ 7 phút, tiến clock 7 phút → `UiState.alert` hết giờ và có `Play(TimerChime)`.
 - [ ] Đang trong lượt nói → alert chờ tới `TtsStop` rồi mới hiện.
-- [ ] Hai hẹn giờ cùng hết → báo lần lượt.
-- [ ] `time_synced == false` → không báo; chuyển `true` → báo.
-- [ ] Không thao tác 2 phút → tự tắt.
+- [x] Hai hẹn giờ cùng hết → báo lần lượt.
+- [x] `time_synced == false` → không báo; chuyển `true` → báo.
+- [x] Không thao tác 2 phút → tự tắt.
+
+## Comments
+
+Đã kiểm thử qua `run` với clock giả: hết giờ, hàng đợi, chưa đồng bộ, tự tắt và dismiss. Chưa có test qua `run` cho trường hợp đợi `TtsStop`; logic dùng `conversation.turn_active()` trên tick. Adapter NTP Pi chưa triển khai (ngoài phạm vi spec); placeholder Pi trả `false`, desktop trả `true`. Audio desktop hiện chỉ tiêu thụ lệnh, chưa phát âm thanh thật.
