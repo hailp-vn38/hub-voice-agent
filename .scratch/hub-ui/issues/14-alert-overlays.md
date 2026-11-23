@@ -1,6 +1,6 @@
 # 14 — Lớp báo và thanh trượt giọng nói
 
-Status: ready-for-agent
+Status: resolved
 Blocked by: 04
 Spec: [../spec.md](../spec.md)
 Thiết kế: concept.md §6 "Màn Hẹn giờ" (Hết giờ), "Màn Reminder" (Lúc Reminder đến hạn), "Agent điều khiển hub" (`hub_set_brightness` / `hub_set_volume`), "Setting" (thẻ xác nhận)
@@ -42,3 +42,7 @@ Map: chờ hub-core #06 (alerts), #08 (Reminder); `hub_set_brightness/volume` ch
 | `.title` / `.time` / `.body` | |
 | `dismiss()` | |
 | `VoiceSlider.kind` / `.value` / `.serial` | |
+
+## Answer
+
+Thêm `contract/alert.slint`, `overlays/{alert,voice-slider,confirm}.slint`; Alert và VoiceSliderOverlay gắn vào Shell trước Orb (dock vẫn nổi trên báo); Orb nhấp nháy khi có báo; Setting dùng `Confirm`. Kịch bản demo trong `src/ui/demo/alerts.rs`. Hàng đợi/tự tắt do hub-core; vòng lan trên Pi chờ kiểm tay.
