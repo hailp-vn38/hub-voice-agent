@@ -50,7 +50,7 @@ Map: chờ hub-core #07
 | `select` / `open-detail` / `close-detail` / `remove` | Callback chọn mốc và mở/đóng chi tiết cập nhật state bridge; `remove(key)` gửi `UserInput::RemoveCountdown(id)` |
 | `Countdown.fading` | Bridge giữ mốc đang xoá 400 ms để mờ dần; `CountdownItemView` chưa có trường fading |
 
-Map: done
+Map: done — hub-mac #03 @ f2509e7
 
 ## Answer
 

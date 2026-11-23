@@ -41,7 +41,7 @@ Map: chờ hub-core #08
 | `.focus` / `.focus-serial` | `RemindersView` chưa có; bridge giữ mặc định Slint |
 | `ReminderItem.fading` | `ReminderItemView` chưa có; bridge đặt `false` |
 
-Map: done
+Map: done — hub-mac #03 @ f2509e7
 
 ## Answer
 
