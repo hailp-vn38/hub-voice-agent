@@ -24,7 +24,9 @@ pub use audio::{AudioCommand, AudioEvent, Sensitivity, Sound};
 pub use config::{
     CalendarSettings, Config, ConfigStore, HomeSettings, VoiceSettings, WeatherSettings,
 };
-pub use ports::{Clock, System, SystemClock, WeatherLocation, WeatherSource};
+pub use ports::{
+    Clock, HomeEntity, HomeEvent, HomeSource, System, SystemClock, WeatherLocation, WeatherSource,
+};
 pub use runtime::run;
 use tokio::sync::{mpsc, watch};
 pub use ui_state::{UiState, VoiceSettingsState, VoiceState, VoiceUiState};
@@ -35,6 +37,7 @@ pub use voice_settings::DEFAULT_OTA_URL;
 pub struct Ports {
     pub clock: Arc<dyn Clock>,
     pub weather: Arc<dyn WeatherSource>,
+    pub home: Arc<dyn HomeSource>,
     pub system: Arc<dyn System>,
 }
 
@@ -64,12 +67,13 @@ pub struct Io {
 pub use features::countdowns::{Countdown, CountdownView};
 pub use features::timers::Timer;
 pub use features::weather::WeatherView;
-pub use sources::OpenMeteo;
+pub use sources::{HomeAssistant, OpenMeteo};
 pub use store::Store;
 
 pub fn tool_definitions() -> Vec<voice_client::ToolDef> {
     let mut tools = features::timers::tools::definitions();
     tools.extend(features::countdowns::tools::definitions());
     tools.extend(features::weather::tools::definitions());
+    tools.extend(features::home::tools::definitions());
     tools
 }

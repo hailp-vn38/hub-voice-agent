@@ -28,6 +28,10 @@ pub async fn run(
         &store,
         ports.clock.now().timestamp().as_second(),
     )?;
+    let (home_settings_tx, home_settings_rx) =
+        tokio::sync::watch::channel(config.get().home.clone());
+    let mut home_events = ports.home.subscribe(home_settings_rx);
+    let mut home = crate::features::home::Feature::new(ports.home.clone());
     let mut conversation = Conversation::default();
     let mut alerts = crate::alerts::Alerts::default();
     let mut view = crate::view::View::new(ports.clock.now().timestamp().as_second());
@@ -69,6 +73,9 @@ pub async fn run(
                 if let Some(id) = dismissed { pending.extend(timers.dismiss(id)); }
                 for effect in pending { effects::execute(effect, &io.ui_tx, &io.voice_tx, &io.audio_tx, &mut jobs, &mut store).await?; }
             }
+            Some(event) = home_events.recv() => {
+                for effect in home.event(event) { effects::execute(effect, &io.ui_tx, &io.voice_tx, &io.audio_tx, &mut jobs, &mut store).await?; }
+            }
             event = jobs.next() => {
                 match event {
                     jobs::Internal::Timeout(id, reply) => {
@@ -77,6 +84,7 @@ pub async fn run(
                     },
                     jobs::Internal::JobDone(id, result, reply) => {
                         if id == "weather" { for effect in weather.on_job(result, reply, ports.clock.now().timestamp().as_second()) { effects::execute(effect, &io.ui_tx, &io.voice_tx, &io.audio_tx, &mut jobs, &mut store).await?; } }
+                        else if id.starts_with("home:") { if let Some(call) = reply { let response = result.map(|_| serde_json::json!({"ok": true})).map_err(|e| crate::features::countdowns::tools::error(&e.to_string())); effects::execute(effects::Effect::Reply(call, response), &io.ui_tx, &io.voice_tx, &io.audio_tx, &mut jobs, &mut store).await?; } }
                     },
                 }
             },
@@ -88,7 +96,7 @@ pub async fn run(
                 }
                 let old_screen = view.screen();
                 let mut pending = match event {
-                    VoiceEvent::ToolCall(call) => tools::route(&mut timers, &mut countdowns, &mut view, &mut weather, &store, call, ports.clock.now()),
+                    VoiceEvent::ToolCall(call) => tools::route(&mut timers, &mut countdowns, &mut view, &mut weather, &home, &store, call, ports.clock.now()),
                     event => voice::on(event, &mut conversation, ports.clock.now()),
                 };
                 if old_screen == crate::Screen::Weather && view.screen() != crate::Screen::Weather { pending.extend(weather.leave(&store, ports.clock.now().timestamp().as_second())); }
@@ -110,6 +118,7 @@ pub async fn run(
                 UserInput::SaveVoiceUrl(input) => effects::execute_settings(effects::SettingsEffect::SaveUrl(input), &mut config, &io),
                 UserInput::Setup(update, reply) => {
                     let weather_changed = matches!(&update, crate::setup_web::Update::Weather(_));
+                    let home_changed = matches!(&update, crate::setup_web::Update::Home(_));
                     let result = config.update(|c| match update {
                         crate::setup_web::Update::Voice(url) => c.voice.ota_url = Some(url),
                         crate::setup_web::Update::Home(home) => c.home = home,
@@ -117,6 +126,7 @@ pub async fn run(
                         crate::setup_web::Update::Calendar(calendar) => c.calendar = calendar,
                     });
                     if result.is_ok() {
+                        if home_changed { home_settings_tx.send_replace(config.get().home.clone()); }
                         if weather_changed { for effect in weather.update_home(&config.get().weather, &store, ports.clock.now().timestamp().as_second()) { effects::execute(effect, &io.ui_tx, &io.voice_tx, &io.audio_tx, &mut jobs, &mut store).await?; } }
                         io.voice_config_tx.send_replace(crate::voice_settings::config(&config));
                         io.ui_tx.send_modify(|ui| ui.voice_settings.ota_url = config.get().voice.ota_url.clone().unwrap_or_default());
