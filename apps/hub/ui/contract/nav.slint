@@ -5,4 +5,5 @@ export enum Screen { center, menu, weather, calendar, home, timers, countdowns, 
 export global Nav {
     in property <Screen> screen;
     callback navigate(Screen);
+    callback activity();
 }

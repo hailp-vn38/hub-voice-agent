@@ -41,17 +41,17 @@ Kịch bản: "Wake", "Nghe", "Nghĩ", "Nói", "Tool chạy", "Lỗi", "Offline"
 
 ## Map với hub-core
 
-Map: chờ hub-core #03 (conversation); levels từ adapter audio ở `apps/hub`
+Map: done; bridge hub-mac #01 (levels giữ ở adapter audio).
 
 | Hợp đồng | UiState / UserInput |
 |---|---|
-| `Voice.state` | |
-| `Voice.mic-muted` | |
-| `Voice.wake-serial` | |
-| `Voice.tool-serial` | |
-| `Voice.error-serial` | |
-| `Voice.orb-tapped()` | |
-| `VoiceLevels.mic` / `.tts` | (watch `Levels` từ audio, không qua hub-core) |
+| `Voice.state` | `HubView.voice.state` → Slint `VoiceState`. |
+| `Voice.mic-muted` | `HubView.voice.mic_muted` (hiện là `false` trong hub-core). |
+| `Voice.wake-serial` | `HubView.voice.wake_serial`. |
+| `Voice.tool-serial` | `HubView.voice.tool_serial`. |
+| `Voice.error-serial` | `HubView.voice.error_serial`. |
+| `Voice.orb-tapped()` | `UserInput::OrbTapped`. |
+| `VoiceLevels.mic` / `.tts` | Giữ mặc định `0`; watch `Levels` từ adapter audio, không qua hub-core. |
 
 ## Answer
 

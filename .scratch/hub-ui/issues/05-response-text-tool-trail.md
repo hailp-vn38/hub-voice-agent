@@ -34,15 +34,15 @@ Kịch bản: "Người dùng nói" (stt), "Agent trả lời" (3 câu, có từ
 
 ## Map với hub-core
 
-Map: chờ hub-core #03 (stt, tts text, fading), #05 (ServerTool)
+Map: done; bridge hub-mac #01.
 
 | Hợp đồng | UiState / UserInput |
 |---|---|
-| `Response.line-serial` | |
-| `Response.speaker` | |
-| `Response.words` | |
-| `Response.fading` | |
-| `ToolTrail.steps` | |
+| `Response.line-serial` | `HubView.response.line_serial`. |
+| `Response.speaker` | `HubView.response.speaker` → Slint `Speaker`. |
+| `Response.words` | `HubView.response.words` → Slint `Word` (`text`, `emphasis`). |
+| `Response.fading` | `HubView.response.fading`. |
+| `ToolTrail.steps` | `HubView.tool_trail.steps` → Slint `ToolStep`. |
 
 ## Answer
 
