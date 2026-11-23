@@ -19,6 +19,8 @@ pub fn all() -> Vec<Scenario> {
             app.global::<Nav>().set_screen(Screen::Weather)
         }),
         ("Tự về trung tâm", |app| app.global::<Nav>().set_screen(Screen::Center)),
+        ("Menu: không có gì chạy", super::fixtures::menu_idle),
+        ("Menu: đủ 8 dòng", super::fixtures::init),
         ("Offline bật/tắt", |app| {
             let bar = app.global::<StatusBar>();
             bar.set_offline(!bar.get_offline());

@@ -1,6 +1,6 @@
 # 08 — Menu tính năng
 
-Status: ready-for-agent
+Status: resolved
 Blocked by: 03
 Spec: [../spec.md](../spec.md)
 Thiết kế: concept.md §6 "Điều hướng" (Menu tính năng)
@@ -28,3 +28,7 @@ Map: chờ hub-core #05 (và tính năng tương ứng cho từng dòng)
 | Hợp đồng | UiState / UserInput |
 |---|---|
 | `Menu.weather` … `Menu.settings` | |
+
+## Answer
+
+Đã thêm `contract/menu.slint` (global Menu), `screens/menu.slint` (lưới 4x2, ô chạm gọi `Nav.navigate`, chừa chỗ dock), nối vào Shell thay Placeholder menu. Vuốt về trung tâm dùng khung ở ticket 03. Fixture `fixtures/menu.rs` và 2 kịch bản demo. Chưa kiểm tra bằng mắt.
