@@ -1,0 +1,8 @@
+import { Theme } from "../theme.slint";
+
+// Khung thẻ cơ bản cho các màn tính năng.
+export component Card inherits Rectangle {
+    background: Theme.card;
+    border-radius: Theme.radius;
+    min-height: Theme.touch-min;
+}

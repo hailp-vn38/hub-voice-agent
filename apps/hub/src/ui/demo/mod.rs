@@ -1,4 +1,5 @@
 //! Adapter demo: ghi fixture vào các global hợp đồng, không cần hub-core.
+mod alerts;
 mod clock;
 mod fixtures;
 mod levels;
@@ -6,6 +7,7 @@ mod qr;
 mod response;
 mod scenarios;
 mod settings;
+mod spawn;
 
 use crate::{App, DemoPanel, Nav, StatusBar};
 use slint::{ComponentHandle, ModelRc, SharedString, Timer, TimerMode, VecModel};

@@ -3,6 +3,8 @@ import { Nav, Screen } from "../contract/nav.slint";
 import { PageDots } from "page-dots.slint";
 import { StatusBarView } from "status-bar.slint";
 import { IdleBackground } from "idle-background.slint";
+import { Alert } from "../overlays/alert.slint";
+import { VoiceSliderOverlay } from "../overlays/voice-slider.slint";
 import { Orb } from "orb.slint";
 import { ResponseText } from "response-text.slint";
 import { ToolTrailView } from "tool-trail.slint";
@@ -13,6 +15,8 @@ import { Home } from "../screens/home.slint";
 import { FirstBoot } from "../screens/first-boot.slint";
 import { Settings } from "../screens/settings.slint";
 import { SettingsData } from "../contract/settings.slint";
+import { SpawnDemo, SpawnDemoScreen } from "../screens/spawn-demo.slint";
+import { FloatingCardsView } from "floating-cards.slint";
 
 // Khung app: tầng trung tâm ⇄ menu (vuốt theo ngón tay), tầng màn tính năng,
 // hàng dưới cùng dành cho Voice dock (ngoài vùng vuốt), lớp phủ ở trên cùng.
@@ -99,6 +103,8 @@ export component Shell inherits Rectangle {
         menu-progress: root.menu-p;
         opacity: 1 - root.feat-p;
     }
+    VoiceSliderOverlay { }
+    Alert { dock-height: root.dock-height; }
     Orb { x: (parent.width - self.width) / 2; y: parent.height - root.dock-height / 2 - self.height / 2; }
     ToolTrailView {
         x: 120px;
@@ -111,6 +117,7 @@ export component Shell inherits Rectangle {
         height: 96px;
         y: parent.height - root.dock-height / 2 - 48px;
     }
+    if SpawnDemo.show: SpawnDemoScreen { height: parent.height - root.dock-height; }
+    FloatingCardsView { dock-height: root.dock-height; }
     if root.shown == Screen.first-boot: FirstBoot { }
-    // Lớp phủ (ticket 14) gắn vào đây.
 }

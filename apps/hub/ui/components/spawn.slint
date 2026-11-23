@@ -1,0 +1,57 @@
+import { Theme } from "../theme.slint";
+import { Spawn, PendingState } from "../contract/spawn.slint";
+import { Dock } from "orb.slint";
+
+// Bọc một thẻ: khi Spawn.key == key và serial đổi (hoặc thẻ vừa được tạo trong lượt đó),
+// thẻ bay từ Orb vào chỗ của nó. pending: saving / saved (check) / failed (rung, viền đỏ).
+export component SpawnIn inherits Rectangle {
+    in property <string> key;
+    in property <PendingState> pending: PendingState.none;
+    private property <int> serial: Spawn.serial;
+    private property <duration> now: animation-tick();
+    private property <duration> t0: -10000ms;
+    private property <duration> fail-t: -10000ms;
+    private property <float> p: clamp((root.now - root.t0) / Theme.anim-bounce, 0, 1);
+    private property <float> u: root.p - 1;
+    // easeOutBack: vọt quá chỗ rồi nảy về.
+    private property <float> e: 1 + 2.70158 * root.u * root.u * root.u + 1.70158 * root.u * root.u;
+    private property <float> shake: clamp((root.now - root.fail-t) / Theme.anim-shake, 0, 1);
+    private property <PendingState> pend: root.pending;
+    private property <bool> spawned: root.t0 > -10000ms;
+
+    function start() {
+        if (Spawn.key == root.key) { root.t0 = animation-tick(); }
+    }
+    init => { root.start(); }
+    changed serial => { root.start(); }
+    changed pend => { if (root.pend == PendingState.failed) { root.fail-t = animation-tick(); } }
+
+    inner := Rectangle {
+        x: (Dock.orb-x - root.absolute-position.x - root.width / 2) * (1 - root.e) * (root.spawned ? 1 : 0)
+            + sin(root.shake * 4turn) * 12px * (1 - root.shake);
+        y: (Dock.orb-y - root.absolute-position.y - root.height / 2) * (1 - root.e) * (root.spawned ? 1 : 0);
+        width: parent.width;
+        height: parent.height;
+        opacity: root.spawned && root.p < 0.15 ? root.p / 0.15 : (root.pend == PendingState.saving ? 0.7 : 1);
+        @children
+        Rectangle {
+            border-radius: Theme.radius;
+            border-width: root.pend == PendingState.failed ? 3px : 0px;
+            border-color: Theme.error;
+        }
+        if root.pend == PendingState.saved: Text {
+            x: parent.width - self.width - Theme.space-s;
+            y: Theme.space-s;
+            text: "✓";
+            color: Theme.done;
+            font-size: Theme.font-body;
+        }
+        if root.pend == PendingState.saving: Text {
+            x: parent.width - self.width - Theme.space-s;
+            y: Theme.space-s;
+            text: "…";
+            color: Theme.text-dim;
+            font-size: Theme.font-small;
+        }
+    }
+}
