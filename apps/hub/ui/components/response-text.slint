@@ -8,15 +8,20 @@ component WordView inherits Rectangle {
     in property <bool> emphasis;
     in property <bool> user;
     in property <bool> fresh; // chỉ vài từ mới nhất mới animate
+    in property <length> font-size;
+    in property <bool> revealed: true; // chưa tới lượt: rộng 0, ẩn
     private property <duration> t0: animation-tick();
+    changed revealed => { root.t0 = animation-tick(); }
     private property <float> p: root.fresh ? clamp((animation-tick() - root.t0) / 550ms, 0, 1) : 1;
     // Overshoot rồi rung tắt.
     private property <float> k: 1 - root.p;
-    width: label.preferred-width;
-    height: label.preferred-height;
+    min-width: root.revealed ? label.preferred-width : 0px;
+    max-width: self.min-width;
+    visible: root.revealed;
     label := Text {
+        y: (parent.height - self.height) / 2;
         text: root.text + " ";
-        font-size: Theme.font-title;
+        font-size: root.font-size;
         font-weight: root.emphasis ? 600 : 400;
         color: root.emphasis ? Theme.warm : (root.user ? Theme.text-dim : Theme.text);
         x: root.k * 80px;
@@ -26,9 +31,10 @@ component WordView inherits Rectangle {
     }
 }
 
-// Dòng chữ phản hồi căn phải sát Orb, không xuống dòng; từ cũ trôi sang trái và mờ ở mép trái.
-// Idle thì xoay vòng gợi ý câu nói theo màn.
+// Dòng chữ phản hồi trong thanh Voice: chạy từ trái sang phải sau nút mic, không xuống dòng;
+// khi tràn, cả hàng trượt sang trái, từ cũ mờ ở mép trái. Idle thì xoay vòng gợi ý câu nói theo màn.
 export component ResponseText inherits Rectangle {
+    in property <length> font-size: Theme.font-title;
     clip: true;
     private property <duration> line-t: animation-tick();
     private property <int> serial: Response.line-serial;
@@ -37,7 +43,7 @@ export component ResponseText inherits Rectangle {
     private property <int> shown: min(Response.words.length, floor((animation-tick() - root.line-t) / 170ms) + 1);
     private property <bool> has-text: Response.words.length > 0;
 
-    private property <[string]> hints-center: ["Hey, bật đèn phòng khách", "Hey, mấy giờ rồi?", "Hey, mở menu", "Hey, thời tiết hôm nay thế nào?"];
+    private property <[string]> hints-center: ["Bạn cần gì hôm nay?", "Hey, bật đèn phòng khách", "Hey, mấy giờ rồi?", "Hey, mở menu", "Hey, thời tiết hôm nay thế nào?"];
     private property <[string]> hints-timers: ["Hey, hẹn giờ 10 phút", "Hey, đặt báo thức 6 giờ sáng", "Hey, huỷ hẹn giờ"];
     private property <[string]> hints-weather: ["Hey, mai có mưa không?", "Hey, thời tiết cuối tuần", "Hey, hôm nay bao nhiêu độ?"];
     private property <[string]> hints-home: ["Hey, tắt hết đèn", "Hey, bật quạt phòng ngủ", "Hey, đèn phòng khách đang bật không?"];
@@ -53,33 +59,33 @@ export component ResponseText inherits Rectangle {
     // Gợi ý: mờ vào/ra mỗi 5 s.
     Text {
         width: parent.width;
-        horizontal-alignment: right;
+        horizontal-alignment: left;
         vertical-alignment: center;
         text: root.hints[mod(root.hint-index, root.hints.length)];
-        font-size: Theme.font-body;
-        color: Theme.text-dim;
+        font-size: root.font-size;
+        color: #a9bdd9;
         opacity: root.show-hint ? min(1, min(root.hint-phase, 1 - root.hint-phase) * 6) * 0.8 : 0;
         animate opacity { duration: 200ms; }
     }
 
-    // Hàng chữ: layout rộng đúng bằng nội dung, đặt sát mép phải, trượt khi thêm từ.
+    // Hàng chữ: bắt đầu ở mép trái; tràn thì trượt trái để từ mới nhất luôn thấy.
     Rectangle {
         opacity: Response.fading ? 0 : 1;
         animate opacity { duration: 1500ms; easing: ease-in; }
         row := HorizontalLayout {
-            x: parent.width - self.preferred-width;
+            x: min(0px, parent.width - self.preferred-width);
             height: parent.height;
             alignment: start;
             animate x { duration: 200ms; easing: ease-out; }
-            for w[i] in Response.words: Rectangle {
+            for w[i] in Response.words: WordView {
                 // Mép trái mờ dần: từ trôi ra gần mép thì nhạt đi (nền trong suốt, không phủ gradient).
-                opacity: clamp((row.x + self.x) / 160px, 0, 1);
-                if i < root.shown: WordView {
-                    text: w.text;
-                    emphasis: w.emphasis;
-                    user: Response.speaker == Speaker.user;
-                    fresh: i >= root.shown - 3;
-                }
+                opacity: row.x < 0 ? clamp((row.x + self.x) / 160px, 0, 1) : 1;
+                revealed: i < root.shown;
+                text: w.text;
+                emphasis: w.emphasis;
+                user: Response.speaker == Speaker.user;
+                fresh: i >= root.shown - 3;
+                font-size: root.font-size;
             }
         }
     }

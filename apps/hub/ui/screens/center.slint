@@ -1,19 +1,27 @@
-import { Theme } from "../theme.slint";
 import { Screen } from "../contract/nav.slint";
+import { StatusBar } from "../contract/status.slint";
 import { Center, CenterCard } from "../contract/center.slint";
-import { CenterCardBox } from "../components/center-card.slint";
-import { CenterTimerTile } from "../components/center-timer.slint";
-import { HomeTileView } from "../components/home-tile.slint";
 import { Icon } from "../components/icon.slint";
+import { NavRail } from "../components/home/nav-rail.slint";
+import { AgendaCard, NextCard } from "../components/home/agenda.slint";
+import { QuickTile, DeviceTile, TimerTile, HomeSafeCard } from "../components/home/quick-tile.slint";
 
-// Màn trung tâm: không tab, không cuộn, co theo cửa sổ. Hàng dưới cùng chừa cho Voice (nổi trên nền màn).
+// Màn trung tâm (Home) theo thiết kế docs/smart-hub-home.
+// Toạ độ theo canvas 1280×600 nhân `u`; canvas giãn theo cửa sổ (cw × ch ≥ 1280 × 600):
+// cột phải bám mép phải, hàng ô và thanh Voice (Shell) bám đáy, phần giữa dàn theo dy.
 export component CenterScreen inherits Rectangle {
-    in property <length> dock-height: 240px;
-    private property <length> gap: Theme.space-m;
+    in property <length> u: 1px;
+    in property <float> cw: 1280;
+    in property <float> ch: 600;
+    private property <float> dy: root.ch - 600;
+    private property <float> gap: 12;
     private property <int> extra: (Center.timer.visible ? 1 : 0) + (Center.countdown.visible ? 1 : 0);
-    // Ô co theo bề ngang để cả hàng vừa màn; tối đa 300 px.
     private property <int> tiles: max(1, root.extra + Center.home.length);
-    private property <length> tw: clamp((root.width - Theme.space-l * 2 - root.gap * (root.tiles - 1)) / root.tiles, Theme.touch-min * 2, 300px);
+    private property <float> row-x: 130;
+    private property <float> row-w: root.cw - 244 - root.gap - root.row-x;
+    private property <float> tw: min(160, (root.row-w - root.gap * (root.tiles - 1)) / root.tiles);
+    private property <float> row-y: 360 + root.dy;
+    private property <float> hour: StatusBar.day-phase * 24;
     private property <CenterCard> zoom-card: CenterCard.none;
     private property <int> serial: Center.focus-serial;
 
@@ -30,129 +38,198 @@ export component CenterScreen inherits Rectangle {
         }
     }
 
-    VerticalLayout {
-        padding-top: 72px;
-        padding-left: Theme.space-l;
-        padding-right: Theme.space-l;
-        padding-bottom: root.dock-height;
-        spacing: root.gap;
+    // Nền: ảnh ngôi nhà đêm, phủ gradient cho chữ dễ đọc.
+    Image {
+        width: parent.width;
+        height: parent.height;
+        source: @image-url("../../assets/home/backgrounds/home-night.jpg");
+        image-fit: cover;
+    }
+    Rectangle { background: @linear-gradient(90deg, #051329d9 0%, #0b1e3ca0 40%, #09182b75 68%, #061123c0 100%); }
+    Rectangle { background: @linear-gradient(180deg, #06172b63 0%, #08142626 54%, #061022e6 100%); }
 
-        HorizontalLayout {
-            vertical-stretch: 1;
-            spacing: root.gap;
-            CenterCardBox {
-                horizontal-stretch: 3;
-                zoomed: root.zoom-card == CenterCard.weather;
-                tapped => { Center.open(Screen.weather); }
-                VerticalLayout {
-                    padding: Theme.space-m;
-                    alignment: start;
-                    Text { text: Center.time; color: Theme.text; font-size: Theme.font-hero; overflow: elide; }
-                    Text { text: Center.date; color: Theme.text-dim; font-size: Theme.font-body; overflow: elide; }
-                }
-                VerticalLayout {
-                    padding: Theme.space-m;
-                    x: parent.width - self.width;
-                    width: parent.width * 0.45;
-                    alignment: start;
-                    HorizontalLayout {
-                        alignment: end;
-                        spacing: Theme.space-s;
-                        Icon { name: Center.weather.icon; size: 64px; color: Theme.warm; }
-                        Text { text: Center.weather.temp; color: Theme.text; font-size: Theme.font-hero * 0.6; overflow: elide; }
-                    }
-                    Text {
-                        text: Center.weather.summary;
-                        color: Theme.text-dim;
-                        font-size: Theme.font-body;
-                        horizontal-alignment: right;
-                        overflow: elide;
-                    }
-                    if Center.weather.stale: Text {
-                        text: "cập nhật lúc " + Center.weather.updated;
-                        color: Theme.warm;
-                        font-size: Theme.font-small;
-                        horizontal-alignment: right;
-                    }
-                }
-            }
-            VerticalLayout {
-                horizontal-stretch: 2;
-                spacing: root.gap;
-                CenterCardBox {
-                    zoomed: root.zoom-card == CenterCard.calendar;
-                    tapped => { Center.open(Screen.calendar); }
-                    VerticalLayout {
-                        padding: Theme.space-m;
-                        alignment: start;
-                        for e[i] in Center.today: Text {
-                            visible: i < 3;
-                            height: i < 3 ? self.preferred-height : 0px;
-                            text: e.time + "  " + e.title;
-                            color: e.now ? Theme.warm : Theme.text;
-                            font-size: Theme.font-body;
-                            overflow: elide;
-                        }
-                    }
-                }
-                CenterCardBox {
-                    zoomed: root.zoom-card == CenterCard.reminders;
-                    tapped => { Center.open(Screen.reminders); }
-                    VerticalLayout {
-                        padding: Theme.space-m;
-                        alignment: start;
-                        for r[i] in Center.reminders: Text {
-                            visible: i < 2;
-                            height: i < 2 ? self.preferred-height : 0px;
-                            text: r.time + "  " + r.text;
-                            color: Theme.text;
-                            font-size: Theme.font-body;
-                            overflow: elide;
-                        }
-                    }
-                }
-            }
+    NavRail {
+        x: 14 * root.u;
+        y: 42 * root.u;
+        height: (448 + root.dy) * root.u;
+        u: root.u;
+        current: Screen.center;
+    }
+
+    // Đồng hồ + thời tiết: chạm mở màn Thời tiết.
+    hero := Rectangle {
+        x: 140 * root.u;
+        y: (42 + root.dy * 0.2) * root.u;
+        width: 660 * root.u;
+        height: 150 * root.u;
+        transform-scale: root.zoom-card == CenterCard.weather ? 1.06 : 1.0;
+        animate transform-scale { duration: 350ms; easing: ease-out; }
+        TouchArea { clicked => { Center.open(Screen.weather); } }
+        Text {
+            x: 10 * root.u;
+            y: 10 * root.u;
+            width: 330 * root.u;
+            text: Center.time;
+            font-size: 99 * root.u;
+            font-weight: 600;
+            color: #f4f9ff;
         }
-
-        // Hàng ô động: các ô dời mượt khi thêm/bớt.
+        Text {
+            x: 14 * root.u;
+            y: 120 * root.u;
+            width: 330 * root.u;
+            text: Center.date;
+            font-size: 16 * root.u;
+            color: #b4c9e8;
+            overflow: elide;
+        }
         Rectangle {
-            height: 160px;
-            CenterCardBox {
-                x: 0;
-                width: root.tw;
-                opacity: Center.timer.visible ? 1 : 0;
-                visible: self.opacity > 0;
-                zoomed: root.zoom-card == CenterCard.timer;
-                animate opacity { duration: Theme.anim-screen; }
-                tapped => { Center.open(Screen.timers); }
-                CenterTimerTile { timer: Center.timer; }
-            }
-            CenterCardBox {
-                x: Center.timer.visible ? root.tw + root.gap : 0px;
-                width: root.tw;
-                opacity: Center.countdown.visible ? 1 : 0;
-                visible: self.opacity > 0;
-                zoomed: root.zoom-card == CenterCard.countdown;
-                animate x { duration: Theme.anim-screen; easing: ease-out; }
-                animate opacity { duration: Theme.anim-screen; }
-                tapped => { Center.open(Screen.countdowns); }
-                Text {
-                    text: Center.countdown.today ? "Hôm nay: " + Center.countdown.label : Center.countdown.value + "\n" + Center.countdown.label;
-                    color: Center.countdown.today ? Theme.warm : Theme.text;
-                    font-size: Theme.font-small;
-                    horizontal-alignment: center;
-                    vertical-alignment: center;
-                    wrap: word-wrap;
-                }
-            }
-            for t[i] in Center.home: HomeTileView {
-                x: (root.extra + i) * (root.tw + root.gap);
-                width: root.tw;
-                tile: t;
-                updated: Center.weather.updated;
-                animate x { duration: Theme.anim-screen; easing: ease-out; }
-                toggle(k) => { Center.toggle-home(k); }
-            }
+            x: 353 * root.u;
+            y: 26 * root.u;
+            width: 1 * root.u;
+            height: 72 * root.u;
+            background: #b0c5e5a9;
         }
+        if Center.weather.icon == "sun": Image {
+            x: 380 * root.u;
+            y: 28 * root.u;
+            width: 47 * root.u;
+            height: 47 * root.u;
+            source: @image-url("../../assets/home/icons/sun.png");
+            colorize: #ffb42a;
+        }
+        if Center.weather.icon != "sun": Icon {
+            x: 380 * root.u;
+            y: 28 * root.u;
+            name: Center.weather.icon;
+            size: 47 * root.u;
+            color: #ffb42a;
+        }
+        Text {
+            x: 437 * root.u;
+            y: 18 * root.u;
+            width: 220 * root.u;
+            text: Center.weather.temp;
+            font-size: 58 * root.u;
+            color: #f2f8ff;
+            overflow: elide;
+        }
+        Text {
+            x: 441 * root.u;
+            y: 95 * root.u;
+            width: 215 * root.u;
+            text: Center.weather.summary;
+            font-size: 16 * root.u;
+            color: #c4d5ec;
+            overflow: elide;
+        }
+        if Center.weather.stale: Text {
+            x: 441 * root.u;
+            y: 120 * root.u;
+            text: "cập nhật lúc " + Center.weather.updated;
+            font-size: 13 * root.u;
+            color: #ffb454;
+        }
+    }
+
+    // Lời chào + mascot.
+    Text {
+        x: 150 * root.u;
+        y: (238 + root.dy * 0.5) * root.u;
+        width: 380 * root.u;
+        text: root.hour < 11 ? "Chào buổi sáng!" : root.hour < 18 ? "Chào buổi chiều!" : "Chào buổi tối!";
+        font-size: 34 * root.u;
+        font-weight: 600;
+        color: #ffffff;
+        overflow: elide;
+    }
+    Text {
+        x: 152 * root.u;
+        y: (292 + root.dy * 0.5) * root.u;
+        width: 360 * root.u;
+        text: "Chúc bạn một ngày thật tuyệt vời!";
+        font-size: 16 * root.u;
+        color: #b8cbe5;
+        overflow: elide;
+    }
+    Image {
+        x: 500 * root.u;
+        y: (188 + root.dy * 0.5) * root.u;
+        width: 240 * root.u;
+        height: 190 * root.u;
+        source: @image-url("../../assets/home/mascot/assistant.png");
+        image-fit: contain;
+    }
+
+    // Cột phải: lịch hôm nay, Reminder tiếp theo.
+    AgendaCard {
+        x: (root.cw - 460) * root.u;
+        y: (42 + root.dy * 0.2) * root.u;
+        width: 430 * root.u;
+        height: 182 * root.u;
+        u: root.u;
+        zoomed: root.zoom-card == CenterCard.calendar;
+        tapped => { Center.open(Screen.calendar); }
+    }
+    NextCard {
+        x: (root.cw - 460) * root.u;
+        y: (238 + root.dy * 0.5) * root.u;
+        width: 430 * root.u;
+        height: 110 * root.u;
+        u: root.u;
+        zoomed: root.zoom-card == CenterCard.reminders;
+        tapped => { Center.open(Screen.reminders); }
+    }
+
+    // Hàng ô động: các ô dời mượt khi thêm/bớt.
+    TimerTile {
+        x: root.row-x * root.u;
+        y: root.row-y * root.u;
+        width: root.tw * root.u;
+        height: 130 * root.u;
+        u: root.u;
+        timer: Center.timer;
+        opacity: Center.timer.visible ? 1 : 0;
+        visible: self.opacity > 0;
+        zoomed: root.zoom-card == CenterCard.timer;
+        animate opacity { duration: 400ms; }
+        tapped => { Center.open(Screen.timers); }
+    }
+    QuickTile {
+        x: (root.row-x + (Center.timer.visible ? root.tw + root.gap : 0)) * root.u;
+        y: root.row-y * root.u;
+        width: root.tw * root.u;
+        height: 130 * root.u;
+        u: root.u;
+        icon: @image-url("../../assets/home/icons/lantern.png");
+        title: Center.countdown.today ? "Hôm nay" : Center.countdown.value;
+        detail: Center.countdown.label;
+        highlight: Center.countdown.today;
+        opacity: Center.countdown.visible ? 1 : 0;
+        visible: self.opacity > 0;
+        zoomed: root.zoom-card == CenterCard.countdown;
+        animate x { duration: 400ms; easing: ease-out; }
+        animate opacity { duration: 400ms; }
+        tapped => { Center.open(Screen.countdowns); }
+    }
+    for t[i] in Center.home: DeviceTile {
+        x: (root.row-x + (root.extra + i) * (root.tw + root.gap)) * root.u;
+        y: root.row-y * root.u;
+        width: root.tw * root.u;
+        height: 130 * root.u;
+        u: root.u;
+        tile: t;
+        updated: Center.weather.updated;
+        animate x { duration: 400ms; easing: ease-out; }
+        toggle(k) => { Center.toggle-home(k); }
+    }
+    HomeSafeCard {
+        x: (root.cw - 244) * root.u;
+        y: root.row-y * root.u;
+        width: 213 * root.u;
+        height: 130 * root.u;
+        u: root.u;
+        safe: Center.home-safe;
+        tapped => { Center.open(Screen.home); }
     }
 }

@@ -5,9 +5,8 @@ import { StatusBarView } from "status-bar.slint";
 import { IdleBackground } from "idle-background.slint";
 import { Alert } from "../overlays/alert.slint";
 import { VoiceSliderOverlay } from "../overlays/voice-slider.slint";
-import { Orb, Dock } from "orb.slint";
-import { ResponseText } from "response-text.slint";
-import { ToolTrailView } from "tool-trail.slint";
+import { Dock } from "orb.slint";
+import { VoiceBar } from "voice-bar.slint";
 import { Ambient } from "../screens/ambient.slint";
 import { MenuScreen } from "../screens/menu.slint";
 import { Home } from "../screens/home.slint";
@@ -28,10 +27,14 @@ import { CenterScreen } from "../screens/center.slint";
 import { Timers } from "../screens/timers.slint";
 
 // Khung app: tầng trung tâm ⇄ menu (vuốt theo ngón tay), tầng màn tính năng,
-// lớp phủ ở trên cùng. Màn phủ kín cửa sổ; Voice (Orb, chữ phản hồi) nổi trên đáy màn.
+// lớp phủ ở trên cùng. Màn phủ kín cửa sổ; thanh Voice (nút mic trái, chữ phản hồi) nổi trên đáy màn.
 export component Shell inherits Rectangle {
-    // Chiều cao hàng Voice: co theo cửa sổ để màn nhỏ vẫn còn chỗ cho nội dung.
-    in property <length> dock-height: clamp(self.height * 0.2, 160px, 240px);
+    // Đơn vị thiết kế: 1 px canvas 1280×600, co đều theo cửa sổ; canvas giãn thành cw × ch.
+    private property <length> u: 1px * min(self.width / 1280px, self.height / 600px);
+    private property <float> cw: self.width / root.u;
+    private property <float> ch: self.height / root.u;
+    // Chiều cao hàng Voice (thanh Voice + lề) theo cùng đơn vị.
+    private property <length> dock-height: 88 * root.u;
     // Màn đang hiển thị: theo Nav.screen, nhưng chuyển ngay khi người dùng vuốt xong.
     private property <Screen> shown: Nav.screen;
     private property <bool> is-feature: shown != Screen.center && shown != Screen.menu;
@@ -78,7 +81,7 @@ export component Shell inherits Rectangle {
                 y: 0;
                 background: transparent;
                 IdleBackground { }
-                CenterScreen { dock-height: root.dock-height; }
+                CenterScreen { u: root.u; cw: root.cw; ch: root.ch; }
                 transform-scale: 1 - 0.08 * root.away;
             }
             Rectangle {
@@ -119,28 +122,17 @@ export component Shell inherits Rectangle {
     }
     VoiceSliderOverlay { }
     Alert { dock-height: root.dock-height; }
-    // Orb neo góc phải dưới, đứng yên khi chuyển màn. Lần đầu khởi động: xám, không chạm được.
-    orb := Orb {
-        x: parent.width - self.width - 88px;
-        y: parent.height - root.dock-height / 2 - self.height / 2;
+    // Thanh Voice neo đáy, trải ngang, đứng yên khi chuyển màn. Lần đầu khởi động: mic xám, không chạm được.
+    VoiceBar {
+        x: 20 * root.u;
+        y: (root.ch - 80) * root.u;
+        width: (root.cw - 40) * root.u;
+        height: 54 * root.u;
+        u: root.u;
         disabled: root.shown == Screen.first-boot;
-        // Ambient: Orb thở nhỏ và mờ.
+        // Ambient: thanh mờ đi.
         opacity: root.shown == Screen.ambient ? 0.35 : 1;
-        transform-scale: root.shown == Screen.ambient ? 0.6 : 1;
-        animate opacity, transform-scale { duration: Theme.anim-screen; easing: ease-out; }
-    }
-    // Chữ phản hồi và dải tool: cùng hàng Orb, căn phải sát Orb, rộng tối đa 60% màn.
-    private property <length> voice-text-w: min(orb.x - Theme.space-l * 2, root.width * 0.6);
-    ToolTrailView {
-        x: orb.x - Theme.space-m - self.width;
-        width: root.voice-text-w;
-        y: parent.height - root.dock-height / 2 - 48px - 24px;
-    }
-    ResponseText {
-        x: orb.x - Theme.space-m - self.width;
-        width: root.voice-text-w;
-        height: 96px;
-        y: parent.height - root.dock-height / 2 - 48px;
+        animate opacity { duration: Theme.anim-screen; easing: ease-out; }
     }
     if SpawnDemo.show: SpawnDemoScreen { height: parent.height - root.dock-height; }
     FloatingCardsView { dock-height: root.dock-height; }

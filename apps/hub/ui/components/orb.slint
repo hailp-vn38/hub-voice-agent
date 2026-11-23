@@ -10,11 +10,15 @@ export global Dock {
     in-out property <length> height: 240px;
 }
 
+// Nút mic ở đầu thanh Voice (thiết kế smart-hub-home): viên gradient xanh–tím,
+// icon mic + 3 vạch sóng theo mức âm. Giữ mọi trạng thái của Orb cũ.
 export component Orb inherits Rectangle {
     // Xám và không chạm được (vd. lần đầu khởi động, voice chưa cấu hình).
     in property <bool> disabled;
-    width: Theme.touch-min * 2;
-    height: Theme.touch-min * 2;
+    // Đơn vị thiết kế (1 px của canvas 1280×600).
+    in property <length> u: 1px;
+    width: 60 * root.u;
+    height: 44 * root.u;
     private property <duration> now: animation-tick();
     private property <int> wake: Voice.wake-serial;
     private property <int> tool: Voice.tool-serial;
@@ -34,65 +38,71 @@ export component Orb inherits Rectangle {
     private property <float> wp: clamp((root.now - root.wake-t) / 700ms, 0, 1);
     private property <float> tp: clamp((root.now - root.tool-t) / 600ms, 0, 1);
     private property <float> ep: clamp((root.now - root.err-t) / 450ms, 0, 1);
-    private property <color> tint: root.grey ? #5a6570 : Theme.accent;
-    private property <float> size: (root.active ? 0.8 : 0.55) + (root.active ? 0.25 * root.level : 0.03 * root.breath)
-        + 0.2 * sin(root.wp * 0.5turn);
-    animate tint { duration: 300ms; }
-
-    private property <length> d: Theme.touch-min * 1.4;
+    private property <bool> thinking: Voice.state == VoiceState.thinking;
 
     // Sóng lan khi wake.
     Rectangle {
-        width: root.d; height: root.d;
-        border-radius: self.width / 2;
-        border-width: 4px;
-        border-color: root.tint;
+        border-radius: 17 * root.u;
+        border-width: 2 * root.u;
+        border-color: #8c82ff;
         opacity: root.wp < 1 ? 1 - root.wp : 0;
-        transform-scale: 1 + root.wp * 0.9;
+        transform-scale: 1 + root.wp * 0.6;
     }
-    // Vòng ngoài mờ lan theo tiếng nói.
+    // Quầng sáng theo tiếng nói.
     Rectangle {
-        width: root.d; height: root.d;
-        border-radius: self.width / 2;
-        background: root.tint;
-        opacity: root.active ? 0.12 + 0.25 * root.level : 0;
-        transform-scale: 1.15 + 0.6 * root.level;
+        border-radius: 17 * root.u;
+        background: #6a5cff;
+        opacity: root.active ? 0.2 + 0.3 * root.level : 0;
+        transform-scale: 1.1 + 0.35 * root.level;
         animate opacity { duration: 150ms; }
     }
     // Lõi (rung ngang một lần khi có lỗi).
     Rectangle {
-        x: (parent.width - self.width) / 2 + sin(root.ep * 3turn) * 10px * (1 - root.ep);
-        width: root.d; height: root.d;
-        border-radius: self.width / 2;
-        background: root.tint;
-        opacity: root.grey ? 0.5 : (AlertData.kind != AlertKind.none ? 0.6 + 0.4 * sin(root.now / 1200ms * 1turn) : (root.active ? 1 : 0.55 + 0.1 * root.breath));
-        transform-scale: root.size;
-        animate opacity { duration: 300ms; }
+        x: sin(root.ep * 3turn) * 8 * root.u * (1 - root.ep);
+        border-radius: 17 * root.u;
+        border-width: 1 * root.u;
+        border-color: root.grey ? #6b7686 : #8c82ff;
+        background: root.grey ? @linear-gradient(125deg, #3a4656 0%, #4a5262 100%)
+            : @linear-gradient(125deg, #006bc9 0%, #6033dd 100%);
+        opacity: AlertData.kind != AlertKind.none ? 0.7 + 0.3 * sin(root.now / 1200ms * 1turn)
+            : root.active ? 1 : 0.9 + 0.1 * root.breath;
+        Image {
+            x: 10 * root.u;
+            y: (parent.height - self.height) / 2;
+            width: 24 * root.u;
+            height: 24 * root.u;
+            source: @image-url("../../assets/home/icons/mic.png");
+            colorize: #ffffff;
+        }
+        // 3 vạch sóng: theo mức âm; nhấp lần lượt khi đang nghĩ.
+        for i in 3: Rectangle {
+            x: (38 + i * 6) * root.u;
+            width: 3 * root.u;
+            height: (6 + 14 * (root.thinking ? 0.5 + 0.5 * sin(root.now / 600ms * 1turn - i * 0.25turn)
+                : root.active ? root.level * (i == 1 ? 1 : 0.7) : 0.15)) * root.u;
+            y: (parent.height - self.height) / 2;
+            border-radius: 1.5 * root.u;
+            background: #ffffff;
+            opacity: root.grey ? 0.4 : 0.9;
+        }
+        // Tắt mic: gạch chéo.
+        Rectangle {
+            width: 34 * root.u;
+            height: 3 * root.u;
+            background: #ffffff;
+            opacity: Voice.mic-muted ? 1 : 0;
+            transform-rotation: -35deg;
+            animate opacity { duration: 200ms; }
+        }
     }
-    // Thinking: chấm quay quanh.
+    // Hạt bắn lên khi tool chạy.
     Rectangle {
-        width: root.d * 1.5; height: root.d * 1.5;
-        background: transparent;
-        opacity: Voice.state == VoiceState.thinking ? 1 : 0;
-        transform-rotation: root.now / 2500ms * 1turn;
-        animate opacity { duration: 300ms; }
-        Rectangle { x: (parent.width - 16px) / 2; y: 0; width: 16px; height: 16px; border-radius: 8px; background: Theme.text; }
-    }
-    // Hạt bắn khi tool chạy, về phía màn.
-    Rectangle {
-        width: 20px; height: 20px;
-        border-radius: 10px;
+        width: 10 * root.u;
+        height: 10 * root.u;
+        border-radius: 5 * root.u;
         background: Theme.warm;
         opacity: root.tp < 1 ? 1 - root.tp : 0;
-        y: (parent.height - self.height) / 2 - root.tp * 300px;
-    }
-    // Tắt mic: gạch chéo.
-    Rectangle {
-        width: root.d * 1.2; height: 6px;
-        background: Theme.text;
-        opacity: Voice.mic-muted ? 1 : 0;
-        transform-rotation: -45deg;
-        animate opacity { duration: 200ms; }
+        y: (parent.height - self.height) / 2 - root.tp * 120 * root.u;
     }
 
     TouchArea {

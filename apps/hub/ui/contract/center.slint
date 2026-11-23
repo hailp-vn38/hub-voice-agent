@@ -20,6 +20,7 @@ export global Center {
     in property <CenterTimer> timer;
     in property <CenterCountdown> countdown;
     in property <[HomeTile]> home;
+    in property <bool> home-safe: true; // thẻ "Nhà của bạn": An toàn / Cần kiểm tra
     in property <CenterCard> focus;
     in property <int> focus-serial;
     callback open(Screen);

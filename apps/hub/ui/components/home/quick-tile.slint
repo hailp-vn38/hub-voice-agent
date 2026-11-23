@@ -1,0 +1,188 @@
+import { CenterTimer } from "../../contract/center.slint";
+import { HomeTile, HomeKind } from "../../contract/home.slint";
+
+// Khung ô nhanh: kính xanh, hoặc cam rực khi `highlight` (thiết bị đang bật).
+// Phóng lớn tại chỗ khi `zoomed` (Center.focus).
+export component TileFrame inherits Rectangle {
+    in property <length> u: 1px;
+    in property <bool> highlight;
+    in property <bool> zoomed;
+    callback tapped();
+    border-radius: 19 * root.u;
+    background: root.highlight ? @linear-gradient(135deg, #925012 0%, #ff9d16 76%, #ffae3c 100%)
+        : @linear-gradient(140deg, #233c62e8 0%, #111f38f0 100%);
+    border-width: (root.highlight ? 1.6 : 1) * root.u;
+    border-color: root.highlight ? #ffd48d : #92b5ea40;
+    drop-shadow-blur: root.highlight ? 13 * root.u : 0;
+    drop-shadow-color: #f59d4960;
+    transform-scale: root.zoomed ? 1.06 : 1.0;
+    animate transform-scale { duration: 350ms; easing: ease-out; }
+    TouchArea { clicked => { root.tapped(); } }
+    @children
+}
+
+// Ô icon + tiêu đề + dòng phụ (+ công tắc).
+export component QuickTile inherits TileFrame {
+    in property <image> icon;
+    in property <string> title;
+    in property <string> detail;
+    in property <bool> switchable;
+    in property <bool> on;
+
+    Rectangle {
+        x: 13 * root.u;
+        y: 13 * root.u;
+        width: 41 * root.u;
+        height: 41 * root.u;
+        border-radius: 12 * root.u;
+        background: root.highlight ? #ffe6ac32 : #2269c852;
+        Image {
+            width: parent.width - 14 * root.u;
+            height: parent.height - 14 * root.u;
+            source: root.icon;
+            colorize: root.highlight ? #ffffff : #b7ddff;
+        }
+    }
+    Text {
+        x: 14 * root.u;
+        y: 75 * root.u;
+        width: parent.width - 23 * root.u;
+        height: 24 * root.u;
+        text: root.title;
+        color: #ffffff;
+        font-size: 14 * root.u;
+        font-weight: 600;
+        overflow: elide;
+        vertical-alignment: center;
+    }
+    Text {
+        x: 14 * root.u;
+        y: 102 * root.u;
+        width: parent.width - (root.switchable ? 64 : 23) * root.u;
+        height: 20 * root.u;
+        text: root.detail;
+        color: root.highlight ? #fff1cd : #b1c5dc;
+        font-size: 12 * root.u;
+        overflow: elide;
+        vertical-alignment: center;
+    }
+    if root.switchable: Rectangle {
+        x: parent.width - 49 * root.u;
+        y: parent.height - 31 * root.u;
+        width: 38 * root.u;
+        height: 21 * root.u;
+        border-radius: 10.5 * root.u;
+        background: root.on ? #ffebbd : #4b607c;
+        Rectangle {
+            x: (root.on ? 20 : 3) * root.u;
+            y: 3 * root.u;
+            width: 15 * root.u;
+            height: 15 * root.u;
+            border-radius: 7.5 * root.u;
+            background: root.on ? #e88b0b : #e3efff;
+            animate x { duration: 160ms; }
+        }
+    }
+}
+
+// Ô thiết bị nhà thông minh (đèn / công tắc / cảm biến).
+export component DeviceTile inherits QuickTile {
+    in property <HomeTile> tile;
+    in property <string> updated;
+    callback toggle(string);
+    private property <bool> sensor: root.tile.kind == HomeKind.sensor;
+    icon: root.tile.kind == HomeKind.light ? @image-url("../../../assets/home/icons/light.png")
+        : root.tile.kind == HomeKind.switch ? @image-url("../../../assets/home/icons/fan.png")
+        : @image-url("../../../assets/home/icons/snowflake.png");
+    title: root.tile.name;
+    detail: root.tile.pending ? "Đang chờ…"
+        : root.tile.stale ? "cập nhật lúc " + root.updated
+        : root.sensor ? root.tile.value
+        : root.tile.on ? "Bật" : "Tắt";
+    switchable: !root.sensor;
+    on: root.tile.on;
+    highlight: root.tile.on && !root.sensor;
+    opacity: root.tile.stale ? 0.45 : 1.0;
+    tapped => {
+        if (!root.sensor && !root.tile.pending) { root.toggle(root.tile.key); }
+    }
+}
+
+// Ô hẹn giờ: vòng tiến độ + thời gian còn lại.
+export component TimerTile inherits TileFrame {
+    in property <CenterTimer> timer;
+    private property <length> d: 58 * root.u;
+    private property <float> p: clamp(root.timer.progress, 0.001, 0.999);
+    private property <angle> a: root.p * 360deg;
+    Path {
+        x: 14 * root.u;
+        y: (parent.height - self.height) / 2;
+        width: root.d;
+        height: root.d;
+        viewbox-width: 100;
+        viewbox-height: 100;
+        commands: "M 50 6 A 44 44 0 1 1 49.99 6";
+        stroke: #2a4a7a;
+        stroke-width: 6 * root.u;
+    }
+    Path {
+        x: 14 * root.u;
+        y: (parent.height - self.height) / 2;
+        width: root.d;
+        height: root.d;
+        viewbox-width: 100;
+        viewbox-height: 100;
+        commands: "M 50 6 A 44 44 0 " + (root.p > 0.5 ? 1 : 0) + " 1 " + (50 + 44 * sin(root.a)) + " " + (50 - 44 * cos(root.a));
+        stroke: #22c7ff;
+        stroke-width: 6 * root.u;
+    }
+    VerticalLayout {
+        x: root.d + 24 * root.u;
+        width: parent.width - self.x - 8 * root.u;
+        alignment: center;
+        Text { text: root.timer.remaining; color: #ffffff; font-size: 16 * root.u; font-weight: 600; overflow: elide; }
+        Text { text: root.timer.label; color: #b1c5dc; font-size: 12 * root.u; overflow: elide; }
+    }
+}
+
+// Thẻ "Nhà của bạn": ảnh nhà + trạng thái an toàn.
+export component HomeSafeCard inherits TileFrame {
+    in property <bool> safe;
+    background: @linear-gradient(125deg, #2a3d64eb 0%, #1b2845d9 100%);
+    border-color: #97b3e872;
+    border-radius: 20 * root.u;
+    clip: true;
+    Image {
+        y: parent.height * 0.5;
+        width: parent.width;
+        height: parent.height * 0.5;
+        source: @image-url("../../../assets/home/backgrounds/security-house.jpg");
+        image-fit: cover;
+        opacity: 0.7;
+    }
+    Text {
+        x: 18 * root.u;
+        y: 17 * root.u;
+        text: "Nhà của bạn";
+        font-size: 16 * root.u;
+        font-weight: 600;
+        color: #ffffff;
+    }
+    Image {
+        x: 18 * root.u;
+        y: 43 * root.u;
+        width: 19 * root.u;
+        height: 19 * root.u;
+        source: @image-url("../../../assets/home/icons/shield.png");
+        colorize: root.safe ? #32ef91 : #fdae4b;
+    }
+    Text {
+        x: 44 * root.u;
+        y: 43 * root.u;
+        height: 19 * root.u;
+        text: root.safe ? "An toàn" : "Cần kiểm tra";
+        color: root.safe ? #32ef91 : #ffd071;
+        font-size: 13 * root.u;
+        vertical-alignment: center;
+    }
+}
