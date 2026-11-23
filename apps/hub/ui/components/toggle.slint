@@ -1,20 +1,25 @@
 import { Theme } from "../theme.slint";
 
+// Công tắc (Aurora): bật = nền xanh accent có quầng sáng.
 export component Toggle inherits Rectangle {
     in property <bool> on;
     callback toggled(bool);
-    width: 120px;
-    height: 64px;
-    border-radius: 32px;
-    background: root.on ? Theme.accent : Theme.card;
+    private property <length> u: Theme.unit;
+    width: 56 * root.u;
+    height: 30 * root.u;
+    border-radius: self.height / 2;
+    background: root.on ? Theme.accent : Theme.border;
+    drop-shadow-blur: root.on ? 10 * root.u : 0;
+    drop-shadow-color: Theme.accent.with-alpha(0.4);
+    animate background { duration: Theme.anim-state; }
     Rectangle {
-        x: root.on ? parent.width - self.width - 6px : 6px;
-        y: 6px;
-        width: 52px;
-        height: 52px;
-        border-radius: 26px;
+        x: root.on ? parent.width - self.width - 4 * root.u : 4 * root.u;
+        y: 4 * root.u;
+        width: 22 * root.u;
+        height: 22 * root.u;
+        border-radius: self.height / 2;
         background: Theme.text;
-        animate x { duration: 150ms; }
+        animate x { duration: Theme.anim-state; easing: ease-out; }
     }
     TouchArea { clicked => { root.toggled(!root.on); } }
 }

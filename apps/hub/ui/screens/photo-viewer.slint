@@ -34,7 +34,7 @@ export component PhotoViewer inherits Rectangle {
     changed ready => { root.t0 = animation-tick(); root.shown = root.cur.full; }
     changed pinned => { root.pin-t = animation-tick(); }
 
-    Rectangle { background: black; opacity: 0.92; }
+    Rectangle { background: Theme.background; opacity: 0.94; }
 
     // Khung chờ / lỗi: thẻ nhỏ sinh từ Orb, nở thành toàn màn khi ảnh xong.
     SpawnIn {
@@ -45,7 +45,7 @@ export component PhotoViewer inherits Rectangle {
         x: (parent.width - self.width) / 2;
         y: (parent.height - self.height) / 2;
         Rectangle {
-            border-radius: Theme.radius * (1 - root.grow);
+            border-radius: Theme.radius-panel * (1 - root.grow);
             background: Theme.card;
             clip: true;
             Image {
@@ -65,12 +65,12 @@ export component PhotoViewer inherits Rectangle {
             }
             if !root.ready: VerticalLayout {
                 alignment: center;
-                spacing: Theme.space-s;
-                Icon { name: "photo"; color: Theme.text-dim; size: 96px; x: (parent.width - self.width) / 2; }
+                spacing: 8 * Theme.unit;
+                Icon { name: "photo"; color: Theme.text-dim; size: 64 * Theme.unit; x: (parent.width - self.width) / 2; }
                 Text {
                     text: root.cur.state == PhotoState.failed ? "Không tải được ảnh" : "Đang tải ảnh…";
                     color: Theme.text-dim;
-                    font-size: Theme.font-body;
+                    font-size: Theme.type-body;
                     horizontal-alignment: center;
                 }
             }
@@ -83,8 +83,8 @@ export component PhotoViewer inherits Rectangle {
         swiped => { PhotosData.close-viewer(); }
         TouchArea {
             clicked => {
-                if (self.mouse-x < 240px) { PhotosData.previous(); }
-                else if (self.mouse-x > self.width - 240px) { PhotosData.next(); }
+                if (self.mouse-x < 160 * Theme.unit) { PhotosData.previous(); }
+                else if (self.mouse-x > self.width - 160 * Theme.unit) { PhotosData.next(); }
                 else { root.captions = !root.captions; }
             }
         }
@@ -92,51 +92,64 @@ export component PhotoViewer inherits Rectangle {
 
     // Chấm chỉ số ở mép trên.
     if PhotosData.viewer.length > 1: HorizontalLayout {
-        y: 48px;
-        height: 16px;
+        y: 24 * Theme.unit;
+        height: 8 * Theme.unit;
         alignment: center;
-        spacing: 12px;
+        spacing: 8 * Theme.unit;
         for p[i] in PhotosData.viewer: Rectangle {
-            width: 16px;
-            height: 16px;
-            border-radius: 8px;
+            width: i == root.idx ? 24 * Theme.unit : 8 * Theme.unit;
+            height: 8 * Theme.unit;
+            border-radius: 4 * Theme.unit;
+            animate width { duration: Theme.anim-state; }
             background: i == root.idx ? Theme.text : Theme.text-dim;
             opacity: i == root.idx ? 1 : 0.5;
         }
     }
 
     if root.captions && root.ready: Rectangle {
-        y: parent.height - self.height - 240px;
-        width: parent.width * 0.6;
-        height: 140px;
+        y: parent.height - self.height;
+        height: 200 * Theme.unit;
+        background: @linear-gradient(180deg, Theme.background.with-alpha(0) 0%, Theme.background.with-alpha(0.85) 100%);
         VerticalLayout {
-            padding-left: Theme.space-l;
+            padding-left: 40 * Theme.unit;
+            padding-right: 40 * Theme.unit;
+            padding-bottom: 100 * Theme.unit;
             alignment: end;
-            Text { text: root.cur.caption; color: Theme.text; font-size: Theme.font-title; overflow: elide; }
-            Text { text: root.cur.source; color: Theme.text-dim; font-size: Theme.font-small; overflow: elide; }
+            spacing: 4 * Theme.unit;
+            Text { text: root.cur.caption; color: Theme.text; font-size: Theme.type-page-title; font-weight: 600; overflow: elide; }
+            Text { text: root.cur.source; color: Theme.text-dim; font-size: Theme.type-body; overflow: elide; }
         }
     }
 
     // Ghim (nhảy lên khi đổi trạng thái) và xoá.
     if root.captions && root.ready: HorizontalLayout {
-        x: parent.width - self.width - Theme.space-l;
-        y: 96px;
-        spacing: Theme.space-m;
+        x: parent.width - self.width - 30 * Theme.unit;
+        y: 42 * Theme.unit;
+        height: 48 * Theme.unit;
+        spacing: 12 * Theme.unit;
         Rectangle {
-            width: Theme.touch-min;
-            height: Theme.touch-min;
+            width: self.height;
+            border-radius: self.height / 2;
+            background: root.pinned ? Theme.warm : Theme.glass;
+            border-width: 1 * Theme.unit;
+            border-color: root.pinned ? Theme.warm.brighter(0.4) : Theme.border;
+            drop-shadow-blur: root.pinned ? 12 * Theme.unit : 0;
+            drop-shadow-color: Theme.warm.with-alpha(0.45);
             Icon {
                 name: "pin";
-                color: root.pinned ? Theme.warm : Theme.text;
-                size: 56px;
-                y: (parent.height - self.height) / 2 - 24px * sin(root.pin-bump * 180deg);
+                color: Theme.text;
+                size: 22 * Theme.unit;
+                y: (parent.height - self.height) / 2 - 10 * Theme.unit * sin(root.pin-bump * 180deg);
             }
             TouchArea { clicked => { PhotosData.toggle-pin(root.cur.key); } }
         }
         Rectangle {
-            width: Theme.touch-min * 1.5;
-            height: Theme.touch-min;
-            Text { text: "Xoá"; color: Theme.error; font-size: Theme.font-body; horizontal-alignment: center; vertical-alignment: center; }
+            width: 88 * Theme.unit;
+            border-radius: self.height / 2;
+            background: Theme.glass;
+            border-width: 1 * Theme.unit;
+            border-color: Theme.error.with-alpha(0.6);
+            Text { text: "Xoá"; color: Theme.error; font-size: Theme.type-body; font-weight: 600; }
             TouchArea { clicked => { root.confirm-remove = true; } }
         }
     }

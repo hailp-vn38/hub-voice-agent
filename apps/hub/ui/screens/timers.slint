@@ -1,8 +1,6 @@
 import { Theme } from "../theme.slint";
-import { Screen } from "../contract/nav.slint";
 import { TimersData } from "../contract/timers.slint";
 import { Backdrop } from "../components/home/backdrop.slint";
-import { NavRail } from "../components/home/nav-rail.slint";
 import { SpawnIn } from "../components/spawn.slint";
 import { TimerCardView } from "../components/timer-card.slint";
 import { TimerRing } from "../components/timer-ring.slint";
@@ -50,13 +48,6 @@ export component Timers inherits Rectangle {
     private property <float> ch: (root.bottom - root.top - (root.rows - 1) * root.gap) / root.rows;
 
     Backdrop { dim: 0.35; }
-    NavRail {
-        x: 14 * root.u;
-        y: 42 * root.u;
-        height: (root.cvh - 152) * root.u;
-        u: root.u;
-        current: Screen.timers;
-    }
 
     // Đầu màn.
     HorizontalLayout {

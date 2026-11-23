@@ -25,6 +25,7 @@ import { BackNav } from "back-nav.slint";
 import { SpawnClock } from "spawn.slint";
 import { CenterScreen } from "../screens/center.slint";
 import { Timers } from "../screens/timers.slint";
+import { NavRail } from "home/nav-rail.slint";
 
 // Khung app: tầng trung tâm ⇄ menu (vuốt theo ngón tay), tầng màn tính năng,
 // lớp phủ ở trên cùng. Màn phủ kín cửa sổ; thanh Voice (nút mic trái, chữ phản hồi) nổi trên đáy màn.
@@ -46,6 +47,10 @@ export component Shell inherits Rectangle {
     private property <float> menu-p: swipe.swiping && !is-feature ? clamp(menu-target - dx / w, 0, 1) : menu-target;
     private property <float> feat-p: swipe.swiping && is-feature ? clamp(1 - dx / w, 0, 1) : feat-target;
     private property <float> away: max(menu-p, feat-p);
+    // Thanh điều hướng trái dùng chung, đứng yên khi chuyển giữa các màn có nó.
+    private property <bool> has-rail: shown == Screen.center || shown == Screen.menu || shown == Screen.timers || shown == Screen.reminders || shown == Screen.calendar;
+    private property <float> rail-p: has-rail ? 1 : 0;
+    animate rail-p { duration: Theme.anim-screen; easing: ease-out; }
     animate menu-p, feat-p { duration: swipe.swiping ? 0ms : Theme.anim-screen; easing: ease-out; }
 
     // Màn tính năng đọc Dock.height để chừa hàng Voice ở đáy.
@@ -109,6 +114,16 @@ export component Shell inherits Rectangle {
                 if root.shown == Screen.first-boot: FirstBoot { }
             }
         }
+    }
+
+    // Thanh điều hướng: nằm trên tầng nội dung nên không trượt theo màn, chỉ view đổi.
+    if root.rail-p > 0: NavRail {
+        x: 14 * root.u;
+        y: 42 * root.u;
+        height: (root.ch - 152) * root.u;
+        u: root.u;
+        current: root.shown;
+        opacity: root.rail-p;
     }
 
     // Ambient: fade vào/ra, phủ nội dung; chạm để thoát (AmbientData.wake).

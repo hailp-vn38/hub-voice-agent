@@ -2,7 +2,6 @@ import { Theme } from "../theme.slint";
 import { Nav, Screen } from "../contract/nav.slint";
 import { Menu } from "../contract/menu.slint";
 import { Backdrop } from "../components/home/backdrop.slint";
-import { NavRail } from "../components/home/nav-rail.slint";
 import { TileFrame } from "../components/home/quick-tile.slint";
 
 struct AppTile { icon: image, name: string, info: string, screen: Screen }
@@ -69,13 +68,6 @@ export component MenuScreen inherits Rectangle {
     ];
 
     Backdrop { dim: 0.35; }
-    NavRail {
-        x: 14 * root.u;
-        y: 42 * root.u;
-        height: (root.ch - 152) * root.u;
-        u: root.u;
-        current: Screen.menu;
-    }
     Text {
         x: root.gx * root.u;
         y: 42 * root.u;

@@ -3,7 +3,6 @@ import { Screen } from "../contract/nav.slint";
 import { StatusBar } from "../contract/status.slint";
 import { Center, CenterCard } from "../contract/center.slint";
 import { Icon } from "../components/icon.slint";
-import { NavRail } from "../components/home/nav-rail.slint";
 import { Backdrop } from "../components/home/backdrop.slint";
 import { AgendaCard, NextCard } from "../components/home/agenda.slint";
 import { QuickTile, DeviceTile, TimerTile, HomeSafeCard } from "../components/home/quick-tile.slint";
@@ -41,14 +40,6 @@ export component CenterScreen inherits Rectangle {
     }
 
     Backdrop { }
-
-    NavRail {
-        x: 14 * root.u;
-        y: 42 * root.u;
-        height: (448 + root.dy) * root.u;
-        u: root.u;
-        current: Screen.center;
-    }
 
     // Đồng hồ + thời tiết: chạm mở màn Thời tiết. Cụm thời tiết đi theo bề rộng đồng hồ.
     Rectangle {

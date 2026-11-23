@@ -6,7 +6,7 @@ import { SettingRow } from "../../components/setting-row.slint";
 
 component Info inherits Text {
     color: Theme.text-dim;
-    font-size: Theme.font-small;
+    font-size: Theme.type-caption;
     vertical-alignment: center;
     wrap: word-wrap;
 }
@@ -23,7 +23,7 @@ export component ConnectionPanel inherits VerticalLayout {
     }
     if !SettingsData.connection.enrolled: SettingRow {
         label: "Mã Enrollment";
-        Text { text: SettingsData.connection.enrollment-code; color: Theme.warm; font-size: Theme.font-title; vertical-alignment: center; }
+        Text { text: SettingsData.connection.enrollment-code; color: Theme.warm; font-size: Theme.type-section; vertical-alignment: center; }
         ActionButton { text: "Kết nối"; clicked => { SettingsData.connect-voice(); } }
     }
     SettingRow {

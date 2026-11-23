@@ -10,22 +10,22 @@ export component HoursChart inherits Rectangle {
     in property <bool> lit;
     in-out property <int> picked: -1;
     private property <length> cw: self.width;
-    private property <length> ch: self.height - 120px * Theme.text-scale;
-    private property <length> top: 48px;
+    private property <length> ch: self.height - 72 * Theme.unit * Theme.text-scale;
+    private property <length> top: 36 * Theme.unit;
     private property <float> range: max(hi - lo, 1);
     private property <length> step: cw / 24;
 
     pure function py(t: float) -> length { return top + (ch - top) * (1 - (t - lo) / range); }
 
     for h[i] in hours: Rectangle {
-        x: i * step + 4px; width: step - 8px;
+        x: i * step + 4 * Theme.unit; width: step - 8 * Theme.unit;
         y: ch - h.rain * (ch - top); height: h.rain * (ch - top);
-        background: #4cc2ff; opacity: 0.22; border-radius: 6px;
+        background: Theme.accent-cyan; opacity: 0.22; border-radius: 6 * Theme.unit;
     }
     for h[i] in hours: Path {
         width: root.cw; height: root.height;
         viewbox-width: self.width / 1px; viewbox-height: self.height / 1px;
-        stroke: Theme.warm; stroke-width: 5px;
+        stroke: Theme.warm; stroke-width: 3 * Theme.unit;
         visible: i < hours.length - 1;
         commands: "M " + ((i + 0.5) * step / 1px) + " " + (py(h.temp) / 1px)
             + " C " + ((i + 1) * step / 1px) + " " + (py(h.temp) / 1px) + " " + ((i + 1) * step / 1px) + " " + (py(hours[min(i + 1, hours.length - 1)].temp) / 1px)
@@ -35,27 +35,27 @@ export component HoursChart inherits Rectangle {
         property <bool> on: i == root.picked || h.key == root.focus-key;
         property <bool> peak: h.peak;
         x: (i + 0.5) * step - self.width / 2; y: py(h.temp) - self.height / 2;
-        width: on ? 28px : (peak ? 20px : 10px); height: self.width; border-radius: self.width / 2;
+        width: on ? 16 * Theme.unit : (peak ? 12 * Theme.unit : 6 * Theme.unit); height: self.width; border-radius: self.width / 2;
         background: peak || on ? Theme.warm : Theme.text;
-        border-width: on && root.lit ? 6px : 0px; border-color: #ffffff;
+        border-width: on && root.lit ? 3 * Theme.unit : 0px; border-color: #ffffff;
         animate width { duration: 150ms; }
-        if peak: Text { x: -40px; y: -44px * Theme.text-scale; width: 100px; text: h.temp + "°"; color: Theme.warm; font-size: Theme.font-small; horizontal-alignment: center; }
+        if peak: Text { x: (self.width - parent.width) / -2; y: -26 * Theme.unit * Theme.text-scale; width: 60 * Theme.unit; text: h.temp + "°"; color: Theme.warm; font-size: Theme.type-caption; horizontal-alignment: center; }
     }
     for h[i] in hours: Text {
-        x: i * step; width: step; y: root.height - 100px * Theme.text-scale;
-        text: mod(i, 6) == 0 ? h.label : ""; color: Theme.text-dim; font-size: Theme.font-small * 0.85;
+        x: i * step; width: step; y: root.height - 58 * Theme.unit * Theme.text-scale;
+        text: mod(i, 6) == 0 ? h.label : ""; color: Theme.text-dim; font-size: Theme.type-caption;
         horizontal-alignment: center;
     }
     for h[i] in hours: TouchArea {
-        x: i * step; width: step; y: 0; height: ch + 20px;
+        x: i * step; width: step; y: 0; height: ch + 20 * Theme.unit;
         clicked => { root.picked = i; }
     }
     // Chi tiết giờ đã chạm
     Text {
-        y: root.height - 56px * Theme.text-scale; width: root.width;
+        y: root.height - 26 * Theme.unit * Theme.text-scale; width: root.width;
         text: root.picked >= 0 && root.picked < hours.length
             ? hours[root.picked].label + " · " + hours[root.picked].temp + "° · mưa " + round(hours[root.picked].rain * 100) + "% · gió " + hours[root.picked].wind
             : "Chạm một điểm để xem chi tiết giờ";
-        color: Theme.text; font-size: Theme.font-small; horizontal-alignment: center; overflow: elide;
+        color: Theme.text-dim; font-size: Theme.type-caption; horizontal-alignment: center; overflow: elide;
     }
 }

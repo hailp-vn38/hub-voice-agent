@@ -1,17 +1,19 @@
 import { Theme } from "../theme.slint";
 
-// Một dòng cài đặt: nhãn bên trái, điều khiển (children) bên phải.
+// Một dòng cài đặt (Aurora): nhãn bên trái, điều khiển (children) bên phải, vạch mảnh ngăn dòng.
 export component SettingRow inherits HorizontalLayout {
     in property <string> label;
-    spacing: Theme.space-m;
-    padding-bottom: Theme.space-m;
+    spacing: 16 * Theme.unit;
+    padding-top: 8 * Theme.unit;
+    padding-bottom: 8 * Theme.unit;
+    min-height: 60 * Theme.unit;
     Text {
         text: root.label;
         color: Theme.text;
-        font-size: Theme.font-body;
+        font-size: Theme.type-body;
         vertical-alignment: center;
-        min-width: 300px;
-        horizontal-stretch: 0;
+        width: 190 * Theme.unit;
+        wrap: word-wrap;
     }
     @children
 }

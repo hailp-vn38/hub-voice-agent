@@ -1,9 +1,7 @@
 import { Theme } from "../theme.slint";
-import { Screen } from "../contract/nav.slint";
 import { CalendarData } from "../contract/calendar.slint";
 import { StatusBar } from "../contract/status.slint";
 import { Backdrop } from "../components/home/backdrop.slint";
-import { NavRail } from "../components/home/nav-rail.slint";
 import { WeekStrip } from "../components/calendar/week-strip.slint";
 import { Timeline } from "../components/calendar/timeline.slint";
 import { UpcomingList } from "../components/calendar/upcoming.slint";
@@ -22,13 +20,6 @@ export component Calendar inherits Rectangle {
     private property <bool> offline: CalendarData.stale || StatusBar.offline;
 
     Backdrop { dim: 0.35; }
-    NavRail {
-        x: 14 * root.u;
-        y: 42 * root.u;
-        height: (root.ch - 152) * root.u;
-        u: root.u;
-        current: Screen.calendar;
-    }
 
     // Đầu màn.
     HorizontalLayout {
