@@ -16,8 +16,10 @@ pub fn init(app: &App) {
     first_boot::init(app);
     center::init(app);
     super::reminders::init(app);
+    super::timers::init(app);
 }
 
 pub fn tick(app: &App) {
     center::tick(app);
+    super::timers::tick(app);
 }

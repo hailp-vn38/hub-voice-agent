@@ -114,6 +114,14 @@ pub fn all() -> Vec<Scenario> {
         ("Reminder: hoãn 10 phút", super::reminders::postpone),
         ("Reminder: một mục đã lỡ", super::reminders::missed),
         ("Reminder: trống", super::reminders::empty),
+        ("Hẹn giờ: luộc trứng 7 phút", super::timers::boil_egg),
+        ("Hẹn giờ: thêm một cái", super::timers::add_another),
+        ("Hẹn giờ: 10 giây cuối", super::timers::final_seconds),
+        ("Hẹn giờ: tạm dừng / tiếp tục", super::timers::pause_resume),
+        ("Hẹn giờ: thêm 2 phút", super::timers::add_two_minutes),
+        ("Hẹn giờ: huỷ trứng", super::timers::cancel_egg),
+        ("Hẹn giờ: hết giờ", super::timers::finish),
+        ("Hẹn giờ: trứng còn bao lâu?", super::timers::focus_egg),
         ("Chữ lớn", |app| app.global::<Theme>().set_text_scale(1.25)),
     ]
 }
