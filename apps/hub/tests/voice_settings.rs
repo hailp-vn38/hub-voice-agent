@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use futures_util::{SinkExt, StreamExt};
-use hub::voice_settings::{SettingsCommand, SettingsState, VoiceSettings, start};
+use hub::voice_settings::{DEFAULT_OTA_URL, SettingsCommand, SettingsState, VoiceSettings, start};
 use serde_json::{Value, json};
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
@@ -161,6 +161,7 @@ async fn saving_url_starts_voice_and_invalid_edit_preserves_config() {
     let expected_device = settings.device_id().to_string();
     let (commands, mut state) = start(settings);
     assert_eq!(state.borrow().status, None);
+    assert_eq!(state.borrow().ota_url, DEFAULT_OTA_URL);
     commands
         .send(SettingsCommand::SaveUrl(url.clone()))
         .unwrap();

@@ -4,6 +4,9 @@ use voice_client::{ConnectionState, DeviceIdentity, VoiceCommand, VoiceConfig, V
 
 use super::VoiceSettings;
 
+/// Pre-filled in the OTA field until a URL is saved: the local test vela-server.
+pub const DEFAULT_OTA_URL: &str = "http://127.0.0.1:8000/voice/ota";
+
 #[derive(Clone, Debug)]
 pub struct SettingsState {
     pub ota_url: String,
@@ -44,7 +47,10 @@ pub fn start(
     watch::Receiver<SettingsState>,
 ) {
     let state = SettingsState {
-        ota_url: settings.ota_url().map(String::from).unwrap_or_default(),
+        ota_url: settings
+            .ota_url()
+            .map(String::from)
+            .unwrap_or_else(|| DEFAULT_OTA_URL.to_owned()),
         device_id: settings.device_id().to_owned(),
         status: None,
         activation: None,
