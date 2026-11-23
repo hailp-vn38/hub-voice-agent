@@ -43,6 +43,8 @@ pub struct Hub {
     pub audio_tx: mpsc::Sender<AudioEvent>,
     pub input_tx: mpsc::Sender<UserInput>,
     pub ui_rx: watch::Receiver<UiState>,
+    pub config_rx: watch::Receiver<Option<voice_client::VoiceConfig>>,
+    pub _dir: tempfile::TempDir,
     pub task: JoinHandle<anyhow::Result<()>>,
 }
 
@@ -54,12 +56,17 @@ impl Hub {
         let (audio_event_tx, audio_event_rx) = mpsc::channel(16);
         let (input_tx, input_rx) = mpsc::channel(16);
         let (ui_tx, ui_rx) = watch::channel(UiState::default());
+        let dir = tempfile::tempdir().unwrap();
+        let config = hub_core::ConfigStore::open(dir.path()).unwrap();
+        let (voice_config_tx, config_rx) = watch::channel(None);
         let task = tokio::spawn(run(
+            config,
             hub_core::Store::in_memory().unwrap(),
             Ports {
                 clock: Arc::new(TestClock::at(start)),
             },
             Io {
+                voice_config_tx,
                 voice_tx,
                 voice_rx: voice_event_rx,
                 audio_tx,
@@ -75,6 +82,8 @@ impl Hub {
             audio_tx: audio_event_tx,
             input_tx,
             ui_rx,
+            config_rx,
+            _dir: dir,
             task,
         }
     }
