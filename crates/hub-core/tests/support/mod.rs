@@ -75,6 +75,7 @@ impl Hub {
                 clock: Arc::new(TestClock::at(start)),
                 calendar: Arc::new(hub_core::sources::google_calendar::GoogleCalendar::default()),
                 weather: Arc::new(hub_core::OpenMeteo::default()),
+                home: Arc::new(hub_core::HomeAssistant::default()),
                 system: Arc::new(Synced),
             },
             Io {

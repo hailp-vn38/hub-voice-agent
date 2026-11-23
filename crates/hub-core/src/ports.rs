@@ -34,3 +34,30 @@ pub trait WeatherSource: Send + Sync {
 pub trait System: Send + Sync {
     fn time_synced(&self) -> bool;
 }
+
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize)]
+pub struct HomeEntity {
+    pub id: String,
+    pub name: String,
+    pub state: String,
+    pub stale: bool,
+}
+
+#[derive(Clone, Debug)]
+pub enum HomeEvent {
+    Connected,
+    State(HomeEntity),
+    Disconnected,
+}
+
+pub trait HomeSource: Send + Sync {
+    fn subscribe(
+        &self,
+        settings: tokio::sync::watch::Receiver<crate::HomeSettings>,
+    ) -> tokio::sync::mpsc::Receiver<HomeEvent>;
+    fn call_service(
+        &self,
+        entity_id: String,
+        service: String,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + '_>>;
+}

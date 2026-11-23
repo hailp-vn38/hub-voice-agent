@@ -59,6 +59,7 @@ async fn weather_preview_returns_home_and_uses_cache() {
             clock: Arc::new(TestClock::at(start.clone())),
             weather: source.clone(),
             calendar: Arc::new(hub_core::sources::google_calendar::GoogleCalendar::default()),
+            home: Arc::new(hub_core::HomeAssistant::default()),
             system: Arc::new(support::Synced),
         },
         Io {

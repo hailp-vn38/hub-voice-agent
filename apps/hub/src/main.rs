@@ -46,7 +46,7 @@ fn main() -> anyhow::Result<()> {
             });
             let (voice_tx, voice_rx) = voice_client::spawn(config_rx);
             ui::spawn_bridge(weak, ui_rx);
-            let ports = Ports { clock: Arc::new(SystemClock), system: Arc::new(DesktopSystem), calendar: Arc::new(hub_core::sources::google_calendar::GoogleCalendar::default()), weather: Arc::new(hub_core::OpenMeteo::default()) };
+            let ports = Ports { clock: Arc::new(SystemClock), system: Arc::new(DesktopSystem), calendar: Arc::new(hub_core::sources::google_calendar::GoogleCalendar::default()), weather: Arc::new(hub_core::OpenMeteo::default()), home: Arc::new(hub_core::HomeAssistant::default()) };
             let (audio_tx, mut audio_commands) = mpsc::channel(16);
             let (_audio_events, audio_rx) = mpsc::channel(16);
             tokio::spawn(async move { while audio_commands.recv().await.is_some() {} });

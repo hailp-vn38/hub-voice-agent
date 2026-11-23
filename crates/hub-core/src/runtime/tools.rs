@@ -7,11 +7,14 @@ pub(super) fn route(
     countdowns: &mut crate::features::countdowns::Feature,
     view: &mut crate::view::View,
     weather: &mut crate::features::weather::Feature,
+    home: &crate::features::home::Feature,
     store: &crate::Store,
     call: ToolCall,
     now: jiff::Zoned,
 ) -> Vec<Effect> {
-    if call.name == "hub_weather_get" {
+    if call.name.starts_with("hub_home_") {
+        home.on_tool(view, call, now.timestamp().as_second())
+    } else if call.name == "hub_weather_get" {
         weather.on_tool(view, call, now.timestamp().as_second(), store)
     } else if call.name.starts_with("hub_timer_") {
         timers.on_tool(view, call, now.timestamp().as_second())
