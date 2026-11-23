@@ -1,0 +1,38 @@
+import { Theme } from "../theme.slint";
+import { SettingsData } from "../contract/settings.slint";
+
+// Slider 0..1. Cử chỉ bắt đầu trên slider thuộc slider (khoá vuốt điều hướng).
+export component Slider inherits Rectangle {
+    in property <float> value;
+    callback changed-to(float);
+    height: Theme.touch-min;
+    min-width: 400px;
+    Rectangle {
+        y: (parent.height - self.height) / 2;
+        height: 16px;
+        border-radius: 8px;
+        background: Theme.card;
+        Rectangle {
+            x: 0;
+            width: parent.width * clamp(root.value, 0, 1);
+            border-radius: 8px;
+            background: Theme.accent;
+        }
+    }
+    Rectangle {
+        x: (root.width - self.width) * clamp(root.value, 0, 1);
+        y: (parent.height - self.height) / 2;
+        width: 56px;
+        height: 56px;
+        border-radius: 28px;
+        background: Theme.text;
+    }
+    TouchArea {
+        pointer-event(e) => {
+            if (e.kind == PointerEventKind.down) { SettingsData.dragging = true; }
+            if (e.kind == PointerEventKind.up || e.kind == PointerEventKind.cancel) { SettingsData.dragging = false; }
+        }
+        moved => { if (self.pressed) { root.changed-to(clamp((self.mouse-x - 28px) / (root.width - 56px), 0, 1)); } }
+        clicked => { root.changed-to(clamp((self.mouse-x - 28px) / (root.width - 56px), 0, 1)); }
+    }
+}

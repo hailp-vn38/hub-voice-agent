@@ -8,6 +8,7 @@ use crate::App;
 pub mod home;
 
 pub fn init(app: &App) {
+    super::settings::init(app);
     menu::init(app);
     home::init(app);
     first_boot::init(app);

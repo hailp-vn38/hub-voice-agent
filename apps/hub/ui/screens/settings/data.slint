@@ -1,0 +1,12 @@
+import { ActionButton } from "../../components/action-button.slint";
+import { SettingRow } from "../../components/setting-row.slint";
+
+// Mỗi nút xin xác nhận qua `ask(khoá, tiêu đề)`.
+export component DataPanel inherits VerticalLayout {
+    callback ask(string, string);
+    SettingRow { label: "Ảnh"; ActionButton { danger: true; text: "Xoá toàn bộ ảnh"; clicked => { root.ask("photos", "Xoá toàn bộ ảnh?"); } } }
+    SettingRow { label: "Cache"; ActionButton { danger: true; text: "Xoá cache thời tiết/lịch"; clicked => { root.ask("cache", "Xoá cache thời tiết và lịch?"); } } }
+    SettingRow { label: "Hẹn giờ"; ActionButton { danger: true; text: "Xoá hẹn giờ"; clicked => { root.ask("timers", "Xoá mọi hẹn giờ?"); } } }
+    SettingRow { label: "Đếm ngược"; ActionButton { danger: true; text: "Xoá đếm ngược"; clicked => { root.ask("countdowns", "Xoá mọi đếm ngược?"); } } }
+    SettingRow { label: "Reminder"; ActionButton { danger: true; text: "Xoá Reminder"; clicked => { root.ask("reminders", "Xoá mọi Reminder?"); } } }
+}

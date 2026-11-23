@@ -73,6 +73,13 @@ pub fn all() -> Vec<Scenario> {
         ("Lần đầu: sai mật khẩu", |app| super::fixtures::run_first_boot(app, true)),
         ("Chữ nhỏ", |app| app.global::<Theme>().set_text_scale(0.85)),
         ("Chữ vừa", |app| app.global::<Theme>().set_text_scale(1.0)),
+        ("Mở Setting", |app| {
+            app.set_show_sample(false);
+            app.global::<Nav>().set_screen(Screen::Settings)
+        }),
+        ("Đổi độ phân giải", super::settings::change_resolution),
+        ("Chưa đăng ký voice", super::settings::not_enrolled),
+        ("Tắt mic", super::settings::mute_mic),
         ("Chữ lớn", |app| app.global::<Theme>().set_text_scale(1.25)),
     ]
 }

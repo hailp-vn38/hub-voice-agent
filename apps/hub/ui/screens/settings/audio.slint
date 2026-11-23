@@ -1,0 +1,32 @@
+import { SettingsData } from "../../contract/settings.slint";
+import { Slider } from "../../components/slider.slint";
+import { Choice } from "../../components/choice.slint";
+import { Toggle } from "../../components/toggle.slint";
+import { SettingRow } from "../../components/setting-row.slint";
+
+export component AudioPanel inherits VerticalLayout {
+    SettingRow {
+        label: "Âm lượng";
+        Slider { value: SettingsData.audio.volume; changed-to(v) => { SettingsData.set-volume(v); } }
+    }
+    SettingRow {
+        label: "Âm giao diện";
+        Toggle { on: SettingsData.audio.ui-sounds; toggled(v) => { SettingsData.toggle("ui-sounds", v); } }
+    }
+    SettingRow {
+        label: "Chuông hẹn giờ";
+        Choice {
+            options: SettingsData.audio.sounds;
+            current: SettingsData.audio.timer-sound;
+            chosen(v) => { SettingsData.choose("timer-sound", v); SettingsData.preview-sound(v); }
+        }
+    }
+    SettingRow {
+        label: "Chuông Reminder";
+        Choice {
+            options: SettingsData.audio.sounds;
+            current: SettingsData.audio.reminder-sound;
+            chosen(v) => { SettingsData.choose("reminder-sound", v); SettingsData.preview-sound(v); }
+        }
+    }
+}

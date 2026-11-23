@@ -1,0 +1,19 @@
+import { Theme } from "../theme.slint";
+
+export component ActionButton inherits Rectangle {
+    in property <string> text;
+    in property <bool> danger;
+    callback clicked();
+    min-width: 200px;
+    height: Theme.touch-min;
+    border-radius: Theme.radius;
+    background: Theme.card;
+    Text {
+        text: root.text;
+        color: root.danger ? Theme.error : Theme.text;
+        font-size: Theme.font-small;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+    TouchArea { clicked => { root.clicked(); } }
+}

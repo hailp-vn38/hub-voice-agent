@@ -4,6 +4,7 @@ mod fixtures;
 mod levels;
 mod qr;
 mod scenarios;
+mod settings;
 
 use crate::{App, DemoPanel, Nav, StatusBar};
 use slint::{ComponentHandle, ModelRc, SharedString, Timer, TimerMode, VecModel};
