@@ -58,3 +58,13 @@ fn new_speech_cancels_silence_deadline() {
     );
     assert_eq!(c.state, VoiceState::Thinking);
 }
+
+#[test]
+fn unconfigured_ends_an_active_conversation() {
+    let mut c = Conversation::default();
+    c.on(Input::Connection(ConnectionState::Ready), now());
+    c.on(Input::WakeWord, now());
+    c.on(Input::Connection(ConnectionState::Unconfigured), now());
+    assert_eq!(c.state, VoiceState::Offline);
+    assert!(!c.turn_active());
+}

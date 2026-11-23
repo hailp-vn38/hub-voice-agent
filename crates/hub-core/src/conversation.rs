@@ -37,6 +37,7 @@ impl Conversation {
             }
             Input::Connection(
                 ConnectionState::Offline { .. }
+                | ConnectionState::Unconfigured
                 | ConnectionState::Connecting
                 | ConnectionState::Enrolling,
             ) => {
