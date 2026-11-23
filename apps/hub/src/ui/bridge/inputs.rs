@@ -13,7 +13,7 @@ use tokio::sync::mpsc;
 #[path = "inputs_tests.rs"]
 mod tests;
 
-struct Inputs {
+pub(super) struct Inputs {
     tx: mpsc::Sender<UserInput>,
     last_activity: Option<Instant>,
 }
@@ -26,7 +26,7 @@ impl Inputs {
         }
     }
 
-    fn send(&self, input: UserInput) {
+    pub(super) fn send(&self, input: UserInput) {
         if let Err(error) = self.tx.try_send(input) {
             let cause = match error {
                 mpsc::error::TrySendError::Full(_) => "hàng đợi đầy",
@@ -36,7 +36,7 @@ impl Inputs {
         }
     }
 
-    fn activity(&mut self) {
+    pub(super) fn activity(&mut self) {
         self.activity_at(Instant::now());
     }
 
@@ -285,10 +285,13 @@ pub fn connect_inputs(app: &App, input_tx: mpsc::Sender<UserInput>, bridge_state
         }
     });
 
-    let dismiss = inputs;
+    let dismiss = inputs.clone();
     app.global::<AlertData>().on_dismiss(move || {
         let mut input = dismiss.borrow_mut();
         input.activity();
         input.send(UserInput::DismissAlert);
     });
+
+    super::home::connect_inputs(app, inputs.clone());
+    super::photos::connect_inputs(app, inputs);
 }
