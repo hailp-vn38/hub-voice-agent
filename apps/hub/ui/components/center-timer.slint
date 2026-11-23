@@ -1,0 +1,42 @@
+import { Theme } from "../theme.slint";
+import { CenterTimer } from "../contract/center.slint";
+
+// Ô hẹn giờ nhỏ: vòng tiến độ + số còn lại.
+export component CenterTimerTile inherits Rectangle {
+    in property <CenterTimer> timer;
+    private property <length> d: 120px;
+    private property <float> p: clamp(root.timer.progress, 0.001, 0.999);
+    private property <angle> a: root.p * 360deg;
+    Path {
+        x: Theme.space-m;
+        y: (parent.height - self.height) / 2;
+        width: root.d;
+        height: root.d;
+        viewbox-width: 100;
+        viewbox-height: 100;
+        commands: "M 50 6 A 44 44 0 1 1 49.99 6";
+        stroke: Theme.text-dim;
+        stroke-width: 8px;
+        opacity: 0.3;
+    }
+    Path {
+        x: Theme.space-m;
+        y: (parent.height - self.height) / 2;
+        width: root.d;
+        height: root.d;
+        viewbox-width: 100;
+        viewbox-height: 100;
+        commands: "M 50 6 A 44 44 0 " + (root.p > 0.5 ? 1 : 0) + " 1 " + (50 + 44 * sin(root.a)) + " " + (50 - 44 * cos(root.a));
+        stroke: Theme.accent;
+        stroke-width: 8px;
+    }
+    Text {
+        x: root.d + Theme.space-m * 2;
+        width: parent.width - self.x - Theme.space-s;
+        y: (parent.height - self.height) / 2;
+        text: root.timer.remaining + "\n" + root.timer.label;
+        color: Theme.text;
+        font-size: Theme.font-small;
+        overflow: elide;
+    }
+}

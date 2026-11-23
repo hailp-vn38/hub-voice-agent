@@ -85,6 +85,11 @@ pub fn all() -> Vec<Scenario> {
         ("Lưu → lỗi", super::spawn::save_fail),
         ("Thẻ nổi", super::spawn::floating),
         ("Thẻ nổi mờ", super::spawn::floating_fade),
+        ("Trung tâm: thêm hẹn giờ", super::fixtures::add_timer),
+        ("Trung tâm: hết hẹn giờ", super::fixtures::end_timer),
+        ("Trung tâm: hôm nay là Tết", super::fixtures::countdown_today),
+        ("Trung tâm: hỏi mai có mưa", super::fixtures::focus_weather),
+        ("Trung tâm: offline", super::fixtures::stale),
         ("Chữ lớn", |app| app.global::<Theme>().set_text_scale(1.25)),
     ]
 }
