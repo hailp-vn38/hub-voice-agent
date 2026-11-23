@@ -89,7 +89,7 @@ fn alert_view_maps_and_none_hides_without_clearing_fade_data() {
 fn timer_and_alert_callbacks_map_to_core_inputs_and_ignore_invalid_ids() {
     let app = app();
     let (tx, mut rx) = tokio::sync::mpsc::channel(16);
-    super::connect_inputs(&app, tx);
+    super::connect_inputs(&app, tx, super::BridgeState::default());
 
     let timers = app.global::<crate::TimersData>();
     timers.invoke_quick_start(1);

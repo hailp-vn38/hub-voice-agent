@@ -23,7 +23,7 @@ Map: done
 
 ## Gates đã chạy
 
-- [x] `scripts/test.sh -p hub` — 155 passed.
+- [x] `scripts/test.sh -p hub` — 158 passed sau merge `feat/hub-mac` (`845ecad`).
 - [x] `rustfmt --edition 2024 --check --config skip_children=true` trên các file bridge đã sửa/tạo.
 - [x] `git diff --check`.
 
