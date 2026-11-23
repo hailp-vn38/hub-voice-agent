@@ -1,12 +1,12 @@
 use super::effects::Effect;
 
-/// Publishes the local clock as `HH:MM:SS`.
+/// Publishes the current local time from the actor's clock port.
 pub(super) fn tick(now: &jiff::Zoned) -> Vec<Effect> {
-    let clock = now.strftime("%H:%M:%S").to_string();
+    let now = now.clone();
     vec![Effect::Ui(Box::new(move |state| {
-        let changed = state.clock != clock;
+        let changed = state.now != now;
         if changed {
-            state.clock = clock;
+            state.now = now;
         }
         changed
     }))]

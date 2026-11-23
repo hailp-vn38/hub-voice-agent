@@ -10,6 +10,7 @@ mod selector;
 mod sources;
 
 mod ports;
+pub mod present;
 mod runtime;
 pub mod setup_web;
 mod store;
@@ -29,9 +30,10 @@ pub use ports::{
     FetchedImage, HomeEntity, HomeEvent, HomeSource, ImageFetcher, NewCalendarEvent, System,
     SystemClock, WeatherLocation, WeatherSource,
 };
+pub use present::{HubView, present};
 pub use runtime::run;
 use tokio::sync::{mpsc, watch};
-pub use ui_state::{UiState, VoiceSettingsState, VoiceState, VoiceUiState};
+pub use ui_state::{UiEvents, UiState, VoiceSettingsState, VoiceState, VoiceUiState};
 pub use view::{Focus, Screen, ViewState};
 use voice_client::{VoiceCommand, VoiceConfig, VoiceEvent};
 pub use voice_settings::DEFAULT_OTA_URL;
@@ -46,6 +48,7 @@ pub struct Ports {
 }
 
 pub enum UserInput {
+    Focus(Option<Focus>),
     DismissAlert,
     PinPhoto {
         id: String,

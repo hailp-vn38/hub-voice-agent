@@ -1,6 +1,6 @@
 # 14 — Present: lớp trình bày cho hợp đồng UI
 
-Status: ready-for-agent
+Status: completed
 Blocked by: 05
 Spec: [../spec.md](../spec.md) · UI: [../../hub-ui/spec.md](../../hub-ui/spec.md) (Quy tắc hợp đồng 1–3)
 
@@ -20,10 +20,10 @@ Spec: [../spec.md](../spec.md) · UI: [../../hub-ui/spec.md](../../hub-ui/spec.m
 
 ## Nghiệm thu
 
-- [ ] Test trong `tests/present.rs`: dựng `UiState` mẫu → so `HubView.nav/status/ambient`.
-- [ ] Test: `hub_timer_start` hai lần cùng thẻ → `events.focus` tăng hai lần.
-- [ ] `present` không có tham số đồng hồ; test dùng `now` cố định.
-- [ ] Test: `UserInput::Focus` đổi `view.focus`, giữ `view.screen`, không tăng `events.focus`.
+- [x] Test trong `tests/present.rs`: dựng `UiState` mẫu → so `HubView.nav/status/ambient`.
+- [x] Test: `hub_timer_start` hai lần cùng nhãn → `events.focus` tăng qua cả hai lần focus.
+- [x] `present` không có tham số đồng hồ; test dùng `now` cố định.
+- [x] Test: `UserInput::Focus` đổi `view.focus`, giữ `view.screen`, không tăng `events.focus`.
 
 ## Comments
 
@@ -32,3 +32,6 @@ Spec: [../spec.md](../spec.md) · UI: [../../hub-ui/spec.md](../../hub-ui/spec.m
   - UI: `toggle-month`, `open-detail`/`close-detail` của Lịch, `select`/`open-detail` của Đếm ngược, `auto-advance` của viewer.
   - Chạm vào trạng thái do hub-core giữ gửi `UserInput::Focus`, không đổi tại UI.
 - Bước map ở `apps/hub` cần gộp `feat/hub-core` vào `feat/hub-ui` trước (nhánh UI tách từ hub-core cũ, `Ports` chỉ có `clock`). Việc gộp và bridge thuộc ticket hub-ui.
+
+- 2026-11-23: Đã thêm `present` cho `nav`, `status`, `ambient`; `UiState.now` dùng `jiff::Zoned`, serial focus tăng khi `View::open/show` đặt focus, và `UserInput::Focus` cập nhật lựa chọn do chạm. `tests/present.rs` kiểm tra snapshot cố định, focus chạm, và hai lần gọi timer qua voice-client.
+- Nghiệm thu tự động: `cargo test -p hub-core`, `cargo build -p hub`, `cargo fmt --all -- --check`, `git diff --check` đều qua. Map UI trực tiếp và kiểm tra hình ảnh trên thiết bị/Pi chưa nằm trong ticket này và chưa được thực hiện; bước map vẫn thuộc hub-ui.

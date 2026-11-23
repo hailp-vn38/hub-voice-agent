@@ -12,11 +12,25 @@ async fn clock_in_ui_state_advances_each_second() {
     let mut hub = Hub::start(start);
 
     hub.ui_rx.changed().await.unwrap();
-    assert_eq!(hub.ui_rx.borrow_and_update().clock, "12:00:00");
+    assert_eq!(
+        hub.ui_rx
+            .borrow_and_update()
+            .now
+            .strftime("%H:%M:%S")
+            .to_string(),
+        "12:00:00"
+    );
 
     tokio::time::sleep(Duration::from_secs(1)).await;
     hub.ui_rx.changed().await.unwrap();
-    assert_eq!(hub.ui_rx.borrow_and_update().clock, "12:00:01");
+    assert_eq!(
+        hub.ui_rx
+            .borrow_and_update()
+            .now
+            .strftime("%H:%M:%S")
+            .to_string(),
+        "12:00:01"
+    );
 
     drop(hub.ui_rx);
     hub.task.await.unwrap().unwrap();

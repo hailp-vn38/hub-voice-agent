@@ -60,9 +60,10 @@ impl View {
                 self.back_to_menu = false;
             }
         }
+        let place_focus = focus.is_some();
         self.state = ViewState { screen, focus };
         self.last_activity = Some(now);
-        self.snapshot()
+        self.snapshot(place_focus)
     }
 
     /// Opens `screen` for a voice tool, keeping the focus when it is already open.
@@ -93,6 +94,11 @@ impl View {
             UserInput::Activity if self.state.screen == Screen::Ambient => {
                 self.open(Screen::Center, None, now)
             }
+            UserInput::Focus(focus) => {
+                self.state.focus = focus;
+                self.last_activity = Some(now);
+                self.snapshot(false)
+            }
             UserInput::PinPhoto { .. }
             | UserInput::SaveVoiceUrl(_)
             | UserInput::VoiceConnect
@@ -113,24 +119,27 @@ impl View {
                     screen: Screen::Ambient,
                     focus: None,
                 };
-                return self.snapshot();
+                return self.snapshot(false);
             }
             if idle >= 60 && !matches!(self.state.screen, Screen::Center | Screen::Ambient) {
                 self.state = ViewState::default();
-                return self.snapshot();
+                return self.snapshot(false);
             }
         }
         Vec::new()
     }
 
-    fn snapshot(&self) -> Vec<Effect> {
+    fn snapshot(&self, focus_event: bool) -> Vec<Effect> {
         let view = self.state.clone();
         vec![Effect::Ui(Box::new(move |ui| {
-            if ui.view == view {
-                return false;
+            let view_changed = ui.view != view;
+            if view_changed {
+                ui.view = view;
             }
-            ui.view = view;
-            true
+            if focus_event {
+                ui.events.focus = ui.events.focus.saturating_add(1);
+            }
+            view_changed || focus_event
         }))]
     }
 }

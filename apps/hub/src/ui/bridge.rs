@@ -4,7 +4,7 @@ use slint::Weak;
 use tokio::sync::watch;
 
 fn apply(app: &App, state: &UiState, url_changed: bool) {
-    app.set_clock(state.clock.as_str().into());
+    app.set_clock(state.now.strftime("%H:%M:%S").to_string().into());
     let voice = &state.voice_settings;
     if url_changed {
         app.set_ota_url(voice.ota_url.as_str().into());

@@ -1,8 +1,10 @@
 /// Snapshot of everything the UI renders. The UI only reads it.
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct UiState {
-    /// Local time as `HH:MM:SS`.
-    pub clock: String,
+    /// Current local time supplied by the actor's clock port.
+    pub now: jiff::Zoned,
+    /// Monotonic serials for one-shot UI effects.
+    pub events: UiEvents,
     pub calendar: Vec<crate::CalendarEvent>,
     pub calendar_online: Option<bool>,
     pub calendar_last_sync: Option<i64>,
@@ -17,6 +19,42 @@ pub struct UiState {
     pub voice_settings: VoiceSettingsState,
     pub timers: Vec<crate::Timer>,
     pub voice: VoiceUiState,
+}
+
+impl Default for UiState {
+    fn default() -> Self {
+        Self {
+            now: "1970-01-01T00:00:00+00:00[UTC]"
+                .parse()
+                .expect("the default timestamp is valid"),
+            events: UiEvents::default(),
+            calendar: Vec::new(),
+            calendar_online: None,
+            calendar_last_sync: None,
+            weather: crate::WeatherView::default(),
+            home: Vec::new(),
+            photos: Vec::new(),
+            alert: None,
+            reminders: Vec::new(),
+            reminder_history: Vec::new(),
+            countdowns: Vec::new(),
+            view: crate::ViewState::default(),
+            voice_settings: VoiceSettingsState::default(),
+            timers: Vec::new(),
+            voice: VoiceUiState::default(),
+        }
+    }
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct UiEvents {
+    pub focus: u64,
+    pub wake: u64,
+    pub tool: u64,
+    pub error: u64,
+    pub alert: u64,
+    pub confetti: u64,
+    pub spawn: u64,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]

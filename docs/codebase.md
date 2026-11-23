@@ -57,6 +57,7 @@ ai-hub/
 │       │   ├── view.rs           # điều hướng, focus, tự quay về, Ambient, "tạm xem", tool server → màn
 │       │   ├── alerts.rs         # trạng thái báo toàn màn: hàng đợi, tự tắt, đợi hết lượt nói
 │       │   ├── ui_state.rs       # UiState, UserInput
+│       │   ├── present/          # UiState → Rust copy of Slint contract data
 │       │   ├── audio.rs          # AudioCommand, AudioEvent (adapter ở apps/hub)
 │       │   ├── features/         # mỗi tính năng một thư mục cùng khuôn (xem 3.2)
 │       │   │   ├── tool_args.rs  # definition(), parse(), error() dùng chung cho tool
@@ -264,6 +265,8 @@ pub enum AudioEvent {
 ```
 
 Biên độ mic và năng lượng TTS không đi qua `hub-core`: audio ghi thẳng vào `watch<Levels>` mà UI đọc. Hiện tại adapter desktop chỉ tiêu thụ lệnh, chưa thu hoặc phát âm thanh; `UiState.voice` chứa trạng thái hội thoại, transcript và phản hồi.
+
+`UiState.now` là `jiff::Zoned` do actor cập nhật mỗi tick; `UiState.events` giữ serial tăng dần cho hiệu ứng một lần. `present(&UiState) -> HubView` chuẩn bị dữ liệu cho các hợp đồng UI, bắt đầu với `nav`, `status` và `ambient`; hàm không đọc đồng hồ. Chạm đổi lựa chọn do hub-core sở hữu qua `UserInput::Focus`, giữ nguyên màn hình và không tăng serial focus.
 
 #### Module bên trong
 
