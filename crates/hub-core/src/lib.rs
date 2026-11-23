@@ -33,7 +33,10 @@ pub use ports::{
 pub use present::{HubView, present};
 pub use runtime::run;
 use tokio::sync::{mpsc, watch};
-pub use ui_state::{UiEvents, UiState, VoiceSettingsState, VoiceState, VoiceUiState};
+pub use ui_state::{
+    ResponseSpeaker, ToolTrailState, ToolTrailStep, UiEvents, UiState, VoiceSettingsState,
+    VoiceState, VoiceUiState,
+};
 pub use view::{Focus, Screen, ViewState};
 use voice_client::{VoiceCommand, VoiceConfig, VoiceEvent};
 pub use voice_settings::DEFAULT_OTA_URL;
@@ -57,6 +60,7 @@ pub enum UserInput {
     Open(Screen),
     Back,
     Activity,
+    OrbTapped,
     SaveVoiceUrl(String),
     VoiceConnect,
     Setup(

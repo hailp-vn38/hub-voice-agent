@@ -266,7 +266,7 @@ pub enum AudioEvent {
 
 Biên độ mic và năng lượng TTS không đi qua `hub-core`: audio ghi thẳng vào `watch<Levels>` mà UI đọc. Hiện tại adapter desktop chỉ tiêu thụ lệnh, chưa thu hoặc phát âm thanh; `UiState.voice` chứa trạng thái hội thoại, transcript và phản hồi.
 
-`UiState.now` là `jiff::Zoned` do actor cập nhật mỗi tick; `UiState.events` giữ serial tăng dần cho hiệu ứng một lần. `present(&UiState) -> HubView` chuẩn bị dữ liệu cho các hợp đồng UI, bắt đầu với `nav`, `status` và `ambient`; hàm không đọc đồng hồ. Chạm đổi lựa chọn do hub-core sở hữu qua `UserInput::Focus`, giữ nguyên màn hình và không tăng serial focus.
+`UiState.now` là `jiff::Zoned` do actor cập nhật mỗi tick; `UiState.events` giữ serial tăng dần cho hiệu ứng một lần. `present(&UiState) -> HubView` chuẩn bị dữ liệu cho các hợp đồng UI: `nav`, `status`, `ambient`, `voice`, `response` và `tool_trail`; hàm không đọc đồng hồ. `response` lấy dòng STT hoặc câu TTS mới nhất, tách theo khoảng trắng và giữ speaker, serial cùng trạng thái mờ. Hiện các từ không có metadata nhấn nên `emphasis` luôn `false`; `voice.mic_muted` cũng luôn `false` cho tới ticket G5. `tool_trail` giữ các bước của lượt hiện tại, và xoá khi lượt mới bắt đầu. Chạm Orb qua `UserInput::OrbTapped` bắt đầu lượt khi Idle hoặc kết thúc lượt đang chạy; chạm đổi lựa chọn qua `UserInput::Focus` giữ nguyên màn hình và không tăng serial focus.
 
 #### Module bên trong
 

@@ -5,6 +5,7 @@ pub(crate) mod jobs;
 mod run;
 mod setup;
 mod tick;
+mod tool_trail;
 mod tools;
 mod voice;
 

@@ -102,6 +102,7 @@ impl View {
             UserInput::PinPhoto { .. }
             | UserInput::SaveVoiceUrl(_)
             | UserInput::VoiceConnect
+            | UserInput::OrbTapped
             | UserInput::Setup(_, _)
             | UserInput::DismissAlert => Vec::new(),
             UserInput::Activity => {
