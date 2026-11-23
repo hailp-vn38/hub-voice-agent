@@ -1,6 +1,6 @@
 # 16 — Hẹn giờ và lớp báo: dữ liệu hiển thị và thao tác chạm
 
-Status: ready-for-agent
+Status: completed
 Blocked by: 14
 Spec: [../spec.md](../spec.md) · UI: hub-ui #11, #14
 
@@ -13,6 +13,11 @@ Spec: [../spec.md](../spec.md) · UI: hub-ui #11, #14
 
 ## Nghiệm thu
 
-- [ ] Test migration: DB cũ không có cột → hẹn giờ cũ tải được, `progress` dùng thời lượng còn lại làm tổng.
-- [ ] Test qua `run()`: `QuickStart(5)` → 1 thẻ; `TogglePause` → `phase == paused`, `remaining` đứng yên khi tiến clock.
-- [ ] Test `present`: còn 9 s → `final-seconds`; hết giờ → `finished` và `alert.serial` tăng.
+- [x] Test migration: DB cũ không có cột → hẹn giờ cũ tải được, `progress` dùng thời lượng còn lại làm tổng.
+- [x] Test qua `run()`: `QuickStart(5)` → 1 thẻ; `TogglePause` → `phase == paused`, `remaining` đứng yên khi tiến clock.
+- [x] Test `present`: còn 9 s → `final-seconds`; hết giờ → `finished` và `alert.serial` tăng.
+
+## Comments
+
+- 2026-11-23: Thêm `duration_seconds` và migration `0007`; timer cũ được gán tổng thời lượng bằng thời gian còn lại theo `Clock` khi actor tải dữ liệu. `UserInput::Timer` xử lý bắt đầu nhanh, tạm dừng/tiếp tục, cộng một phút và huỷ; `present` dựng thẻ hẹn giờ và lớp báo từ `UiState`.
+- Gate đã chạy: `scripts/test.sh -p hub-core` (119 passed), `cargo fmt --all -- --check`, `cargo build -p hub-core`, `cargo build -p hub`, `git diff --check`.

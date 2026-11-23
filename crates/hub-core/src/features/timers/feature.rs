@@ -1,16 +1,18 @@
 use super::rules::{Timer, Timers};
 use super::tools::{self, TimerTool};
-use crate::{Focus, Screen, Store, features::tool_args, runtime::effects::Effect, view::View};
+use crate::{
+    Focus, Screen, Store, TimerInput, features::tool_args, runtime::effects::Effect, view::View,
+};
 use voice_client::ToolCall;
 
 pub struct Feature {
     timers: Timers,
 }
 impl Feature {
-    pub fn load(store: &Store) -> anyhow::Result<Self> {
+    pub fn load(store: &mut Store, now: i64) -> anyhow::Result<Self> {
         Ok(Self {
             timers: Timers {
-                items: store.timers_load()?,
+                items: store.timers_load(now)?,
             },
         })
     }
@@ -55,6 +57,33 @@ impl Feature {
     }
     pub fn due(&self, now: i64) -> Vec<Timer> {
         self.timers.due(now)
+    }
+    pub fn on_input(&mut self, view: &mut View, input: TimerInput, now: i64) -> Vec<Effect> {
+        let result = match input {
+            TimerInput::QuickStart(minutes) => self
+                .timers
+                .quick_start(minutes, now)
+                .map(|id| Some(Focus::Timer(id))),
+            TimerInput::TogglePause(id) => self
+                .timers
+                .toggle_pause(id, now)
+                .map(|()| Some(Focus::Timer(id))),
+            TimerInput::AddMinute(id) => self
+                .timers
+                .add_minute(id, now)
+                .map(|()| Some(Focus::Timer(id))),
+            TimerInput::Cancel(id) => self.timers.cancel_id(id).map(|()| match view.focus() {
+                Some(Focus::Timer(focused)) if *focused == id => None,
+                Some(focus) => Some(focus.clone()),
+                None => None,
+            }),
+        };
+        let Ok(focus) = result else {
+            return Vec::new();
+        };
+        let mut effects = self.changed();
+        effects.extend(view.open(Screen::Timers, focus, now));
+        effects
     }
     pub fn dismiss(&mut self, id: i64) -> Vec<Effect> {
         self.timers.items.retain(|timer| timer.id != id);

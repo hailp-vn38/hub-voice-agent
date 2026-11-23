@@ -266,7 +266,11 @@ pub enum AudioEvent {
 
 Biên độ mic và năng lượng TTS không đi qua `hub-core`: audio ghi thẳng vào `watch<Levels>` mà UI đọc. Hiện tại adapter desktop chỉ tiêu thụ lệnh, chưa thu hoặc phát âm thanh; `UiState.voice` chứa trạng thái hội thoại, transcript và phản hồi.
 
-`UiState.now` là `jiff::Zoned` do actor cập nhật mỗi tick; `UiState.events` giữ serial tăng dần cho hiệu ứng một lần. `present(&UiState) -> HubView` chuẩn bị dữ liệu cho các hợp đồng UI: `nav`, `status`, `ambient`, `voice`, `response` và `tool_trail`; hàm không đọc đồng hồ. `response` lấy dòng STT hoặc câu TTS mới nhất, tách theo khoảng trắng và giữ speaker, serial cùng trạng thái mờ. Hiện các từ không có metadata nhấn nên `emphasis` luôn `false`; `voice.mic_muted` cũng luôn `false` cho tới ticket G5. `tool_trail` giữ các bước của lượt hiện tại, và xoá khi lượt mới bắt đầu. Chạm Orb qua `UserInput::OrbTapped` bắt đầu lượt khi Idle hoặc kết thúc lượt đang chạy; chạm đổi lựa chọn qua `UserInput::Focus` giữ nguyên màn hình và không tăng serial focus.
+`UiState.now` là `jiff::Zoned` do actor cập nhật mỗi tick; `UiState.events` giữ serial tăng dần cho hiệu ứng một lần. `present(&UiState) -> HubView` chuẩn bị dữ liệu cho các hợp đồng UI gồm `nav`, `status`, `ambient`, `voice`, `response`, `tool_trail`, `timers` và `alert`; hàm không đọc đồng hồ.
+
+`response` lấy dòng STT hoặc câu TTS mới nhất, tách theo khoảng trắng và giữ speaker, serial cùng trạng thái mờ. Hiện các từ không có metadata nhấn nên `emphasis` luôn `false`; `voice.mic_muted` cũng luôn `false` cho tới ticket G5. `tool_trail` giữ các bước của lượt hiện tại và xoá khi lượt mới bắt đầu. Chạm Orb qua `UserInput::OrbTapped` bắt đầu lượt khi Idle hoặc kết thúc lượt đang chạy.
+
+Thẻ hẹn giờ trong `timers` có thời gian còn lại, chi tiết, tiến độ và phase; lớp `alert` mang serial từ `events.alert`. Chạm đổi lựa chọn qua `UserInput::Focus` giữ nguyên màn hình và không tăng serial focus.
 
 #### Module bên trong
 
@@ -283,7 +287,7 @@ Hai lớp:
 | `view` | Màn hiện tại, focus, tự về màn trung tâm sau ~60 s, Ambient, "tạm xem", tool phía server → màn | `open(screen, focus)`, `show(screen)`, `on_user(..)`, `tick(now)`, `screen_for_hub_tool(name)`, `screen_for_server_tool(name)` (theo từ khoá) |
 | `runtime::jobs` | Task mạng đang chạy, `ToolCall` đang chờ | `Effect::Spawn { job, work, reply, timeout }` → `Internal::JobDone(id, result)`; hết giờ → reply lỗi; job mới cùng khoá huỷ job cũ |
 | `alerts` | Hàng đợi trạng thái báo (hết giờ, Reminder): lần lượt, tự tắt 2 phút / 60 s, đợi hết lượt nói | `push(alert)`, `dismiss()`, `tick(now, turn_active)` |
-| `features::timers` | ≤ 4 hẹn giờ, giờ kết thúc tuyệt đối, tạm dừng | `start`, `adjust`, `cancel`, `due(now)` |
+| `features::timers` | ≤ 4 hẹn giờ, giờ kết thúc tuyệt đối, thời lượng tổng, tạm dừng | `start`, `adjust`, `cancel`, `due(now)`; thao tác chạm qua `UserInput::Timer` |
 | `features::countdowns` | ≤ 8 mốc, `none` / `yearly` / `yearly_lunar` | `create`, `remove`, `next_occurrence(now)` |
 | `features::reminders` | `none` / `daily` / `weekly`, đã nhắc, đã lỡ (< 1 giờ thì nhắc một lần) | `create`, `cancel`, `snooze`, `due(now)` |
 | `features::weather` | Vị trí nhà, thành phố tạm xem (giữ ~30 phút), WMO → icon/nền | `snapshot(focus)`, `apply(forecast)` |
@@ -416,6 +420,6 @@ Ví dụ test qua interface của hub-core: gửi `ToolCall("hub_timer_start", {
 ### Giao diện đếm ngược của hub-core
 
 `hub_countdown_create` nhận `label`, `date` (YYYY-MM-DD), `repeat` (`none`, `yearly`, `yearly_lunar`) và `lunar_leap` tùy chọn. Với `yearly_lunar`, `date` là ngày âm lịch Việt Nam UTC+7; ngày 30 trong tháng thiếu được chuyển thành ngày 29, còn tháng nhuận chỉ lặp vào lần có cùng tháng nhuận. Ngày 29/2 dương lịch lặp vào 28/2 trong năm không nhuận. `hub_countdown_remove` tìm nhãn không phân biệt dấu và trả các lựa chọn khi mơ hồ; `hub_countdown_list` trả cùng các mốc và số ngày như `UiState.countdowns`.
-**View hiện có:** `UiState.view` chứa `Screen` và `Focus`; `UserInput::Open`, `Back`, `Activity` điều hướng và đặt lại hạn 60 giây. Tool timer thành công mở màn Hẹn giờ và timer mới được focus theo ID. Chạm hoặc wake word thoát Ambient; tự vào Ambient sau 5 phút không tương tác, chưa áp dụng lịch ban đêm. Bảng ánh xạ tool server chưa được xác định. Vị trí thời tiết tạm xem và cache thuộc ticket 09.
+**View hiện có:** `UiState.view` chứa `Screen` và `Focus`; `UserInput::Open`, `Back`, `Activity` điều hướng và đặt lại hạn 60 giây. `UserInput::Timer` hỗ trợ bắt đầu nhanh theo phút, tạm dừng/tiếp tục, cộng một phút và huỷ theo ID. Tool timer thành công hoặc bắt đầu nhanh mở màn Hẹn giờ và focus timer mới. Chạm hoặc wake word thoát Ambient; tự vào Ambient sau 5 phút không tương tác, chưa áp dụng lịch ban đêm. Bảng ánh xạ tool server chưa được xác định. Vị trí thời tiết tạm xem và cache thuộc ticket 09.
 
 `ImageFetcher` trả PNG đã thu nhỏ cùng thumbnail; `HttpImageFetcher` kiểm tra mọi địa chỉ DNS và từng chuyển hướng, giới hạn tải 10 MiB và thời gian 20 giây. `UiState.photos` cung cấp chỉ mục ảnh; `UserInput::PinPhoto` cập nhật ghim. `hub_image_list` trả chỉ mục cache, còn `hub_image_control` nhận `action` (`open`, `next`, `previous`, `pin`, `unpin`) và `id` tùy chọn; `Focus::Photo(id)` xác định ảnh đang xem.

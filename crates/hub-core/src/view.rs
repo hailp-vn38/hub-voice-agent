@@ -104,6 +104,7 @@ impl View {
             | UserInput::VoiceConnect
             | UserInput::OrbTapped
             | UserInput::Setup(_, _)
+            | UserInput::Timer(_)
             | UserInput::DismissAlert => Vec::new(),
             UserInput::Activity => {
                 self.last_activity = Some(now);

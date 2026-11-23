@@ -16,7 +16,7 @@ pub async fn run(
     mut io: Io,
 ) -> anyhow::Result<()> {
     effects::execute_settings(SettingsEffect::Initialize, &mut config, &io);
-    let mut hub = Hub::load(config.get(), &store, &ports)?;
+    let mut hub = Hub::load(config.get(), &mut store, &ports)?;
     let (home_settings, home_settings_rx) = watch::channel(config.get().home.clone());
     let mut home_events = ports.home.subscribe(home_settings_rx);
     let mut jobs = Jobs::new();

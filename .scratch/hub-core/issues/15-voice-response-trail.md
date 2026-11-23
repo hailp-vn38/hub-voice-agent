@@ -21,4 +21,4 @@ Spec: [../spec.md](../spec.md) · UI: hub-ui #04, #05
 ## Comments
 
 - `present` hiện cung cấp `voice`, `response` và `tool_trail`; chữ STT/TTS được tách theo khoảng trắng. `mic_muted` là `false` cho tới G5. Nguồn `TtsText` hiện không có metadata nhấn nên `Word.emphasis` là `false`.
-- Đã chạy `scripts/test.sh -p hub-core` (119 passed), `cargo fmt --all -- --check`, `cargo check -p hub-core --all-targets` và `git diff --check` (đều thành công).
+- Sau khi ghép tip integration #16, đã chạy `scripts/test.sh -p hub-core` (123 passed), `cargo fmt --all -- --check`, `cargo check -p hub-core --all-targets` và `git diff --check` (đều thành công).
