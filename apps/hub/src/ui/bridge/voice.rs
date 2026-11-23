@@ -4,7 +4,7 @@ use crate::{
 };
 use hub_core::{
     ResponseSpeaker, ToolTrailState, UiState, VoiceSettingsState, VoiceState as CoreVoiceState,
-    present::{ResponseView, StatusView, ToolTrailView, VoiceView},
+    present::{AlertView, ResponseView, StatusView, TimersView, ToolTrailView, VoiceView},
 };
 use slint::{ComponentHandle, ModelRc, VecModel, Weak};
 use std::rc::Rc;
@@ -97,6 +97,8 @@ pub(super) fn apply_changed(
     response: Option<&ResponseView>,
     tool_trail: Option<&ToolTrailView>,
     voice_settings: Option<(&VoiceSettingsState, bool)>,
+    timers: Option<&TimersView>,
+    alert: Option<Option<&AlertView>>,
 ) {
     if let Some(nav) = nav {
         apply_nav(app, nav);
@@ -115,6 +117,12 @@ pub(super) fn apply_changed(
     }
     if let Some((settings, url_changed)) = voice_settings {
         apply_voice_settings(app, settings, url_changed);
+    }
+    if let Some(timers) = timers {
+        super::timers::apply_timers(app, timers);
+    }
+    if let Some(alert) = alert {
+        super::timers::apply_alert(app, alert);
     }
 }
 
@@ -143,6 +151,12 @@ pub fn spawn_bridge(app: Weak<App>, mut rx: watch::Receiver<UiState>) {
                 .is_none_or(|previous| previous.ota_url != state.voice_settings.ota_url);
             let voice_settings =
                 settings_changed.then(|| (state.voice_settings.clone(), url_changed));
+            let timers = previous
+                .is_none_or(|previous| previous.timers != view.timers)
+                .then(|| view.timers.clone());
+            let alert = previous
+                .is_none_or(|previous| previous.alert != view.alert)
+                .then(|| view.alert.clone());
             shown = Some(view);
             shown_voice_settings = Some(state.voice_settings.clone());
 
@@ -152,6 +166,8 @@ pub fn spawn_bridge(app: Weak<App>, mut rx: watch::Receiver<UiState>) {
                 && response.is_none()
                 && tool_trail.is_none()
                 && voice_settings.is_none()
+                && timers.is_none()
+                && alert.is_none()
             {
                 continue;
             }
@@ -169,6 +185,8 @@ pub fn spawn_bridge(app: Weak<App>, mut rx: watch::Receiver<UiState>) {
                         voice_settings
                             .as_ref()
                             .map(|(settings, url_changed)| (settings, *url_changed)),
+                        timers.as_ref(),
+                        alert.as_ref().map(|alert| alert.as_ref()),
                     );
                 }
             })
