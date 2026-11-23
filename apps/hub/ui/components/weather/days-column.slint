@@ -1,0 +1,44 @@
+import { Theme } from "../../theme.slint";
+import { Icon } from "../icon.slint";
+import { WeatherDay } from "../../contract/weather.slint";
+
+// Cột phải: 7 ngày, thanh khoảng nhiệt cùng thang week-min..week-max.
+export component DaysColumn inherits Rectangle {
+    in property <[WeatherDay]> days;
+    in property <float> week-min;
+    in property <float> week-max;
+    in property <string> selected;
+    in property <string> focus-key;
+    in property <bool> lit;
+    callback pick(string);
+    private property <float> range: max(week-max - week-min, 1);
+    background: #00000040;
+    border-radius: Theme.radius;
+    clip: true;
+    VerticalLayout {
+        padding: Theme.space-s;
+        for d in days: Rectangle {
+            property <bool> hot: d.key == root.focus-key && root.lit;
+            background: hot ? #ffffff40 : (d.is-tomorrow ? #4cc2ff30 : (d.key == root.selected ? #ffffff18 : transparent));
+            border-radius: 12px;
+            animate background { duration: 300ms; }
+            HorizontalLayout {
+                padding-left: Theme.space-s; padding-right: Theme.space-s; spacing: Theme.space-s;
+                Text { width: 84px * Theme.text-scale; text: d.label; color: d.is-tomorrow ? Theme.accent : Theme.text; font-size: Theme.font-small; vertical-alignment: center; overflow: elide; }
+                Icon { name: d.icon; size: 36px; color: Theme.warm; y: (parent.height - 36px) / 2; }
+                Text { width: 56px * Theme.text-scale; text: d.low-text; color: Theme.text-dim; font-size: Theme.font-small * 0.85; vertical-alignment: center; horizontal-alignment: right; }
+                Rectangle {
+                    horizontal-stretch: 1;
+                    Rectangle { height: 8px; y: (parent.height - 8px) / 2; background: #ffffff20; border-radius: 4px; }
+                    Rectangle {
+                        height: 8px; y: (parent.height - 8px) / 2; border-radius: 4px; background: Theme.warm;
+                        x: (d.low - root.week-min) / root.range * parent.width;
+                        width: max((d.high - d.low) / root.range * parent.width, 8px);
+                    }
+                }
+                Text { width: 56px * Theme.text-scale; text: d.high-text; color: Theme.text; font-size: Theme.font-small * 0.85; vertical-alignment: center; }
+            }
+            TouchArea { clicked => { root.pick(d.key); } }
+        }
+    }
+}

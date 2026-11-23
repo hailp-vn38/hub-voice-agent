@@ -1,6 +1,6 @@
 # 09 — Màn Thời tiết
 
-Status: ready-for-agent
+Status: resolved
 Blocked by: 06
 Spec: [../spec.md](../spec.md)
 Thiết kế: concept.md §6 "Màn Thời tiết"
@@ -46,3 +46,7 @@ Map: chờ hub-core #09
 | `.days` / `.week-min` / `.week-max` | |
 | `.focus` / `.focus-serial` | |
 | `select-day(key)` | |
+
+## Answer
+
+Implemented contract/weather.slint, screens/weather.slint, components/weather/{backdrop,current,hours-chart,days-column}.slint, Rust fixtures (fixtures/weather.rs + tests) and 11 demo scenarios. 24h chart y-scale uses week-min..week-max; peak marked via the selected day high. Pi fps per background not measured (ready-for-human). hub-core map left pending.
