@@ -9,6 +9,7 @@ pub mod selector;
 
 mod ports;
 mod runtime;
+pub mod setup_web;
 mod store;
 mod ui_state;
 mod view;
@@ -17,7 +18,9 @@ mod voice_settings;
 use std::sync::Arc;
 
 pub use audio::{AudioCommand, AudioEvent, Sensitivity, Sound};
-pub use config::{Config, ConfigStore, VoiceSettings};
+pub use config::{
+    CalendarSettings, Config, ConfigStore, HomeSettings, VoiceSettings, WeatherSettings,
+};
 pub use ports::{Clock, SystemClock};
 pub use runtime::run;
 use tokio::sync::{mpsc, watch};
@@ -36,6 +39,10 @@ pub enum UserInput {
     Activity,
     SaveVoiceUrl(String),
     VoiceConnect,
+    Setup(
+        setup_web::Update,
+        tokio::sync::oneshot::Sender<Result<(), String>>,
+    ),
 }
 
 pub struct Io {

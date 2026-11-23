@@ -79,6 +79,19 @@ pub async fn run(
             }
             Some(input) = io.input_rx.recv() => match input {
                 UserInput::SaveVoiceUrl(input) => effects::execute_settings(effects::SettingsEffect::SaveUrl(input), &mut config, &io),
+                UserInput::Setup(update, reply) => {
+                    let result = config.update(|c| match update {
+                        crate::setup_web::Update::Voice(url) => c.voice.ota_url = Some(url),
+                        crate::setup_web::Update::Home(home) => c.home = home,
+                        crate::setup_web::Update::Weather(weather) => c.weather = weather,
+                        crate::setup_web::Update::Calendar(calendar) => c.calendar = calendar,
+                    });
+                    if result.is_ok() {
+                        io.voice_config_tx.send_replace(crate::voice_settings::config(&config));
+                        io.ui_tx.send_modify(|ui| ui.voice_settings.ota_url = config.get().voice.ota_url.clone().unwrap_or_default());
+                    }
+                    let _ = reply.send(result.map_err(|e| e.to_string()));
+                }
                 UserInput::VoiceConnect => { effects::execute(effects::Effect::Voice(VoiceCommand::Connect), &io.ui_tx, &io.voice_tx, &io.audio_tx, &mut jobs, &mut store).await?; }
                 input => for effect in view.on_user(input, ports.clock.now().timestamp().as_second()) { effects::execute(effect, &io.ui_tx, &io.voice_tx, &io.audio_tx, &mut jobs, &mut store).await?; }
             },

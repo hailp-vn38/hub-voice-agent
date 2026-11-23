@@ -14,9 +14,31 @@ pub struct VoiceSettings {
     pub client_id: String,
     pub ota_url: Option<String>,
 }
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[serde(default)]
+pub struct CalendarSettings {
+    pub client_id: String,
+    pub client_secret: String,
+    pub refresh_token: String,
+}
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[serde(default)]
+pub struct HomeSettings {
+    pub url: String,
+    pub token: String,
+}
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[serde(default)]
+pub struct WeatherSettings {
+    pub latitude: Option<f64>,
+    pub longitude: Option<f64>,
+}
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Config {
     pub voice: VoiceSettings,
+    pub calendar: CalendarSettings,
+    pub home: HomeSettings,
+    pub weather: WeatherSettings,
 }
 
 pub struct ConfigStore {
@@ -37,7 +59,28 @@ impl ConfigStore {
                 ota_url: None,
             },
         };
-        let value = Config { voice };
+        let value = Config {
+            voice,
+            calendar: document
+                .get("calendar")
+                .cloned()
+                .map(toml::Value::try_into)
+                .transpose()?
+                .unwrap_or_default(),
+            home: document
+                .get("home")
+                .cloned()
+                .map(toml::Value::try_into)
+                .transpose()?
+                .unwrap_or_default(),
+            weather: document
+                .get("weather")
+                .filter(|v| v.is_table())
+                .cloned()
+                .map(toml::Value::try_into)
+                .transpose()?
+                .unwrap_or_default(),
+        };
         if let Some(url) = &value.voice.ota_url {
             crate::voice_settings::parse_url(url)?;
         }
@@ -78,6 +121,19 @@ impl ConfigStore {
                 .unwrap()
                 .clone(),
         );
+        for (key, settings) in [
+            ("calendar", toml::Value::try_from(&value.calendar)?),
+            ("home", toml::Value::try_from(&value.home)?),
+            ("weather", toml::Value::try_from(&value.weather)?),
+        ] {
+            if let Some(table) = doc.get_mut(key).and_then(toml::Value::as_table_mut) {
+                table.extend(settings.as_table().unwrap().clone());
+            } else if !doc.contains_key(key)
+                || (key == "weather" && value.weather.latitude.is_some())
+            {
+                doc.insert(key.into(), settings);
+            }
+        }
         let contents = toml::to_string(&doc)?;
         let tmp = self.path.with_extension(format!("{}.tmp", Uuid::new_v4()));
         let result = (|| -> anyhow::Result<()> {

@@ -1,6 +1,6 @@
 # 13 — Setup web
 
-Status: ready-for-agent
+Status: ready-for-human
 Blocked by: 02
 Spec: [../spec.md](../spec.md)
 
@@ -11,10 +11,12 @@ Spec: [../spec.md](../spec.md)
 
 ## Nghiệm thu
 
-- [ ] Test HTTP trên cổng ngẫu nhiên: POST OTA URL → `voice_config_tx` đổi.
-- [ ] OAuth callback đổi mã → refresh token được lưu (fake Google).
+- [x] Test HTTP trên cổng ngẫu nhiên: POST OTA URL → `voice_config_tx` đổi.
+- [x] OAuth callback đổi mã → refresh token được lưu (fake Google).
 
 ## Comments
 
 - Cần chốt khi triage: xác thực Setup web trên LAN (mã hiển thị trên màn hình?) và phạm vi trang cho first-boot (ADR 0010).
 - 2026-11-23: Theo quyết định của người dùng, Setup web không xác thực trên LAN theo ADR 0009. First-boot AP và hai mã QR theo ADR 0010 để ticket riêng, ngoài phạm vi ticket này.
+
+- Đã kiểm thử HTTP trên cổng ngẫu nhiên và đổi mã qua Google giả; cần kiểm tay OAuth Google thật và truy cập LAN. AP/QR ngoài phạm vi.
