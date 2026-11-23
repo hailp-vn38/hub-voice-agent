@@ -209,7 +209,8 @@ Integration test dùng server WebSocket giả tại `tests/`; test backoff dùng
 
 #### Interface bên ngoài
 
-Interface bên dưới là thiết kế đích. Hiện `run(config, store, ports, io)` xử lý voice settings, hội thoại và các tool hẹn giờ, đếm ngược. `ConfigStore` giữ cấu hình voice, Google Calendar, Home Assistant và vị trí nhà; `Store::open(dir)` hoặc `Store::in_memory()` mở SQLite. Hẹn giờ đến hạn được xếp hàng vào `UiState.alert`; `System::time_synced()` chặn báo khi giờ chưa tin cậy. Desktop trả `true`; adapter NTP cho Pi chưa có và hiện trả `false`. `UserInput::DismissAlert` tắt chuông.
+Interface bên dưới là thiết kế đích. Hiện `run(config, store, ports, io)` xử lý voice settings, hội thoại và các tool hẹn giờ. `ConfigStore` giữ cấu hình voice, Google Calendar, Home Assistant và vị trí nhà; `Store::open(dir)` hoặc `Store::in_memory()` mở SQLite; `tool_definitions()` cung cấp schema cho tool hẹn giờ, đếm ngược và thời tiết. `WeatherSource` cung cấp dự báo theo tọa độ hoặc tên thành phố; `OpenMeteo` là adapter HTTP, còn `UiState.weather` giữ dữ liệu, trạng thái cũ và icon/nền. Cache SQLite được dùng trong 30 phút và tạm xem kết thúc ngay khi rời màn Thời tiết.
+ Hẹn giờ đến hạn được xếp hàng vào `UiState.alert`; `System::time_synced()` chặn báo khi giờ chưa tin cậy. Desktop trả `true`; adapter NTP cho Pi chưa có và hiện trả `false`. `UserInput::DismissAlert` tắt chuông.
 
 ```rust
 pub async fn run(config: ConfigStore, store: Store, ports: Ports, io: Io) -> anyhow::Result<()>;
@@ -362,6 +363,8 @@ tick 1 Hz → reminders.due(now) → alerts.push(Reminder)
   → online và bật đọc bằng giọng: VoiceCommand::DirectSpeech{request_id}
       DirectSpeechRejected(session_busy) → thử lại sau; Offline → chỉ chuông + chữ
   → ~60 s → alert vào "Đã nhắc gần đây"
+
+`voice.reminder_speech` trong `config.toml` bật hoặc tắt đọc Reminder; mặc định bật. Tool `hub_reminder_snooze` dời Reminder đang báo theo số phút cung cấp.
 ```
 
 Actor tick 1 Hz cho mọi thứ theo giờ (hẹn giờ, Reminder, tự quay về, chữ số đếm ngược, làm mới thời tiết/lịch); vòng tròn hẹn giờ mượt nhờ Slint `animate` tuyến tính 1 s giữa hai tick. Tick chỉ là nhịp: luật luôn so sánh với giờ tuyệt đối từ `Clock`, không đếm tick.

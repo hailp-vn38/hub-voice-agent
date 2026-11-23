@@ -20,6 +20,7 @@ impl Store {
         connection.execute_batch(include_str!("migrations/0001_init.sql"))?;
         connection.execute_batch(include_str!("migrations/0002_countdowns.sql"))?;
         connection.execute_batch(include_str!("migrations/0003_reminders.sql"))?;
+        connection.execute_batch(include_str!("migrations/0003_weather.sql"))?;
         Ok(Self { connection })
     }
 }

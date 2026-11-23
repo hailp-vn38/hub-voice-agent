@@ -50,6 +50,7 @@ async fn countdown_updates_at_midnight_through_run() {
         Store::open(&dir).unwrap(),
         Ports {
             clock: Arc::new(TestClock::at(start.clone())),
+            weather: Arc::new(hub_core::OpenMeteo::default()),
             system: Arc::new(support::Synced),
         },
         Io {
@@ -137,6 +138,7 @@ async fn countdown_updates_at_midnight_through_run() {
         Store::open(&dir).unwrap(),
         Ports {
             clock: Arc::new(TestClock::at(start)),
+            weather: Arc::new(hub_core::OpenMeteo::default()),
             system: Arc::new(support::Synced),
         },
         Io {

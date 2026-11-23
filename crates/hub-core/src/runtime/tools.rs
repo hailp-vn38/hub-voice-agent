@@ -8,11 +8,15 @@ pub(super) fn route(
     countdowns: &mut crate::features::countdowns::Feature,
     view: &mut crate::view::View,
     alerts: &mut crate::alerts::Alerts,
+    weather: &mut crate::features::weather::Feature,
+    store: &crate::Store,
     call: ToolCall,
     now: jiff::Zoned,
 ) -> Vec<Effect> {
     if call.name.starts_with("hub_reminder_") {
         reminders.on_tool(view, call, now.timestamp().as_second(), alerts)
+    } else if call.name == "hub_weather_get" {
+        weather.on_tool(view, call, now.timestamp().as_second(), store)
     } else if call.name.starts_with("hub_timer_") {
         timers.on_tool(view, call, now.timestamp().as_second())
     } else if call.name.starts_with("hub_countdown_") {
