@@ -1,79 +1,139 @@
 import { Theme } from "../theme.slint";
-import { Nav } from "../contract/nav.slint";
-import { BackNav } from "../components/back-nav.slint";
+import { Screen } from "../contract/nav.slint";
 import { TimersData } from "../contract/timers.slint";
+import { Backdrop } from "../components/home/backdrop.slint";
+import { NavRail } from "../components/home/nav-rail.slint";
 import { SpawnIn } from "../components/spawn.slint";
 import { TimerCardView } from "../components/timer-card.slint";
 import { TimerRing } from "../components/timer-ring.slint";
-import { Dock } from "../components/orb.slint";
 
-// 1 thẻ: một vòng lớn giữa màn; 2: hai cột; 3-4: lưới 2x2.
+// Chip hẹn giờ nhanh (kính, icon đồng hồ).
+component QuickChip inherits Rectangle {
+    in property <int> minutes;
+    private property <length> u: Theme.unit;
+    border-radius: self.height / 2;
+    background: touch.pressed ? Theme.accent.with-alpha(0.55) : Theme.glass;
+    border-width: 1 * root.u;
+    border-color: touch.pressed ? Theme.accent : Theme.border;
+    transform-scale: touch.pressed ? 0.96 : 1.0;
+    animate transform-scale { duration: Theme.anim-tap; easing: ease-out; }
+    animate background { duration: Theme.anim-tap; }
+    HorizontalLayout {
+        alignment: center;
+        spacing: 8 * root.u;
+        Image {
+            width: 18 * root.u;
+            source: @image-url("../../assets/home/icons/timer.png");
+            colorize: Theme.accent-cyan;
+            image-fit: contain;
+        }
+        Text { text: root.minutes + " phút"; color: Theme.text; font-size: Theme.type-body; font-weight: 600; vertical-alignment: center; }
+    }
+    touch := TouchArea { clicked => { TimersData.quick-start(root.minutes); } }
+}
+
+// Màn Hẹn giờ (Aurora). 1 thẻ: lớn giữa màn; 2: hai cột; 3-4: lưới 2x2.
+// Toạ độ theo canvas 1280×600 nhân Theme.unit.
 export component Timers inherits Rectangle {
+    private property <length> u: Theme.unit;
+    private property <float> cvw: self.width / root.u;
+    private property <float> cvh: self.height / root.u;
+    private property <float> left: 130;
+    private property <float> right: root.cvw - 30;
+    private property <float> top: 96;
+    private property <float> bottom: root.cvh - 92 - 62;
     private property <int> n: TimersData.timers.length;
     private property <int> cols: root.n <= 2 ? max(root.n, 1) : 2;
     private property <int> rows: root.n <= 2 ? 1 : ceil(root.n / 2);
-    private property <length> gap: Theme.space-m;
-    private property <length> cw: (area.width - (root.cols - 1) * root.gap) / root.cols;
-    private property <length> ch: (area.height - (root.rows - 1) * root.gap) / root.rows;
+    private property <float> gap: 16;
+    private property <float> cw: (root.right - root.left - (root.cols - 1) * root.gap) / root.cols;
+    private property <float> ch: (root.bottom - root.top - (root.rows - 1) * root.gap) / root.rows;
 
-    VerticalLayout {
-        padding: Theme.space-l;
-        spacing: Theme.space-m;
-        Rectangle {
-            height: Theme.touch-min;
-            Text {
-                text: TimersData.title;
-                color: Theme.text;
-                font-size: Theme.font-title;
-                horizontal-alignment: left;
-                vertical-alignment: center;
-            }
-            TouchArea { width: 480px; x: 0; clicked => { Nav.navigate(BackNav.origin); } }
+    Backdrop { dim: 0.35; }
+    NavRail {
+        x: 14 * root.u;
+        y: 42 * root.u;
+        height: (root.cvh - 152) * root.u;
+        u: root.u;
+        current: Screen.timers;
+    }
+
+    // Đầu màn.
+    HorizontalLayout {
+        x: root.left * root.u;
+        y: 42 * root.u;
+        width: (root.right - root.left) * root.u;
+        height: 40 * root.u;
+        spacing: 16 * root.u;
+        Text { text: "Hẹn giờ"; color: Theme.text; font-size: Theme.type-page-title; font-weight: 600; vertical-alignment: center; }
+        if root.n > 0: Rectangle {
+            width: sub.preferred-width + 32 * root.u;
+            border-radius: self.height / 2;
+            background: Theme.glass;
+            border-width: 1 * root.u;
+            border-color: Theme.border;
+            sub := Text { text: root.n + " hẹn giờ"; color: Theme.text-dim; font-size: Theme.type-caption; }
         }
-        area := Rectangle {
-            vertical-stretch: 1;
-            if root.n == 0: TimerRing {
-                x: (parent.width - self.width) / 2;
-                y: (parent.height - self.height - 80px) / 2;
-                width: self.height;
-                height: min(parent.height - 120px, 360px);
-                progress: 0;
-            }
-            if root.n == 0: Text {
-                y: parent.height - self.height - 16px;
-                width: parent.width;
-                text: "Hey Jarvis, hẹn giờ 5 phút";
-                color: Theme.text-dim;
-                font-size: Theme.font-body;
-                horizontal-alignment: center;
-            }
-            for t[i] in TimersData.timers: SpawnIn {
-                key: t.key;
-                x: mod(i, root.cols) * (root.cw + root.gap);
-                y: floor(i / root.cols) * (root.ch + root.gap);
-                width: root.cw;
-                height: root.ch;
-                animate x, y, width, height { duration: Theme.anim-screen; easing: ease-out; }
-                TimerCardView {
-                    timer: t;
-                    focused: TimersData.focus == t.key;
-                    focus-serial: TimersData.focus-serial;
-                    toggle-pause => { TimersData.toggle-pause(t.key); }
-                    add-minute => { TimersData.add-minute(t.key); }
-                    cancel => { TimersData.cancel(t.key); }
+        Rectangle { horizontal-stretch: 1; }
+    }
+
+    // Trống: vòng rỗng trong thẻ kính + câu gợi ý.
+    if root.n == 0: Rectangle {
+        x: root.left * root.u;
+        y: root.top * root.u;
+        width: (root.right - root.left) * root.u;
+        height: (root.bottom - root.top) * root.u;
+        border-radius: Theme.radius-panel;
+        background: Theme.glass;
+        border-width: 1 * root.u;
+        border-color: Theme.border;
+        VerticalLayout {
+            alignment: center;
+            spacing: 14 * root.u;
+            HorizontalLayout {
+                alignment: center;
+                TimerRing {
+                    width: min(200 * root.u, root.height * 0.5);
+                    height: self.width;
+                    progress: 0;
+                    stroke: 7 * root.u;
+                    Image {
+                        width: parent.width * 0.3;
+                        height: self.width;
+                        source: @image-url("../../assets/home/icons/timer.png");
+                        colorize: Theme.text-dim;
+                    }
                 }
             }
+            Text { text: "Chưa có hẹn giờ nào"; color: Theme.text; font-size: Theme.type-section; font-weight: 600; horizontal-alignment: center; }
+            Text { text: "Thử nói: “Hey Jarvis, hẹn giờ 5 phút”"; color: Theme.text-dim; font-size: Theme.type-body; horizontal-alignment: center; }
         }
-        HorizontalLayout {
-            height: Theme.touch-min;
-            spacing: Theme.space-s;
-            for m in [1, 3, 5, 10, 15]: Rectangle {
-                background: Theme.card;
-                border-radius: Theme.radius;
-                Text { text: m + " phút"; color: Theme.text; font-size: Theme.font-small; }
-                TouchArea { clicked => { TimersData.quick-start(m); } }
-            }
+    }
+
+    for t[i] in TimersData.timers: SpawnIn {
+        key: t.key;
+        x: (root.left + mod(i, root.cols) * (root.cw + root.gap)) * root.u;
+        y: (root.top + floor(i / root.cols) * (root.ch + root.gap)) * root.u;
+        width: root.cw * root.u;
+        height: root.ch * root.u;
+        animate x, y, width, height { duration: Theme.anim-screen; easing: ease-out; }
+        TimerCardView {
+            timer: t;
+            focused: TimersData.focus == t.key;
+            focus-serial: TimersData.focus-serial;
+            toggle-pause => { TimersData.toggle-pause(t.key); }
+            add-minute => { TimersData.add-minute(t.key); }
+            cancel => { TimersData.cancel(t.key); }
         }
-        Rectangle { height: Dock.height; } // chừa Voice dock
+    }
+
+    // Hàng hẹn giờ nhanh.
+    HorizontalLayout {
+        x: root.left * root.u;
+        y: (root.bottom + 14) * root.u;
+        width: (root.right - root.left) * root.u;
+        height: 48 * root.u;
+        spacing: 12 * root.u;
+        for m in [1, 3, 5, 10, 15]: QuickChip { minutes: m; }
     }
 }

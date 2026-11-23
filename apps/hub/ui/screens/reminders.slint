@@ -1,136 +1,180 @@
 import { Theme } from "../theme.slint";
-import { Nav } from "../contract/nav.slint";
-import { BackNav } from "../components/back-nav.slint";
-import { RemindersData, ReminderItem, ReminderPast } from "../contract/reminders.slint";
-import { Icon } from "../components/icon.slint";
-import { SpawnIn } from "../components/spawn.slint";
-import { Dock } from "../components/orb.slint";
+import { Screen } from "../contract/nav.slint";
+import { RemindersData } from "../contract/reminders.slint";
+import { Backdrop } from "../components/home/backdrop.slint";
+import { NavRail } from "../components/home/nav-rail.slint";
+import { ItemRow, PastCard } from "../components/reminders/rows.slint";
 
-// Một dòng trên dòng thời gian. Huỷ: mờ dần. Hoãn (giờ đổi, cùng key): dòng trượt sang giờ mới.
-// Focus giọng nói (focus-serial đổi): các mục trong `focus` sáng lên rồi tắt dần.
-component ItemRow inherits Rectangle {
-    in property <ReminderItem> item;
-    height: 88px;
-    private property <duration> now: animation-tick();
-    private property <int> focus-serial: RemindersData.focus-serial;
-    private property <duration> focus-t: -10000ms;
-    changed focus-serial => { root.focus-t = animation-tick(); }
-    private property <float> glow: 1 - clamp((root.now - root.focus-t - 2s) / 800ms, 0, 1);
-    private property <string> time: root.item.time;
-    private property <string> time-key: root.item.key;
-    private property <duration> move-t: -10000ms;
-    changed time => {
-        if (root.item.key == root.time-key) { root.move-t = animation-tick(); }
-        root.time-key = root.item.key;
-    }
-    private property <float> mv: clamp((root.now - root.move-t) / 500ms, 0, 1);
-    SpawnIn {
-        key: root.item.key;
-        Rectangle {
-            y: (1 - root.mv) * -root.height * 0.6;
-            background: Theme.card;
-            border-radius: Theme.radius;
-            opacity: root.item.fading ? 0 : 1;
-            animate opacity { duration: 500ms; easing: ease-out; }
-            for f in RemindersData.focus: Rectangle {
-                if f == root.item.key && root.glow > 0: Rectangle {
-                    opacity: root.glow;
-                    border-width: 3px;
-                    border-color: Theme.accent;
-                    border-radius: Theme.radius;
-                    background: Theme.accent.with-alpha(0.15);
-                }
-            }
-            HorizontalLayout {
-                padding-left: Theme.space-m;
-                padding-right: Theme.space-m;
-                spacing: Theme.space-m;
-                Text { text: root.item.time; color: Theme.accent; font-size: Theme.font-body; font-weight: 600; vertical-alignment: center; width: 110px; }
-                Text { text: root.item.text; color: Theme.text; font-size: Theme.font-body; vertical-alignment: center; overflow: elide; horizontal-stretch: 1; }
-                if root.item.repeats: Icon { name: "alarm"; color: Theme.text-dim; size: 40px; }
-            }
-        }
-    }
-}
-
-component PastCard inherits Rectangle {
-    in property <ReminderPast> past;
-    background: Theme.card;
-    border-radius: Theme.radius;
-    border-width: root.past.missed ? 2px : 0px;
-    border-color: Theme.error;
-    opacity: root.past.missed ? 1 : 0.7;
-    VerticalLayout {
-        alignment: center;
-        padding: Theme.space-s;
-        Text { text: root.past.time + (root.past.missed ? " · Đã lỡ" : ""); color: root.past.missed ? Theme.error : Theme.done; font-size: Theme.font-small; font-weight: 600; }
-        Text { text: root.past.text; color: Theme.text; font-size: Theme.font-small; overflow: elide; }
-    }
-}
-
+// Màn Lời nhắc (Aurora): cột trái là thẻ "Kế tiếp" nổi bật (cam ấm) + "Đã nhắc gần đây";
+// cột phải là thẻ kính liệt kê lời nhắc theo nhóm ngày. Toạ độ theo canvas 1280×600 nhân Theme.unit.
 export component Reminders inherits Rectangle {
-    VerticalLayout {
-        padding: Theme.space-l;
-        spacing: Theme.space-m;
-        Rectangle {
-            height: Theme.touch-min;
-            Text {
-                text: "‹ Reminder · " + RemindersData.title;
-                color: Theme.text;
-                font-size: Theme.font-title;
-                horizontal-alignment: left;
-                vertical-alignment: center;
-            }
-            TouchArea { width: 640px; x: 0; clicked => { Nav.navigate(BackNav.origin); } }
-        }
-        if !RemindersData.has-next && RemindersData.groups.length == 0: Text {
-            text: "Hey Jarvis, nhắc tôi uống thuốc lúc 9 giờ tối";
-            color: Theme.text-dim;
-            font-size: Theme.font-title;
-            horizontal-alignment: center;
+    private property <length> u: Theme.unit;
+    private property <float> cw: self.width / root.u;
+    private property <float> ch: self.height / root.u;
+    private property <float> left: 130;
+    private property <float> right: root.cw - 30;
+    private property <float> top: 96;
+    private property <float> bottom: root.ch - 92;
+    private property <float> lcol: (root.right - root.left) * 0.36;
+    private property <bool> empty: !RemindersData.has-next && RemindersData.groups.length == 0;
+    private property <bool> has-recent: RemindersData.recent.length > 0;
+    private property <float> recent-h: 132;
+
+    Backdrop { dim: 0.35; }
+    NavRail {
+        x: 14 * root.u;
+        y: 42 * root.u;
+        height: (root.ch - 152) * root.u;
+        u: root.u;
+        current: Screen.reminders;
+    }
+
+    // Đầu màn.
+    HorizontalLayout {
+        x: root.left * root.u;
+        y: 42 * root.u;
+        width: (root.right - root.left) * root.u;
+        height: 40 * root.u;
+        spacing: 16 * root.u;
+        Text {
+            text: "Lời nhắc";
+            color: Theme.text;
+            font-size: Theme.type-page-title;
+            font-weight: 600;
             vertical-alignment: center;
-            wrap: word-wrap;
-            vertical-stretch: 1;
         }
-        if RemindersData.has-next || RemindersData.groups.length > 0: HorizontalLayout {
-            spacing: Theme.space-l;
-            vertical-stretch: 1;
-            Rectangle {
-                width: clamp(root.width * 0.29, 360px, 560px);
-                background: Theme.card;
-                border-radius: Theme.radius;
-                if RemindersData.has-next: VerticalLayout {
-                    alignment: center;
-                    padding: Theme.space-m;
-                    spacing: Theme.space-s;
-                    Text { text: "Kế tiếp"; color: Theme.text-dim; font-size: Theme.font-small; }
-                    Text { text: RemindersData.next.time; color: Theme.accent; font-size: 120px * Theme.text-scale; font-weight: 600; }
-                    Text { text: RemindersData.next.until; color: Theme.warm; font-size: Theme.font-body; }
-                    Text { text: RemindersData.next.text; color: Theme.text; font-size: Theme.font-title; wrap: word-wrap; }
-                    if RemindersData.next.repeat-text != "": Text { text: RemindersData.next.repeat-text; color: Theme.text-dim; font-size: Theme.font-small; }
-                }
+        if RemindersData.title != "": Rectangle {
+            width: count.preferred-width + 32 * root.u;
+            border-radius: self.height / 2;
+            background: Theme.glass;
+            border-width: 1 * root.u;
+            border-color: Theme.border;
+            count := Text { text: RemindersData.title; color: Theme.text-dim; font-size: Theme.type-caption; }
+        }
+        Rectangle { horizontal-stretch: 1; }
+    }
+
+    // Trống: mascot + câu gợi ý.
+    if root.empty: Rectangle {
+        x: root.left * root.u;
+        y: root.top * root.u;
+        width: (root.right - root.left) * root.u;
+        height: (root.bottom - root.top - (root.has-recent ? root.recent-h + 16 : 0)) * root.u;
+        border-radius: Theme.radius-panel;
+        background: Theme.glass;
+        border-width: 1 * root.u;
+        border-color: Theme.border;
+        VerticalLayout {
+            alignment: center;
+            spacing: 12 * root.u;
+            Image {
+                height: min(160 * root.u, parent.height * 0.5);
+                source: @image-url("../../assets/home/mascot/assistant.png");
+                image-fit: contain;
             }
-            Flickable {
-                content-height: tl.preferred-height;
-                tl := VerticalLayout {
-                    spacing: Theme.space-s;
-                    for g in RemindersData.groups: VerticalLayout {
-                        spacing: Theme.space-s;
-                        Text { text: g.label; color: Theme.text-dim; font-size: Theme.font-small; font-weight: 600; }
-                        for it in g.items: ItemRow { item: it; }
+            Text { text: "Chưa có lời nhắc nào"; color: Theme.text; font-size: Theme.type-section; font-weight: 600; horizontal-alignment: center; }
+            Text { text: "Thử nói: “Hey Jarvis, nhắc tôi uống thuốc lúc 9 giờ tối”"; color: Theme.text-dim; font-size: Theme.type-body; horizontal-alignment: center; wrap: word-wrap; }
+        }
+    }
+
+    // Thẻ "Kế tiếp".
+    if !root.empty: Rectangle {
+        x: root.left * root.u;
+        y: root.top * root.u;
+        width: root.lcol * root.u;
+        height: (root.bottom - root.top - (root.has-recent ? root.recent-h + 16 : 0)) * root.u;
+        border-radius: Theme.radius-panel;
+        background: RemindersData.has-next ? @linear-gradient(135deg, Theme.warm.darker(0.45) 0%, Theme.warm 85%) : Theme.glass;
+        border-width: 1 * root.u;
+        border-color: RemindersData.has-next ? Theme.warm.brighter(0.4) : Theme.border;
+        drop-shadow-blur: RemindersData.has-next ? 16 * root.u : 0;
+        drop-shadow-color: Theme.warm.with-alpha(0.38);
+        if !RemindersData.has-next: Text {
+            text: "Không còn lời nhắc nào hôm nay";
+            color: Theme.text-dim;
+            font-size: Theme.type-body;
+        }
+        if RemindersData.has-next: VerticalLayout {
+            padding: 22 * root.u;
+            spacing: 6 * root.u;
+            alignment: center;
+            HorizontalLayout {
+                spacing: 8 * root.u;
+                alignment: start;
+                Rectangle {
+                    width: 30 * root.u;
+                    height: 30 * root.u;
+                    border-radius: Theme.radius-s * 0.75;
+                    background: Theme.text.with-alpha(0.2);
+                    Image {
+                        width: 18 * root.u;
+                        height: 18 * root.u;
+                        source: @image-url("../../assets/home/icons/sparkle.png");
+                        colorize: Theme.text;
                     }
                 }
+                Text { text: "Kế tiếp"; color: Theme.text; font-size: Theme.type-card-title; font-weight: 600; vertical-alignment: center; }
+            }
+            Text { text: RemindersData.next.time; color: Theme.text; font-size: Theme.type-clock; font-weight: 300; }
+            Text { text: RemindersData.next.until; color: Theme.text; font-size: Theme.type-body; font-weight: 600; }
+            Text { text: RemindersData.next.text; color: Theme.text; font-size: Theme.type-section; wrap: word-wrap; overflow: elide; }
+            if RemindersData.next.repeat-text != "": Text {
+                text: "↻ " + RemindersData.next.repeat-text;
+                color: Theme.text.with-alpha(0.8);
+                font-size: Theme.type-caption;
             }
         }
-        if RemindersData.recent.length > 0: VerticalLayout {
-            spacing: Theme.space-s;
-            height: 160px;
-            Text { text: "Đã nhắc gần đây"; color: Theme.text-dim; font-size: Theme.font-small; font-weight: 600; }
+    }
+
+    // Danh sách theo nhóm ngày.
+    if !root.empty: Rectangle {
+        x: (root.left + root.lcol + 16) * root.u;
+        y: root.top * root.u;
+        width: (root.right - root.left - root.lcol - 16) * root.u;
+        height: (root.bottom - root.top) * root.u;
+        border-radius: Theme.radius-panel;
+        background: Theme.glass;
+        border-width: 1 * root.u;
+        border-color: Theme.border;
+        clip: true;
+        Flickable {
+            x: 16 * root.u;
+            y: 16 * root.u;
+            width: parent.width - 32 * root.u;
+            height: parent.height - 32 * root.u;
+            content-height: tl.preferred-height;
+            tl := VerticalLayout {
+                spacing: 8 * root.u;
+                if RemindersData.groups.length == 0: Text { text: "Không có lời nhắc sắp tới"; color: Theme.text-dim; font-size: Theme.type-body; }
+                for g in RemindersData.groups: VerticalLayout {
+                    spacing: 8 * root.u;
+                    padding-bottom: 6 * root.u;
+                    Text { text: g.label; color: Theme.text; font-size: Theme.type-card-title; font-weight: 600; }
+                    for it in g.items: ItemRow { item: it; }
+                }
+            }
+        }
+    }
+
+    // Đã nhắc gần đây: dưới thẻ Kế tiếp (hoặc dưới khung trống).
+    if root.has-recent: Rectangle {
+        x: root.left * root.u;
+        y: (root.bottom - root.recent-h) * root.u;
+        width: (root.empty ? root.right - root.left : root.lcol) * root.u;
+        height: root.recent-h * root.u;
+        border-radius: Theme.radius-panel;
+        background: Theme.glass;
+        border-width: 1 * root.u;
+        border-color: Theme.border;
+        clip: true;
+        VerticalLayout {
+            padding: 14 * root.u;
+            spacing: 8 * root.u;
+            Text { text: "Đã nhắc gần đây"; color: Theme.text; font-size: Theme.type-card-title; font-weight: 600; }
             HorizontalLayout {
-                spacing: Theme.space-m;
+                spacing: 8 * root.u;
                 for p in RemindersData.recent: PastCard { past: p; }
             }
         }
-        Rectangle { height: Dock.height; } // chừa Voice dock
     }
 }
