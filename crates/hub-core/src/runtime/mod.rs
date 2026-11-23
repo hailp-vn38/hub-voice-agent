@@ -23,7 +23,7 @@ pub async fn run(
     let mut timers = crate::features::timers::Feature::load(&store)?;
     let mut countdowns = crate::features::countdowns::Feature::load(&store)?;
     let mut conversation = Conversation::default();
-    let mut view = crate::view::View::default();
+    let mut view = crate::view::View::new(ports.clock.now().timestamp().as_second());
     let mut jobs = jobs::Jobs::new();
     let mut tick = time::interval(Duration::from_secs(1));
     tick.set_missed_tick_behavior(time::MissedTickBehavior::Skip);
