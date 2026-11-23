@@ -1,5 +1,8 @@
 //! Adapter thật: UiState → global hợp đồng, callback hợp đồng → UserInput.
+mod home;
+mod images;
 mod inputs;
+mod photos;
 mod timers;
 mod voice;
 

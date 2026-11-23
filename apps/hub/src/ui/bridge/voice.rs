@@ -3,8 +3,12 @@ use crate::{
     ToolTrail, Voice, VoiceState, Word,
 };
 use hub_core::{
-    ResponseSpeaker, ToolTrailState, UiState, VoiceSettingsState, VoiceState as CoreVoiceState,
-    present::{AlertView, ResponseView, StatusView, TimersView, ToolTrailView, VoiceView},
+    PhotoState, ResponseSpeaker, ToolTrailState, UiState, VoiceSettingsState,
+    VoiceState as CoreVoiceState,
+    present::{
+        AlertView, HomeView, PhotosView, ResponseView, StatusView, TimersView, ToolTrailView,
+        VoiceView,
+    },
 };
 use slint::{ComponentHandle, ModelRc, VecModel, Weak};
 use std::rc::Rc;
@@ -99,6 +103,8 @@ pub(super) fn apply_changed(
     voice_settings: Option<(&VoiceSettingsState, bool)>,
     timers: Option<&TimersView>,
     alert: Option<Option<&AlertView>>,
+    home: Option<&HomeView>,
+    photos: Option<&PhotosView>,
 ) {
     if let Some(nav) = nav {
         apply_nav(app, nav);
@@ -124,6 +130,24 @@ pub(super) fn apply_changed(
     if let Some(alert) = alert {
         super::timers::apply_alert(app, alert);
     }
+    if let Some(home) = home {
+        super::home::apply_home(app, home);
+    }
+    if let Some(photos) = photos {
+        super::photos::apply_photos(app, photos);
+    }
+}
+
+fn agent_photos_finished(previous: &hub_core::HubView, current: &hub_core::HubView) -> bool {
+    current.photos.viewing
+        && current.photos.viewer.iter().any(|photo| {
+            photo.state == PhotoState::Ready
+                && previous
+                    .photos
+                    .photos
+                    .iter()
+                    .any(|old| old.key == photo.key && old.state == PhotoState::Loading)
+        })
 }
 
 pub fn spawn_bridge(app: Weak<App>, mut rx: watch::Receiver<UiState>) {
@@ -157,6 +181,14 @@ pub fn spawn_bridge(app: Weak<App>, mut rx: watch::Receiver<UiState>) {
             let alert = previous
                 .is_none_or(|previous| previous.alert != view.alert)
                 .then(|| view.alert.clone());
+            let home = previous
+                .is_none_or(|previous| previous.home != view.home)
+                .then(|| view.home.clone());
+            let photos = previous
+                .is_none_or(|previous| previous.photos != view.photos)
+                .then(|| view.photos.clone());
+            let start_auto_advance =
+                previous.is_some_and(|previous| agent_photos_finished(previous, &view));
             shown = Some(view);
             shown_voice_settings = Some(state.voice_settings.clone());
 
@@ -168,6 +200,8 @@ pub fn spawn_bridge(app: Weak<App>, mut rx: watch::Receiver<UiState>) {
                 && voice_settings.is_none()
                 && timers.is_none()
                 && alert.is_none()
+                && home.is_none()
+                && photos.is_none()
             {
                 continue;
             }
@@ -175,6 +209,9 @@ pub fn spawn_bridge(app: Weak<App>, mut rx: watch::Receiver<UiState>) {
             let app = app.clone();
             if slint::invoke_from_event_loop(move || {
                 if let Some(app) = app.upgrade() {
+                    if start_auto_advance {
+                        super::photos::start_auto_advance();
+                    }
                     apply_changed(
                         &app,
                         nav,
@@ -187,6 +224,8 @@ pub fn spawn_bridge(app: Weak<App>, mut rx: watch::Receiver<UiState>) {
                             .map(|(settings, url_changed)| (settings, *url_changed)),
                         timers.as_ref(),
                         alert.as_ref().map(|alert| alert.as_ref()),
+                        home.as_ref(),
+                        photos.as_ref(),
                     );
                 }
             })
