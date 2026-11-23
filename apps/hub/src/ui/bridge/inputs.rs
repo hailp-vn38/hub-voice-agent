@@ -1,5 +1,5 @@
-use crate::{App, Nav, SettingsData, Voice};
-use hub_core::{Screen as CoreScreen, UserInput};
+use crate::{AlertData, App, Nav, SettingsData, TimersData, Voice};
+use hub_core::{Screen as CoreScreen, TimerInput, UserInput};
 use slint::ComponentHandle;
 use std::{
     cell::RefCell,
@@ -68,6 +68,16 @@ fn to_core_screen(screen: crate::Screen) -> Option<CoreScreen> {
     }
 }
 
+fn parse_timer_id(key: &str) -> Option<i64> {
+    match key.parse() {
+        Ok(id) => Some(id),
+        Err(error) => {
+            eprintln!("id hẹn giờ không hợp lệ {key:?}: {error}");
+            None
+        }
+    }
+}
+
 pub(super) fn to_ui_screen(screen: CoreScreen) -> crate::Screen {
     use crate::Screen as UiScreen;
     match screen {
@@ -115,8 +125,50 @@ pub fn connect_inputs(app: &App, input_tx: mpsc::Sender<UserInput>) {
     settings.on_save_voice_url(move |url| {
         save.borrow().send(UserInput::SaveVoiceUrl(url.to_string()));
     });
-    let connect = inputs;
+    let connect = inputs.clone();
     settings.on_connect_voice(move || {
         connect.borrow().send(UserInput::VoiceConnect);
+    });
+
+    let timers = app.global::<TimersData>();
+    let quick_start = inputs.clone();
+    timers.on_quick_start(move |minutes| match u32::try_from(minutes) {
+        Ok(minutes) => {
+            let mut input = quick_start.borrow_mut();
+            input.activity();
+            input.send(UserInput::Timer(TimerInput::QuickStart(minutes)));
+        }
+        Err(error) => eprintln!("số phút hẹn giờ không hợp lệ {minutes}: {error}"),
+    });
+    let toggle_pause = inputs.clone();
+    timers.on_toggle_pause(move |key| {
+        if let Some(id) = parse_timer_id(key.as_str()) {
+            let mut input = toggle_pause.borrow_mut();
+            input.activity();
+            input.send(UserInput::Timer(TimerInput::TogglePause(id)));
+        }
+    });
+    let add_minute = inputs.clone();
+    timers.on_add_minute(move |key| {
+        if let Some(id) = parse_timer_id(key.as_str()) {
+            let mut input = add_minute.borrow_mut();
+            input.activity();
+            input.send(UserInput::Timer(TimerInput::AddMinute(id)));
+        }
+    });
+    let cancel = inputs.clone();
+    timers.on_cancel(move |key| {
+        if let Some(id) = parse_timer_id(key.as_str()) {
+            let mut input = cancel.borrow_mut();
+            input.activity();
+            input.send(UserInput::Timer(TimerInput::Cancel(id)));
+        }
+    });
+
+    let dismiss = inputs;
+    app.global::<AlertData>().on_dismiss(move || {
+        let mut input = dismiss.borrow_mut();
+        input.activity();
+        input.send(UserInput::DismissAlert);
     });
 }
