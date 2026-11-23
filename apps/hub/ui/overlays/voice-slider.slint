@@ -21,7 +21,7 @@ export component VoiceSliderOverlay inherits Rectangle {
     animate opacity { duration: 250ms; }
     x: (root.width - self.width) / 2;
     y: 140px;
-    width: 720px;
+    width: min(720px, root.width - 2 * Theme.space-l);
     height: 120px;
     border-radius: Theme.radius;
     background: Theme.card;

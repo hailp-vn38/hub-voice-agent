@@ -6,6 +6,7 @@ import { Card } from "../components/card.slint";
 import { SpawnIn } from "../components/spawn.slint";
 import { Confetti } from "../components/confetti.slint";
 import { ActionButton } from "../components/action-button.slint";
+import { Dock } from "../components/orb.slint";
 
 global CdFmt {
     pure public function show-value(c: Countdown) -> string {
@@ -208,14 +209,14 @@ export component Countdowns inherits Rectangle {
                 }
             }
         }
-        Rectangle { height: 240px; } // chừa Voice dock
+        Rectangle { height: Dock.height; } // chừa Voice dock
     }
     if CountdownsData.detail-open && CountdownsData.has-main: Rectangle {
         background: #000000a0;
         TouchArea { clicked => { CountdownsData.close-detail(); } }
         Card {
-            width: 800px;
-            height: 420px;
+            width: min(800px, root.width - 2 * Theme.space-l);
+            height: min(420px, root.height - 2 * Theme.space-l);
             VerticalLayout {
                 padding: Theme.space-l;
                 spacing: Theme.space-m;

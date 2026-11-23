@@ -3,6 +3,7 @@ import { Nav } from "../contract/nav.slint";
 import { BackNav } from "../components/back-nav.slint";
 import { HomeData } from "../contract/home.slint";
 import { HomeTileView } from "../components/home-tile.slint";
+import { Dock } from "../components/orb.slint";
 
 export component Home inherits Rectangle {
     VerticalLayout {
@@ -52,6 +53,6 @@ export component Home inherits Rectangle {
                 toggle(k) => { HomeData.toggle(k); }
             }
         }
-        Rectangle { height: 240px; } // chừa Voice dock
+        Rectangle { height: Dock.height; } // chừa Voice dock
     }
 }

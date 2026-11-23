@@ -7,7 +7,7 @@ export component DetailCard inherits Rectangle {
     TouchArea { clicked => { CalendarData.close-detail(); } }
     Rectangle {
         width: min(parent.width - 2 * Theme.space-l, 960px);
-        height: 420px;
+        height: min(420px, parent.height - 2 * Theme.space-l);
         background: Theme.card;
         border-radius: Theme.radius;
         TouchArea { }

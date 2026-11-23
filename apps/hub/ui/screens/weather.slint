@@ -6,6 +6,7 @@ import { WeatherBackdrop } from "../components/weather/backdrop.slint";
 import { CurrentColumn } from "../components/weather/current.slint";
 import { HoursChart } from "../components/weather/hours-chart.slint";
 import { DaysColumn } from "../components/weather/days-column.slint";
+import { Dock } from "../components/orb.slint";
 
 export component Weather inherits Rectangle {
     private property <int> serial: WeatherData.focus-serial;
@@ -40,7 +41,7 @@ export component Weather inherits Rectangle {
         HorizontalLayout {
             spacing: Theme.space-m;
             vertical-stretch: 1;
-            CurrentColumn { width: 520px; now: WeatherData.now; aqi-lit: root.lit && WeatherData.focus == "aqi"; }
+            CurrentColumn { width: clamp(root.width * 0.27, 320px, 520px); now: WeatherData.now; aqi-lit: root.lit && WeatherData.focus == "aqi"; }
             Rectangle {
                 horizontal-stretch: 1;
                 background: #00000040; border-radius: Theme.radius; clip: true;
@@ -53,13 +54,13 @@ export component Weather inherits Rectangle {
                 } }
             }
             DaysColumn {
-                width: 560px;
+                width: clamp(root.width * 0.29, 340px, 560px);
                 days: WeatherData.days;
                 week-min: WeatherData.week-min; week-max: WeatherData.week-max;
                 selected: WeatherData.selected-day; focus-key: WeatherData.focus; lit: root.lit;
                 pick(k) => { WeatherData.select-day(k); }
             }
         }
-        Rectangle { height: 240px; } // chừa Voice dock
+        Rectangle { height: Dock.height; } // chừa Voice dock
     }
 }

@@ -2,10 +2,12 @@ import { Theme } from "../theme.slint";
 import { AlertData, AlertKind } from "../contract/alert.slint";
 import { Voice, VoiceState, VoiceLevels } from "../contract/voice.slint";
 
-// Tâm Orb (toạ độ cửa sổ) cho ticket 06 dùng làm điểm xuất phát.
+// Hình học Voice dock: tâm Orb (toạ độ cửa sổ, điểm xuất phát ticket 06) và chiều cao hàng dock.
 export global Dock {
     in-out property <length> orb-x;
     in-out property <length> orb-y;
+    // Chiều cao hàng Voice ở đáy (Shell ghi theo cỡ cửa sổ).
+    in-out property <length> height: 240px;
 }
 
 export component Orb inherits Rectangle {

@@ -8,6 +8,7 @@ import { Timeline } from "../components/calendar/timeline.slint";
 import { UpcomingList } from "../components/calendar/upcoming.slint";
 import { MonthGrid } from "../components/calendar/month-grid.slint";
 import { DetailCard } from "../components/calendar/detail.slint";
+import { Dock } from "../components/orb.slint";
 
 export component Calendar inherits Rectangle {
     VerticalLayout {
@@ -27,7 +28,7 @@ export component Calendar inherits Rectangle {
             TouchArea { x: 240px; width: 360px; clicked => { CalendarData.toggle-month(); } }
             Rectangle {
                 x: parent.width - self.width;
-                width: 360px;
+                width: min(360px, root.width * 0.3);
                 background: (CalendarData.stale || StatusBar.offline) ? Theme.warm : transparent;
                 border-radius: 16px;
                 Text {
@@ -47,7 +48,7 @@ export component Calendar inherits Rectangle {
             UpcomingList { horizontal-stretch: 2; }
         }
         if CalendarData.month-view: MonthGrid { vertical-stretch: 1; }
-        Rectangle { height: 240px; } // chừa Voice dock
+        Rectangle { height: Dock.height; } // chừa Voice dock
     }
     if CalendarData.detail.visible: DetailCard { }
 }

@@ -1,5 +1,6 @@
 import { Theme } from "../theme.slint";
 import { BootStep, FirstBootData } from "../contract/first-boot.slint";
+import { Dock } from "../components/orb.slint";
 
 component QrCard inherits Rectangle {
     in property <string> step;
@@ -14,11 +15,12 @@ component QrCard inherits Rectangle {
         alignment: center;
         if root.step != "": Text { text: root.step; color: Theme.accent; font-size: Theme.font-small; horizontal-alignment: center; }
         Text { text: root.caption; color: Theme.text; font-size: Theme.font-body; horizontal-alignment: center; wrap: word-wrap; }
+        // Ô QR vuông theo bề ngang thẻ, tối đa 340 px.
         Rectangle {
-            height: 340px;
+            height: min(340px, self.width);
             background: white;
             border-radius: 12px;
-            Image { source: root.qr; width: 320px; height: 320px; image-fit: contain; }
+            Image { source: root.qr; width: parent.height - 20px; height: parent.height - 20px; image-fit: contain; }
         }
         Text { text: root.detail; color: Theme.text; font-size: Theme.font-title; font-weight: 600; horizontal-alignment: center; }
     }
@@ -29,6 +31,7 @@ export component FirstBoot inherits Rectangle {
     background: Theme.background;
     VerticalLayout {
         padding: Theme.space-l;
+        padding-bottom: Dock.height; // chừa Voice dock
         spacing: Theme.space-m;
         Text {
             text: FirstBootData.step == BootStep.access-point ? "Cài đặt lần đầu"
@@ -82,7 +85,7 @@ export component FirstBoot inherits Rectangle {
             HorizontalLayout {
                 alignment: center;
                 QrCard {
-                    width: 520px;
+                    width: min(520px, root.width - 2 * Theme.space-l);
                     caption: "Trang cài đặt mới";
                     qr: FirstBootData.setup-qr;
                     detail: FirstBootData.setup-url;

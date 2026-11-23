@@ -12,7 +12,7 @@ export component Confirm inherits Rectangle {
     background: #000000a0;
     TouchArea { }
     Rectangle {
-        width: 760px;
+        width: min(760px, root.width - 2 * Theme.space-l);
         height: 300px;
         border-radius: Theme.radius;
         background: Theme.card;

@@ -9,6 +9,7 @@ import { HomePanel } from "settings/home.slint";
 import { ConnectionPanel } from "settings/connection.slint";
 import { DataPanel } from "settings/data.slint";
 import { SystemPanel } from "settings/system.slint";
+import { Dock } from "../components/orb.slint";
 
 // Setting: danh mục trái, bảng giữa (cuộn), ô QR Setup web phải. Áp dụng ngay, không nút Lưu.
 export component Settings inherits Rectangle {
@@ -20,13 +21,13 @@ export component Settings inherits Rectangle {
 
     HorizontalLayout {
         padding-top: 120px;
-        padding-bottom: 260px;
+        padding-bottom: Dock.height + Theme.space-s; // chừa Voice dock
         padding-left: Theme.space-l;
         padding-right: Theme.space-l;
         spacing: Theme.space-l;
 
         VerticalLayout {
-            width: 300px;
+            width: clamp(root.width * 0.16, 200px, 300px);
             spacing: Theme.space-s;
             for name[i] in root.categories: Rectangle {
                 height: Theme.touch-min;
@@ -61,7 +62,7 @@ export component Settings inherits Rectangle {
         }
 
         Rectangle {
-            width: 380px;
+            width: clamp(root.width * 0.2, 260px, 380px);
             background: Theme.card;
             border-radius: Theme.radius;
             VerticalLayout {
@@ -69,7 +70,7 @@ export component Settings inherits Rectangle {
                 spacing: Theme.space-m;
                 alignment: center;
                 Text { text: "Setup web"; color: Theme.text; font-size: Theme.font-body; horizontal-alignment: center; }
-                Image { source: SettingsData.setup-qr; height: 260px; }
+                Image { source: SettingsData.setup-qr; height: min(260px, parent.width - 2 * Theme.space-m); }
                 Text { text: SettingsData.setup-url; color: Theme.accent; font-size: Theme.font-small; horizontal-alignment: center; }
                 Text { text: "Server, lịch, nhà, vị trí"; color: Theme.text-dim; font-size: Theme.font-small; horizontal-alignment: center; wrap: word-wrap; }
             }
@@ -81,7 +82,7 @@ export component Settings inherits Rectangle {
         background: #000000a0;
         TouchArea { }
         Rectangle {
-            width: 760px;
+            width: min(760px, root.width - 2 * Theme.space-l);
             height: 280px;
             border-radius: Theme.radius;
             background: Theme.card;

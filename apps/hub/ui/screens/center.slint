@@ -6,12 +6,14 @@ import { CenterTimerTile } from "../components/center-timer.slint";
 import { HomeTileView } from "../components/home-tile.slint";
 import { Icon } from "../components/icon.slint";
 
-// Màn trung tâm 16:9: không tab, không cuộn. Hàng dưới cùng chừa cho Voice dock.
+// Màn trung tâm: không tab, không cuộn, co theo cửa sổ. Hàng dưới cùng chừa cho Voice (nổi trên nền màn).
 export component CenterScreen inherits Rectangle {
     in property <length> dock-height: 240px;
-    private property <length> tw: 300px;
     private property <length> gap: Theme.space-m;
     private property <int> extra: (Center.timer.visible ? 1 : 0) + (Center.countdown.visible ? 1 : 0);
+    // Ô co theo bề ngang để cả hàng vừa màn; tối đa 300 px.
+    private property <int> tiles: max(1, root.extra + Center.home.length);
+    private property <length> tw: clamp((root.width - Theme.space-l * 2 - root.gap * (root.tiles - 1)) / root.tiles, Theme.touch-min * 2, 300px);
     private property <CenterCard> zoom-card: CenterCard.none;
     private property <int> serial: Center.focus-serial;
 

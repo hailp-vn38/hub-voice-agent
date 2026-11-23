@@ -72,6 +72,8 @@ export component ResponseText inherits Rectangle {
             alignment: start;
             animate x { duration: 200ms; easing: ease-out; }
             for w[i] in Response.words: Rectangle {
+                // Mép trái mờ dần: từ trôi ra gần mép thì nhạt đi (nền trong suốt, không phủ gradient).
+                opacity: clamp((row.x + self.x) / 160px, 0, 1);
                 if i < root.shown: WordView {
                     text: w.text;
                     emphasis: w.emphasis;
@@ -80,12 +82,5 @@ export component ResponseText inherits Rectangle {
                 }
             }
         }
-    }
-
-    // Mép trái mờ dần (thay mask).
-    Rectangle {
-        x: 0;
-        width: 160px;
-        background: @linear-gradient(90deg, Theme.background 0%, transparent 100%);
     }
 }

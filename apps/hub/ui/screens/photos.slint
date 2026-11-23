@@ -4,6 +4,7 @@ import { BackNav } from "../components/back-nav.slint";
 import { PhotosData, PhotoState } from "../contract/photos.slint";
 import { Icon } from "../components/icon.slint";
 import { PhotoViewer } from "photo-viewer.slint";
+import { Dock } from "../components/orb.slint";
 
 export component Photos inherits Rectangle {
     private property <length> gap: Theme.space-m;
@@ -86,7 +87,7 @@ export component Photos inherits Rectangle {
                 TouchArea { clicked => { PhotosData.open(p.key); } }
             }
         }
-        Rectangle { height: 240px; } // chừa Voice dock
+        Rectangle { height: Dock.height; } // chừa Voice dock
     }
 
     if PhotosData.viewing: PhotoViewer { }

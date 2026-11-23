@@ -4,6 +4,7 @@ import { BackNav } from "../components/back-nav.slint";
 import { RemindersData, ReminderItem, ReminderPast } from "../contract/reminders.slint";
 import { Icon } from "../components/icon.slint";
 import { SpawnIn } from "../components/spawn.slint";
+import { Dock } from "../components/orb.slint";
 
 // Một dòng trên dòng thời gian. Huỷ: mờ dần. Hoãn (giờ đổi, cùng key): dòng trượt sang giờ mới.
 // Focus giọng nói (focus-serial đổi): các mục trong `focus` sáng lên rồi tắt dần.
@@ -95,7 +96,7 @@ export component Reminders inherits Rectangle {
             spacing: Theme.space-l;
             vertical-stretch: 1;
             Rectangle {
-                width: 560px;
+                width: clamp(root.width * 0.29, 360px, 560px);
                 background: Theme.card;
                 border-radius: Theme.radius;
                 if RemindersData.has-next: VerticalLayout {
@@ -130,6 +131,6 @@ export component Reminders inherits Rectangle {
                 for p in RemindersData.recent: PastCard { past: p; }
             }
         }
-        Rectangle { height: 240px; } // chừa Voice dock
+        Rectangle { height: Dock.height; } // chừa Voice dock
     }
 }

@@ -5,6 +5,7 @@ import { TimersData } from "../contract/timers.slint";
 import { SpawnIn } from "../components/spawn.slint";
 import { TimerCardView } from "../components/timer-card.slint";
 import { TimerRing } from "../components/timer-ring.slint";
+import { Dock } from "../components/orb.slint";
 
 // 1 thẻ: một vòng lớn giữa màn; 2: hai cột; 3-4: lưới 2x2.
 export component Timers inherits Rectangle {
@@ -73,6 +74,6 @@ export component Timers inherits Rectangle {
                 TouchArea { clicked => { TimersData.quick-start(m); } }
             }
         }
-        Rectangle { height: 240px; } // chừa Voice dock
+        Rectangle { height: Dock.height; } // chừa Voice dock
     }
 }
