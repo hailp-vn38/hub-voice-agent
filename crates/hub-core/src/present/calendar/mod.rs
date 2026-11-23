@@ -137,6 +137,23 @@ pub(super) fn from_state(state: &UiState) -> CalendarView {
     }
 }
 
+pub(super) fn center_today(state: &UiState) -> Vec<super::CenterEvent> {
+    blocks::for_day(state, state.now.date())
+        .into_iter()
+        .filter(|event| event.kind == CalendarKind::Event)
+        .map(|event| super::CenterEvent {
+            key: event.key,
+            time: if event.all_day {
+                "Cả ngày".into()
+            } else {
+                event.time
+            },
+            title: event.title,
+            now: event.ongoing,
+        })
+        .collect()
+}
+
 fn week(state: &UiState, today: Date) -> Vec<CalendarDayView> {
     (0..7)
         .filter_map(|offset| {

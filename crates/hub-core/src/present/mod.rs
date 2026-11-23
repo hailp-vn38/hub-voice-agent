@@ -1,8 +1,10 @@
 mod alerts;
 mod ambient;
 mod calendar;
+mod center;
 mod countdowns;
 mod home;
+mod menu;
 mod nav;
 mod photos;
 mod reminders;
@@ -20,8 +22,13 @@ pub use calendar::{
     CalendarBlockView, CalendarDayView, CalendarDetailView, CalendarKind, CalendarMonthDayView,
     CalendarUpcomingView, CalendarView, PendingState,
 };
+pub use center::{
+    CenterCard, CenterCountdown, CenterEvent, CenterReminder, CenterTimer, CenterView,
+    CenterWeather,
+};
 pub use countdowns::{CountdownItemView, CountdownUnit, CountdownsView};
 pub use home::{HomeKind, HomeTileView, HomeView};
+pub use menu::MenuView;
 pub use photos::{PhotoState, PhotoView, PhotosView};
 pub use reminders::{
     ReminderGroupView, ReminderItemView, ReminderNextView, ReminderPastView, RemindersView,
@@ -39,6 +46,8 @@ pub use weather::{
 #[derive(Clone, Debug, PartialEq)]
 pub struct HubView {
     pub nav: crate::Screen,
+    pub center: CenterView,
+    pub menu: MenuView,
     pub status: StatusView,
     pub ambient: AmbientView,
     pub calendar: CalendarView,
@@ -56,20 +65,31 @@ pub struct HubView {
 
 /// Prepares display-ready contract data from the actor snapshot.
 pub fn present(state: &UiState) -> HubView {
+    let calendar = calendar::from_state(state);
+    let countdowns = countdowns::from_state(state);
+    let home = home::from_state(state);
+    let photos = photos::from_state(state);
+    let reminders = reminders::from_state(state);
+    let timers = timers::from_state(state);
+    let weather = weather::from_state(state);
+    let center = center::from_state(state, &countdowns, &home, &reminders, &timers, &weather);
+    let menu = menu::from_state(state, &center, &countdowns, &home, &photos, &reminders);
     HubView {
         nav: nav::screen(state),
         status: status::from_state(state),
         ambient: ambient::from_state(state),
-        calendar: calendar::from_state(state),
-        countdowns: countdowns::from_state(state),
-        home: home::from_state(state),
-        photos: photos::from_state(state),
-        reminders: reminders::from_state(state),
-        timers: timers::from_state(state),
+        center,
+        menu,
+        calendar,
+        countdowns,
+        home,
+        photos,
+        reminders,
+        timers,
         alert: alerts::from_state(state),
         voice: voice::from_state(state),
         response: response::from_state(state),
         tool_trail: tool_trail::from_state(state),
-        weather: weather::from_state(state),
+        weather,
     }
 }

@@ -1,6 +1,6 @@
 # 21 — Màn trung tâm và Menu: dữ liệu gộp nhiều tính năng
 
-Status: ready-for-agent
+Status: completed
 Blocked by: 16, 17, 18, 19, 20
 Spec: [../spec.md](../spec.md) · UI: hub-ui #07, #08
 
@@ -12,5 +12,10 @@ Spec: [../spec.md](../spec.md) · UI: hub-ui #07, #08
 
 ## Nghiệm thu
 
-- [ ] Test `present` với `UiState` đầy đủ: center chọn đúng hẹn giờ gần hết nhất và mốc gần nhất; không có dữ liệu → các thẻ ẩn (`visible == false`).
-- [ ] Test `menu`: mỗi dòng đổi khi dữ liệu tính năng đổi.
+- [x] Test `present` với `UiState` đầy đủ: center chọn đúng hẹn giờ gần hết nhất và mốc gần nhất; không có dữ liệu → các thẻ ẩn (`visible == false`).
+- [x] Test `menu`: mỗi dòng đổi khi dữ liệu tính năng đổi.
+
+## Comments
+
+- `present` bổ sung Center và Menu; Center lấy sự kiện hôm nay, Reminder sắp tới, hẹn giờ đang chạy gần hết nhất, mốc gần nhất, tối đa bốn entity Nhà đầu tiên; `home-safe` theo trạng thái kết nối Home Assistant.
+- Gates đạt: `scripts/test.sh` (142 passed), `cargo fmt --all -- --check`, `cargo build -p hub`, `git diff --check`.
