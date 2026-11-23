@@ -3,3 +3,5 @@ pub(crate) mod timers;
 
 pub(crate) mod reminders;
 pub(crate) mod weather;
+
+pub(crate) mod home;

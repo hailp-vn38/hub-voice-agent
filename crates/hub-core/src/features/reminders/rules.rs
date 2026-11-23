@@ -15,6 +15,8 @@ pub struct Reminder {
     pub at: String,
     pub repeat: Repeat,
     pub weekdays: Vec<u8>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub scheduled_at: Option<String>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -37,7 +39,12 @@ impl Reminder {
     }
 
     pub fn next_occurrence(&self) -> Option<String> {
-        let at: jiff::Zoned = self.at.parse().ok()?;
+        let at: jiff::Zoned = self
+            .scheduled_at
+            .as_deref()
+            .unwrap_or(&self.at)
+            .parse()
+            .ok()?;
         let days = match self.repeat {
             Repeat::None => return None,
             Repeat::Daily => 1,

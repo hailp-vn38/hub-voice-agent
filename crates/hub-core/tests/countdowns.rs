@@ -51,6 +51,7 @@ async fn countdown_updates_at_midnight_through_run() {
         Ports {
             clock: Arc::new(TestClock::at(start.clone())),
             weather: Arc::new(hub_core::OpenMeteo::default()),
+            home: Arc::new(hub_core::HomeAssistant::default()),
             system: Arc::new(support::Synced),
         },
         Io {
@@ -139,6 +140,7 @@ async fn countdown_updates_at_midnight_through_run() {
         Ports {
             clock: Arc::new(TestClock::at(start)),
             weather: Arc::new(hub_core::OpenMeteo::default()),
+            home: Arc::new(hub_core::HomeAssistant::default()),
             system: Arc::new(support::Synced),
         },
         Io {

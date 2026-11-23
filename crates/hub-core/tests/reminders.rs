@@ -52,6 +52,7 @@ async fn reminder_create_through_run() {
             clock: Arc::new(TestClock::at(start.clone())),
             system: Arc::new(support::Synced),
             weather: Arc::new(hub_core::OpenMeteo::default()),
+            home: Arc::new(hub_core::HomeAssistant::default()),
         },
         Io {
             voice_config_tx: config_tx.clone(),

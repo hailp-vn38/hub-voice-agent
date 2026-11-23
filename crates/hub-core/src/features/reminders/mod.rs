@@ -70,6 +70,7 @@ impl Feature {
             self.history.truncate(5);
             if let Some(next) = self.items[index].next_occurrence() {
                 self.items[index].at = next;
+                self.items[index].scheduled_at = None;
             } else {
                 self.items.remove(index);
             }
@@ -122,6 +123,7 @@ impl Feature {
                     at: args.at,
                     repeat,
                     weekdays: args.weekdays,
+                    scheduled_at: None,
                 });
             }
             tools::Tool::List => {}
@@ -187,6 +189,9 @@ impl Feature {
                         )),
                     )];
                 };
+                if item.scheduled_at.is_none() {
+                    item.scheduled_at = Some(item.at.clone());
+                }
                 item.at = timestamp.to_zoned(at.time_zone().clone()).to_string();
                 let (_, mut effects) = alerts.dismiss();
                 effects.push(Effect::PersistReminders(

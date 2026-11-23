@@ -74,6 +74,7 @@ impl Hub {
             Ports {
                 clock: Arc::new(TestClock::at(start)),
                 weather: Arc::new(hub_core::OpenMeteo::default()),
+                home: Arc::new(hub_core::HomeAssistant::default()),
                 system: Arc::new(Synced),
             },
             Io {

@@ -17,6 +17,8 @@ schemars = "1"
 unicode-normalization = "0.1"
 axum = "0.8"
 reqwest = { workspace = true, features = ["json"] }
+futures-util = { workspace = true }
+tokio-tungstenite = { workspace = true }
 rusqlite = { version = "0.37", features = ["bundled"] }
 
 [dev-dependencies]

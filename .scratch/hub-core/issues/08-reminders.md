@@ -12,6 +12,10 @@ Spec: [../spec.md](../spec.md)
 
 ## Nghiệm thu
 
-- [ ] Unit test `weekly` qua Chủ nhật, `daily` qua đổi tháng, lỡ 30 phút → nhắc, lỡ 2 giờ → chỉ đánh dấu đã lỡ.
-- [ ] Test qua `run()`: đến hạn khi online → `DirectSpeech`; `SessionBusy` → gửi lại; Offline → không gửi.
+- [x] Unit test `weekly` qua Chủ nhật, `daily` qua đổi tháng, lỡ 30 phút → nhắc, lỡ 2 giờ → chỉ đánh dấu đã lỡ.
+- [x] Test qua `run()`: đến hạn khi online → `DirectSpeech`; `SessionBusy` → gửi lại; Offline → không gửi.
 - [ ] Huỷ theo nhãn dùng `selector`.
+
+## Comments
+
+- Đã triển khai Reminder, thông báo và công cụ; test qua `run()` bao phủ online, SessionBusy, offline và nhắc lỡ. Cần bổ sung test huỷ theo nhãn và snooze trước khi đóng ticket.

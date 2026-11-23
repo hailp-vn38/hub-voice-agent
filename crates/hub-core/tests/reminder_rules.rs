@@ -8,6 +8,7 @@ fn daily_reminder_crosses_month_boundary() {
         at: "2026-01-31T09:00:00+07:00[Asia/Ho_Chi_Minh]".into(),
         repeat: ReminderRepeat::Daily,
         weekdays: vec![],
+        scheduled_at: None,
     };
     assert_eq!(
         reminder.next_occurrence().unwrap(),
@@ -23,6 +24,7 @@ fn weekly_reminder_crosses_sunday_to_monday() {
         at: "2026-11-22T09:00:00+07:00[Asia/Ho_Chi_Minh]".into(),
         repeat: ReminderRepeat::Weekly,
         weekdays: vec![1],
+        scheduled_at: None,
     };
     assert_eq!(
         reminder.next_occurrence().unwrap(),
@@ -38,6 +40,7 @@ fn overdue_reminder_only_alerts_within_one_hour() {
         at: "2026-11-22T09:00:00+07:00[Asia/Ho_Chi_Minh]".into(),
         repeat: ReminderRepeat::None,
         weekdays: vec![],
+        scheduled_at: None,
     };
     assert_eq!(
         reminder.due(
