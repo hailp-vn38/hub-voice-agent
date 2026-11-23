@@ -33,6 +33,10 @@ export component Shell inherits Rectangle {
     // Màn đang hiển thị: theo Nav.screen, nhưng chuyển ngay khi người dùng vuốt xong.
     private property <Screen> shown: Nav.screen;
     private property <Screen> origin: Screen.center; // trung tâm hoặc menu, nơi quay về từ màn tính năng
+    // Màn tính năng có nhánh riêng bên dưới; thêm màn mới thì sửa cả `has-screen` lẫn nhánh `if`.
+    private property <bool> has-screen: shown == Screen.calendar || shown == Screen.countdowns || shown == Screen.home
+        || shown == Screen.photos || shown == Screen.reminders || shown == Screen.settings
+        || shown == Screen.timers || shown == Screen.weather;
     private property <bool> is-feature: shown != Screen.center && shown != Screen.menu;
     private property <length> w: swipe.width;
     private property <length> dx: swipe.current-position.x - swipe.pressed-position.x;
@@ -53,7 +57,7 @@ export component Shell inherits Rectangle {
     pure function title(s: Screen) -> string {
         return s == Screen.weather ? "weather" : s == Screen.calendar ? "calendar" : s == Screen.home ? "home"
             : s == Screen.timers ? "timers" : s == Screen.countdowns ? "countdowns" : s == Screen.reminders ? "reminders"
-            : s == Screen.photos ? "photos" : s == Screen.settings ? "settings" : s == Screen.ambient ? "ambient" : "first-boot";
+            : s == Screen.photos ? "photos" : s == Screen.settings ? "settings" : s == Screen.ambient ? "ambient" : s == Screen.first-boot ? "first-boot" : "unknown";
     }
 
     // Tầng nội dung (vuốt được). Hàng dock nằm ngoài vùng này.
@@ -91,7 +95,7 @@ export component Shell inherits Rectangle {
                 x: (1 - root.feat-p) * root.w;
                 opacity: root.feat-p;
                 background: Theme.background;
-                if root.shown != Screen.calendar && root.shown != Screen.countdowns && root.shown != Screen.home && root.shown != Screen.photos && root.shown != Screen.reminders && root.shown != Screen.settings && root.shown != Screen.timers && root.shown != Screen.weather: Placeholder { title: root.title(root.shown); }
+                if !root.has-screen: Placeholder { title: root.title(root.shown); }
                 if root.shown == Screen.home: Home { }
                 if root.shown == Screen.weather: Weather { }
                 if root.shown == Screen.settings: Settings { }
@@ -99,6 +103,7 @@ export component Shell inherits Rectangle {
                 if root.shown == Screen.timers: Timers { }
                 if root.shown == Screen.photos: Photos { }
                 if root.shown == Screen.calendar: Calendar { }
+                if root.shown == Screen.countdowns: Countdowns { }
             }
         }
     }

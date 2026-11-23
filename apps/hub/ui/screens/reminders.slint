@@ -92,7 +92,7 @@ export component Reminders inherits Rectangle {
                 }
             }
             Flickable {
-                viewport-height: tl.preferred-height;
+                content-height: tl.preferred-height;
                 tl := VerticalLayout {
                     spacing: Theme.space-s;
                     for g in RemindersData.groups: VerticalLayout {

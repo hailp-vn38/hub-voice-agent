@@ -91,7 +91,7 @@ pub fn all() -> Vec<Scenario> {
         }),
         ("Đổi độ phân giải", super::settings::change_resolution),
         ("Chưa đăng ký voice", super::settings::not_enrolled),
-        ("Tắt mic", super::settings::mute_mic),
+        ("Setting: tắt mic", super::settings::mute_mic),
         ("Người dùng nói", super::response::user_says),
         ("Agent trả lời", super::response::agent_reply),
         ("Tool server: lịch", super::response::tool_server),

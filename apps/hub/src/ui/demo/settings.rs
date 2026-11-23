@@ -97,6 +97,24 @@ pub fn init(app: &App) {
             toggle(&app, &key, on);
         }
     });
+    // Demo: không có âm thanh/dịch vụ thật nên chỉ nhận callback.
+    s.on_preview_sound(|_| {});
+    s.on_system_action(|_| {});
+    let weak = app.as_weak();
+    s.on_clear(move |key| {
+        if let Some(app) = weak.upgrade() {
+            let g = app.global::<SettingsData>();
+            let mut c = g.get_connection();
+            match key.as_str() {
+                "cache" => {
+                    c.calendar_status = "Đã xoá cache".into();
+                    c.weather_status = "Đã xoá cache".into();
+                }
+                _ => {}
+            }
+            g.set_connection(c);
+        }
+    });
     let weak = app.as_weak();
     s.on_keep_resolution(move || {
         RES_TIMER.with(|t| t.stop());
