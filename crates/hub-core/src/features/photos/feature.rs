@@ -51,8 +51,7 @@ impl Feature {
             return vec![Effect::ReplyError(call, "Expected one to six images")];
         }
         let source = self.source.clone();
-        let mut effects = view.open(crate::Screen::Photos, None, now);
-        effects.push(Effect::Spawn {
+        vec![Effect::Spawn {
             job: "photos".into(),
             reply: Some(call),
             timeout: Duration::from_secs(120),
@@ -63,8 +62,7 @@ impl Feature {
                 }
                 Ok(Box::new(results) as Box<dyn std::any::Any + Send>)
             }),
-        });
-        effects
+        }]
     }
     fn cached_tool(
         &self,
@@ -73,7 +71,7 @@ impl Feature {
         now: i64,
         store: &crate::Store,
     ) -> Vec<Effect> {
-        let mut effects = view.open(crate::Screen::Photos, view.focus().cloned(), now);
+        let mut effects = Vec::new();
         let photos = match store.photos_load() {
             Ok(photos) => photos,
             Err(_) => {

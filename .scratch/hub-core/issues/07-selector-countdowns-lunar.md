@@ -24,3 +24,7 @@ Spec: [../spec.md](../spec.md)
 - Test ngày 30 tháng thiếu chuyển thành ngày 29; ngày 29/2 dương lịch chuyển thành 28/2 năm không nhuận.
 - Test qua `run()` tạo mốc, cập nhật sau nửa đêm, lưu lại sau khởi động, và trả danh sách ứng viên khi nhãn hẹn giờ mơ hồ.
 - `hub_countdown_create` nhận `date` YYYY-MM-DD theo lịch của `repeat`, và `lunar_leap` khi cần tháng nhuận.
+
+## Comments
+
+- Review fix: `selector` ưu tiên nhãn khớp đúng (sau khi bỏ dấu) trước nhãn chỉ chứa chuỗi hỏi, trả chỉ số mục. Mốc `yearly_lunar` ở tháng nhuận rơi về tháng thường trong năm không có tháng nhuận đó; chỉ cần xét năm âm hiện tại và năm sau.

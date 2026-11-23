@@ -6,8 +6,8 @@ use std::time::Duration;
 
 use crate::{AudioCommand, UiState};
 
-// Variants are introduced here for the subsequent voice and audio slices.
-#[allow(dead_code)]
+type StoreWrite = Box<dyn FnOnce(&mut crate::Store) -> anyhow::Result<()> + Send>;
+
 pub(crate) enum Effect {
     Ui(Box<dyn FnOnce(&mut UiState) -> bool + Send>),
     Voice(VoiceCommand),
@@ -18,20 +18,37 @@ pub(crate) enum Effect {
         reply: Option<ToolCall>,
         timeout: Duration,
     },
-    Persist(Vec<crate::Timer>),
+    /// Persist feature data; the closure owns a copy of what it writes.
+    Store(StoreWrite),
     PinPhoto(String, bool),
     PersistPhotos(
         Vec<(String, anyhow::Result<crate::FetchedImage>)>,
         i64,
         Option<ToolCall>,
     ),
-    PersistWeather(String, i64, serde_json::Value),
     CancelJob(JobId),
-    PersistCountdowns(Vec<crate::Countdown>),
-    PersistReminders(Vec<crate::Reminder>, Vec<crate::ReminderHistory>),
-    PersistCalendar(Vec<crate::CalendarEvent>, Option<String>, Option<i64>),
     Reply(ToolCall, Result<serde_json::Value, ToolError>),
     ReplyError(ToolCall, &'static str),
+}
+
+impl Effect {
+    pub(crate) fn store(
+        write: impl FnOnce(&mut crate::Store) -> anyhow::Result<()> + Send + 'static,
+    ) -> Self {
+        Self::Store(Box::new(write))
+    }
+}
+
+pub(super) async fn execute_all(
+    effects: Vec<Effect>,
+    io: &crate::Io,
+    jobs: &mut Jobs,
+    store: &mut crate::Store,
+) -> anyhow::Result<()> {
+    for effect in effects {
+        execute(effect, &io.ui_tx, &io.voice_tx, &io.audio_tx, jobs, store).await?;
+    }
+    Ok(())
 }
 
 pub(super) async fn execute(
@@ -43,11 +60,7 @@ pub(super) async fn execute(
     store: &mut crate::Store,
 ) -> anyhow::Result<()> {
     match effect {
-        Effect::PersistReminders(items, history) => store.reminders_save(&items, &history)?,
-        Effect::PersistCalendar(events, token, last_sync) => {
-            store.calendar_save(&events, &token)?;
-            store.calendar_save_sync(last_sync)?;
-        }
+        Effect::Store(write) => write(store)?,
         Effect::CancelJob(id) => {
             if let Some(call) = jobs.cancel(&id) {
                 reply_error(call, "Job cancelled");
@@ -78,9 +91,6 @@ pub(super) async fn execute(
                 }
             }
         }
-        Effect::PersistWeather(key, updated, data) => store.weather_save(&key, updated, &data)?,
-        Effect::PersistCountdowns(items) => store.countdowns_save(&items)?,
-        Effect::Persist(timers) => store.timers_save(&timers)?,
         Effect::Reply(call, result) => call.reply(result),
         Effect::Ui(patch) => {
             ui_tx.send_if_modified(patch);

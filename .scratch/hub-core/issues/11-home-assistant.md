@@ -19,3 +19,5 @@ Spec: [../spec.md](../spec.md)
 ## Comments
 
 Đã triển khai adapter WebSocket và tool qua actor; kiểm thử fixture và `run()` dùng fake. Cần kiểm thử kết nối với Home Assistant thật.
+
+- Review fix: `hub_home_get` trả trạng thái cũ (đánh dấu `stale`) khi mất kết nối; chưa kết nối và không có entity → lỗi "disconnected"; bật/tắt khi mất kết nối → lỗi "disconnected".

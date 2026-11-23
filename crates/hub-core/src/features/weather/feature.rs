@@ -3,6 +3,9 @@ use serde_json::Value;
 use std::{sync::Arc, time::Duration};
 use voice_client::ToolCall;
 
+/// How long a fetched forecast stays fresh.
+const REFRESH_SECONDS: i64 = 1800;
+
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct WeatherView {
     pub location: Option<String>,
@@ -44,10 +47,14 @@ impl Feature {
         home.map(|(a, b)| format!("home:{a},{b}"))
             .unwrap_or_default()
     }
+    /// Shows the cached forecast for the active location and schedules its
+    /// refresh 30 minutes after it was fetched (now when nothing is cached).
     fn restore(&mut self, store: &crate::Store, now: i64) -> anyhow::Result<()> {
         self.view = WeatherView::default();
+        self.next_refresh = now;
         if let Some((updated, data)) = store.weather_get(&self.active)? {
-            self.apply(data, now.saturating_sub(updated) >= 1800);
+            self.apply(data, now.saturating_sub(updated) >= REFRESH_SECONDS);
+            self.next_refresh = updated.saturating_add(REFRESH_SECONDS);
         }
         Ok(())
     }
@@ -98,7 +105,7 @@ impl Feature {
         if self.pending || now < self.next_refresh {
             return vec![];
         }
-        self.next_refresh = now + 1800;
+        self.next_refresh = now.saturating_add(REFRESH_SECONDS);
         let location = if self.active.starts_with("city:") {
             Some(WeatherLocation::City(self.active[5..].to_owned()))
         } else {
@@ -122,16 +129,9 @@ impl Feature {
         now: i64,
         store: &crate::Store,
     ) -> Vec<Effect> {
-        let args: super::tools::Get = match serde_json::from_value(call.arguments.clone()) {
+        let args: super::tools::Get = match crate::features::tool_args::parse(&call) {
             Ok(args) => args,
-            Err(e) => {
-                return vec![Effect::Reply(
-                    call,
-                    Err(crate::features::timers::tools::error(&format!(
-                        "Invalid arguments: {e}"
-                    ))),
-                )];
-            }
+            Err(e) => return vec![Effect::Reply(call, Err(e))],
         };
         let city = args.location.filter(|s| !s.trim().is_empty());
         self.active = city
@@ -139,19 +139,21 @@ impl Feature {
             .map(|s| format!("city:{}", s.trim()))
             .unwrap_or_else(|| Self::home_key(self.home));
         let _ = self.restore(store, now);
-        let mut effects = view.open(
-            crate::Screen::Weather,
-            args.focus.map(crate::Focus::Weather),
-            now,
-        );
+        let mut effects = match args.focus {
+            Some(focus) => view.open(
+                crate::Screen::Weather,
+                Some(crate::Focus::Weather(focus)),
+                now,
+            ),
+            None => Vec::new(),
+        };
         effects.push(self.snapshot());
-        if let Some((updated, data)) = store
+        if let Some((_, data)) = store
             .weather_get(&self.active)
             .ok()
             .flatten()
-            .filter(|(updated, _)| now.saturating_sub(*updated) < 1800)
+            .filter(|(updated, _)| now.saturating_sub(*updated) < REFRESH_SECONDS)
         {
-            self.next_refresh = updated.saturating_add(1800);
             self.pending = false;
             effects.push(Effect::CancelJob("weather".into()));
             effects.push(Effect::Reply(call, Ok(data)));
@@ -190,8 +192,10 @@ impl Feature {
                 let (key, data) = *result;
                 match data {
                     Ok(data) => {
-                        let mut effects =
-                            vec![Effect::PersistWeather(key.clone(), now, data.clone())];
+                        let saved = (key.clone(), data.clone());
+                        let mut effects = vec![Effect::store(move |store| {
+                            store.weather_save(&saved.0, now, &saved.1)
+                        })];
                         if key == self.active {
                             self.apply(data.clone(), false);
                             effects.push(self.snapshot());
@@ -225,7 +229,6 @@ impl Feature {
         }
         self.active = Self::home_key(self.home);
         let _ = self.restore(store, now);
-        self.next_refresh = now;
         vec![self.snapshot()]
     }
     pub fn update_home(
@@ -237,7 +240,6 @@ impl Feature {
         self.home = settings.latitude.zip(settings.longitude);
         self.active = Self::home_key(self.home);
         let _ = self.restore(store, now);
-        self.next_refresh = now;
         vec![self.snapshot()]
     }
 }

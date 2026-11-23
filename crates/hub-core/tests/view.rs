@@ -2,6 +2,7 @@ mod support;
 
 use hub_core::{Screen, UserInput};
 use std::time::Duration;
+use voice_client::{ToolState, VoiceEvent};
 
 #[tokio::test(start_paused = true)]
 async fn navigation_resets_return_deadline() {
@@ -121,4 +122,37 @@ async fn ambient_begins_after_five_idle_minutes_from_startup() {
     tokio::time::advance(Duration::from_secs(300)).await;
     tokio::task::yield_now().await;
     assert_eq!(hub.ui_rx.borrow().view.screen, Screen::Ambient);
+}
+
+#[tokio::test(start_paused = true)]
+async fn started_server_tool_opens_its_screen() {
+    let hub = support::Hub::start(
+        "2026-11-22T12:00:00+07:00[Asia/Ho_Chi_Minh]"
+            .parse()
+            .unwrap(),
+    );
+    let tool = |name: &str, state| VoiceEvent::ServerTool {
+        name: name.into(),
+        state,
+    };
+    hub.voice_tx
+        .send(tool("google_calendar_list_events", ToolState::Started))
+        .await
+        .unwrap();
+    for _ in 0..5 {
+        tokio::task::yield_now().await;
+    }
+    assert_eq!(hub.ui_rx.borrow().view.screen, Screen::Calendar);
+    hub.voice_tx
+        .send(tool("server_search", ToolState::Started))
+        .await
+        .unwrap();
+    hub.voice_tx
+        .send(tool("get_weather", ToolState::Completed))
+        .await
+        .unwrap();
+    for _ in 0..5 {
+        tokio::task::yield_now().await;
+    }
+    assert_eq!(hub.ui_rx.borrow().view.screen, Screen::Calendar);
 }

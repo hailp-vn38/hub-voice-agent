@@ -73,7 +73,7 @@ impl Hub {
             store,
             Ports {
                 clock: Arc::new(TestClock::at(start)),
-                calendar: Arc::new(hub_core::sources::google_calendar::GoogleCalendar::default()),
+                calendar: Arc::new(hub_core::GoogleCalendar::default()),
                 weather: Arc::new(hub_core::OpenMeteo::default()),
                 home: Arc::new(hub_core::HomeAssistant::default()),
                 images: Arc::new(hub_core::HttpImageFetcher),

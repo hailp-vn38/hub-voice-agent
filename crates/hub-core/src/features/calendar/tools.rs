@@ -1,4 +1,5 @@
-use schemars::{JsonSchema, schema_for};
+use crate::features::tool_args::definition;
+use schemars::JsonSchema;
 use serde::Deserialize;
 use voice_client::ToolDef;
 
@@ -17,16 +18,12 @@ pub struct List {
     pub start: Option<String>,
     pub end: Option<String>,
 }
-fn definition<T: JsonSchema>(name: &str, description: &str) -> ToolDef {
-    ToolDef {
-        name: name.into(),
-        description: description.into(),
-        input_schema: serde_json::to_value(schema_for!(T)).unwrap(),
-    }
-}
 pub fn definitions() -> Vec<ToolDef> {
     vec![
-        definition::<List>("hub_calendar_get", "List calendar events"),
+        definition::<List>(
+            "hub_calendar_get",
+            "List calendar events; start and end bound the range as RFC3339 timestamps or YYYY-MM-DD dates",
+        ),
         definition::<Create>(
             "hub_calendar_create",
             "Create a calendar event; start and end are RFC3339 timestamps or all-day YYYY-MM-DD dates (end exclusive)",

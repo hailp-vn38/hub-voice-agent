@@ -12,10 +12,13 @@ use std::{path::PathBuf, sync::Arc, thread};
 use tokio::sync::{mpsc, oneshot, watch};
 slint::include_modules!();
 
-struct DesktopSystem;
-impl hub_core::System for DesktopSystem {
+struct HostSystem;
+impl hub_core::System for HostSystem {
+    /// The desktop clock is trusted. On the Pi, systemd-timesyncd creates this
+    /// file once NTP has synchronized the clock.
     fn time_synced(&self) -> bool {
         cfg!(feature = "desktop")
+            || std::path::Path::new("/run/systemd/timesync/synchronized").exists()
     }
 }
 
@@ -46,7 +49,7 @@ fn main() -> anyhow::Result<()> {
             });
             let (voice_tx, voice_rx) = voice_client::spawn(config_rx);
             ui::spawn_bridge(weak, ui_rx);
-            let ports = Ports { clock: Arc::new(SystemClock), system: Arc::new(DesktopSystem), calendar: Arc::new(hub_core::sources::google_calendar::GoogleCalendar::default()), weather: Arc::new(hub_core::OpenMeteo::default()), home: Arc::new(hub_core::HomeAssistant::default()), images: Arc::new(hub_core::HttpImageFetcher) };
+            let ports = Ports { clock: Arc::new(SystemClock), system: Arc::new(HostSystem), calendar: Arc::new(hub_core::GoogleCalendar::default()), weather: Arc::new(hub_core::OpenMeteo::default()), home: Arc::new(hub_core::HomeAssistant::default()), images: Arc::new(hub_core::HttpImageFetcher) };
             let (audio_tx, mut audio_commands) = mpsc::channel(16);
             let (_audio_events, audio_rx) = mpsc::channel(16);
             tokio::spawn(async move { while audio_commands.recv().await.is_some() {} });

@@ -1,4 +1,5 @@
-use schemars::{JsonSchema, schema_for};
+use crate::features::tool_args::definition;
+use schemars::JsonSchema;
 use serde::Deserialize;
 use voice_client::ToolDef;
 
@@ -9,9 +10,8 @@ pub struct Get {
     pub focus: Option<String>,
 }
 pub fn definitions() -> Vec<ToolDef> {
-    vec![ToolDef {
-        name: "hub_weather_get".into(),
-        description: "Get weather for a city or the home location".into(),
-        input_schema: serde_json::to_value(schema_for!(Get)).unwrap(),
-    }]
+    vec![definition::<Get>(
+        "hub_weather_get",
+        "Get weather for a city or the home location",
+    )]
 }

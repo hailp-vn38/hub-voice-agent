@@ -19,3 +19,5 @@ Spec: [../spec.md](../spec.md)
 ## Comments
 
 - Đã thêm Open-Meteo, cache SQLite, refresh theo tick và job tool; test adapter dùng fixture API, test actor dùng fake không gọi mạng.
+
+- Review fix: rời màn tạm xem khôi phục hạn làm mới theo cache của vị trí nhà (30 phút sau lần tải), không tải lại ngay khi cache còn mới.

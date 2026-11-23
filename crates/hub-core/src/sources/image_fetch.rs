@@ -148,8 +148,11 @@ fn public(ip: IpAddr) -> bool {
                 return public(IpAddr::V4(v4));
             }
             let s = v.segments();
-            // Only globally routed unicast; exclude documentation addresses.
-            (s[0] & 0xe000) == 0x2000 && !(s[0] == 0x2001 && s[1] == 0x0db8)
+            // Only globally routed unicast. Exclude documentation addresses and the
+            // 6to4 (2002::/16) and Teredo (2001::/32) tunnels, which embed IPv4.
+            (s[0] & 0xe000) == 0x2000
+                && s[0] != 0x2002
+                && !(s[0] == 0x2001 && (s[1] == 0x0db8 || s[1] == 0))
         }
     }
 }

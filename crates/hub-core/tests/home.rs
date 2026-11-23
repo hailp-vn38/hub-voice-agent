@@ -74,7 +74,7 @@ async fn tool_calls_service_and_tracks_state_and_disconnect() {
         config,
         Store::in_memory().unwrap(),
         Ports {
-            calendar: Arc::new(hub_core::sources::google_calendar::GoogleCalendar::default()),
+            calendar: Arc::new(hub_core::GoogleCalendar::default()),
             clock: Arc::new(support::TestClock::at(
                 "2026-11-22T12:00:00+07:00[Asia/Ho_Chi_Minh]"
                     .parse()
@@ -99,6 +99,22 @@ async fn tool_calls_service_and_tracks_state_and_disconnect() {
     let mut socket = accept_async(stream).await.unwrap();
     socket.next().await.unwrap().unwrap();
     socket.send(Message::Text(json!({"type":"hello","transport":"websocket","session_id":"test","audio_params":{"format":"opus","sample_rate":24000,"channels":1,"frame_duration":60}}).to_string().into())).await.unwrap();
+    let request = |id: i64, name: &str| json!({"type":"mcp","payload":{"jsonrpc":"2.0","id":id,"method":"tools/call","params":{"name":name,"arguments":{"entity":"Desk"}}}});
+    socket
+        .send(Message::Text(
+            request(10, "hub_home_get").to_string().into(),
+        ))
+        .await
+        .unwrap();
+    loop {
+        if let Message::Text(text) = socket.next().await.unwrap().unwrap() {
+            let v: Value = serde_json::from_str(&text).unwrap();
+            if v["payload"]["id"] == 10 {
+                assert!(text.contains("disconnected"), "{text}");
+                break;
+            }
+        }
+    }
     send(&fake, HomeEvent::Connected).await;
     let mut entity = HomeEntity {
         id: "light.desk".into(),
@@ -151,5 +167,19 @@ async fn tool_calls_service_and_tracks_state_and_disconnect() {
         }
     }
     assert_eq!(fake.calls.lock().unwrap().len(), 1);
+    socket
+        .send(Message::Text(request(3, "hub_home_get").to_string().into()))
+        .await
+        .unwrap();
+    loop {
+        if let Message::Text(text) = socket.next().await.unwrap().unwrap() {
+            let v: Value = serde_json::from_str(&text).unwrap();
+            if v["payload"]["id"] == 3 {
+                let text = text.replace("\\\"", "\"");
+                assert!(text.contains("\"stale\":true"), "{text}");
+                break;
+            }
+        }
+    }
     task.abort();
 }

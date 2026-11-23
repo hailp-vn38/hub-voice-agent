@@ -66,3 +66,11 @@ async fn rejects_redirect_to_localhost_before_second_request() {
             .contains("non-public")
     );
 }
+
+#[test]
+fn ipv6_tunnels_embedding_ipv4_are_not_public() {
+    assert!(public("2606:4700::1111".parse().unwrap()));
+    assert!(!public("2002:7f00:1::1".parse().unwrap()));
+    assert!(!public("2001:0:7f00:1::1".parse().unwrap()));
+    assert!(!public("2001:db8::1".parse().unwrap()));
+}

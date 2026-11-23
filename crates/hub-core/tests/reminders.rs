@@ -52,7 +52,7 @@ async fn reminder_create_through_run() {
             images: Arc::new(hub_core::HttpImageFetcher),
             clock: Arc::new(TestClock::at(start.clone())),
             system: Arc::new(support::Synced),
-            calendar: Arc::new(hub_core::sources::google_calendar::GoogleCalendar::default()),
+            calendar: Arc::new(hub_core::GoogleCalendar::default()),
             weather: Arc::new(hub_core::OpenMeteo::default()),
             home: Arc::new(hub_core::HomeAssistant::default()),
         },

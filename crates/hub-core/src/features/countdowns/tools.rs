@@ -1,4 +1,6 @@
-use schemars::{JsonSchema, schema_for};
+use super::rules::Repeat;
+use crate::features::tool_args::{definition, error, parse_value};
+use schemars::JsonSchema;
 use serde::Deserialize;
 use serde_json::Value;
 use voice_client::{ToolDef, ToolError};
@@ -7,10 +9,10 @@ use voice_client::{ToolDef, ToolError};
 #[serde(deny_unknown_fields)]
 pub struct Create {
     pub label: String,
-    /// Date YYYY-MM-DD in the requested calendar.
+    /// Date YYYY-MM-DD in the calendar that `repeat` names.
     pub date: String,
-    /// none, yearly, or yearly_lunar
-    pub repeat: String,
+    pub repeat: Repeat,
+    /// The lunar date is in a leap month.
     #[serde(default)]
     pub lunar_leap: bool,
 }
@@ -34,26 +36,11 @@ pub fn definitions() -> Vec<ToolDef> {
         definition::<List>("hub_countdown_list", "List countdowns"),
     ]
 }
-fn definition<T: JsonSchema>(name: &str, description: &str) -> ToolDef {
-    ToolDef {
-        name: name.into(),
-        description: description.into(),
-        input_schema: serde_json::to_value(schema_for!(T)).expect("schema serializes"),
-    }
-}
 pub fn parse(name: &str, args: Value) -> Result<Request, ToolError> {
-    let result = match name {
-        "hub_countdown_create" => serde_json::from_value(args).map(Request::Create),
-        "hub_countdown_remove" => serde_json::from_value(args).map(Request::Remove),
-        "hub_countdown_list" => serde_json::from_value::<List>(args).map(|_| Request::List),
-        _ => return Err(error("Unknown countdown tool")),
-    };
-    result.map_err(|e| error(&format!("Invalid arguments: {e}")))
-}
-pub fn error(message: &str) -> ToolError {
-    ToolError {
-        code: -32602,
-        message: message.into(),
-        data: None,
+    match name {
+        "hub_countdown_create" => parse_value(args).map(Request::Create),
+        "hub_countdown_remove" => parse_value(args).map(Request::Remove),
+        "hub_countdown_list" => parse_value::<List>(args).map(|_| Request::List),
+        _ => Err(error("Unknown countdown tool")),
     }
 }

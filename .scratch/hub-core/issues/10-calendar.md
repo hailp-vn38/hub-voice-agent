@@ -1,6 +1,6 @@
 # 10 — Lịch Google
 
-Status: ready-for-agent
+Status: completed
 Blocked by: 05
 Spec: [../spec.md](../spec.md)
 
@@ -24,3 +24,5 @@ Spec: [../spec.md](../spec.md)
 - Đồng bộ toàn bộ khi khởi động và mỗi ngày UTC để cửa sổ cache dịch chuyển vẫn nhận được sự kiện không thay đổi; test actor kiểm tra trường hợp này. OAuth đổi mã do Setup web thực hiện, adapter Google làm refresh. Chưa kiểm tra OAuth/API Google thực tế.
 
 - Review: sửa tên `hub_calendar_get`, hỗ trợ sự kiện cả ngày và địa điểm; công bố trạng thái offline và giờ sync cuối lưu qua khởi động, mở màn khi tạo thất bại. Đã kiểm thử bằng fake và adapter HTTP cục bộ; chưa kiểm tra Google API thực tế.
+
+- Review fix: đồng bộ đầy đủ gửi `timeMin`/`timeMax` (30 ngày trước – 60 ngày sau theo ngày địa phương) qua `CalendarQuery::Full`; đồng bộ đầy đủ hằng ngày tính theo ngày địa phương; lọc, sắp xếp và cắt cache so sánh theo thời điểm thay vì chuỗi.

@@ -39,9 +39,7 @@ impl Timers {
             .collect();
         match crate::selector::select(&labels, label) {
             crate::selector::Selection::NotFound => Err(format!("Timer not found: {label}")),
-            crate::selector::Selection::Found(found) => {
-                Ok(labels.iter().position(|item| *item == found).unwrap())
-            }
+            crate::selector::Selection::Found(index) => Ok(index),
             crate::selector::Selection::Ambiguous(found) => Err(format!(
                 "Ambiguous timer label: {label}; choices: {}",
                 found.join(", ")

@@ -1,8 +1,8 @@
 #[allow(dead_code)]
 mod support;
 use hub_core::{
-    CalendarDelta, CalendarEvent, CalendarFuture, CalendarSettings, CalendarSource, Io,
-    NewCalendarEvent, Ports, Store, UiState, run,
+    CalendarDelta, CalendarEvent, CalendarFuture, CalendarQuery, CalendarSettings, CalendarSource,
+    Io, NewCalendarEvent, Ports, Store, UiState, run,
 };
 use std::sync::{Arc, Mutex};
 use support::TestClock;
@@ -13,7 +13,11 @@ struct Fake {
     calls: Mutex<Vec<Option<String>>>,
 }
 impl CalendarSource for Fake {
-    fn list(&self, _: CalendarSettings, token: Option<String>) -> CalendarFuture<CalendarDelta> {
+    fn list(&self, _: CalendarSettings, query: CalendarQuery) -> CalendarFuture<CalendarDelta> {
+        let token = match query {
+            CalendarQuery::Since(token) => Some(token),
+            CalendarQuery::Full { .. } => None,
+        };
         let count = {
             let mut calls = self.calls.lock().unwrap();
             calls.push(token.clone());
@@ -119,7 +123,11 @@ async fn actor_refreshes_and_keeps_cached_events_when_offline() {
 #[derive(Default)]
 struct FutureEvent;
 impl CalendarSource for FutureEvent {
-    fn list(&self, _: CalendarSettings, token: Option<String>) -> CalendarFuture<CalendarDelta> {
+    fn list(&self, _: CalendarSettings, query: CalendarQuery) -> CalendarFuture<CalendarDelta> {
+        let token = match query {
+            CalendarQuery::Since(token) => Some(token),
+            CalendarQuery::Full { .. } => None,
+        };
         Box::pin(async move {
             Ok(CalendarDelta {
                 events: if token.is_none() {

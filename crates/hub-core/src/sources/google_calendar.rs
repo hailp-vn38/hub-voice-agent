@@ -1,5 +1,5 @@
 use crate::{
-    CalendarDelta, CalendarEvent, CalendarFuture, CalendarSettings, CalendarSource,
+    CalendarDelta, CalendarEvent, CalendarFuture, CalendarQuery, CalendarSettings, CalendarSource,
     NewCalendarEvent,
 };
 use serde::Deserialize;
@@ -50,7 +50,7 @@ impl GoogleCalendar {
     async fn list_inner(
         &self,
         settings: CalendarSettings,
-        token: Option<String>,
+        query: CalendarQuery,
     ) -> anyhow::Result<CalendarDelta> {
         let access = self.access(&settings).await?;
         let mut page: Option<String> = None;
@@ -62,9 +62,13 @@ impl GoogleCalendar {
                 .get(format!("{}/calendars/primary/events", self.api))
                 .bearer_auth(&access)
                 .query(&[("singleEvents", "true"), ("showDeleted", "true")]);
-            if let Some(t) = &token {
-                request = request.query(&[("syncToken", t)]);
-            }
+            request = match &query {
+                CalendarQuery::Since(token) => request.query(&[("syncToken", token)]),
+                CalendarQuery::Full { time_min, time_max } => request.query(&[
+                    ("timeMin", time_min.to_string()),
+                    ("timeMax", time_max.to_string()),
+                ]),
+            };
             if let Some(p) = &page {
                 request = request.query(&[("pageToken", p)]);
             }
@@ -148,10 +152,10 @@ impl CalendarSource for GoogleCalendar {
     fn list(
         &self,
         settings: CalendarSettings,
-        token: Option<String>,
+        query: CalendarQuery,
     ) -> CalendarFuture<CalendarDelta> {
         let this = self.clone();
-        Box::pin(async move { this.list_inner(settings, token).await })
+        Box::pin(async move { this.list_inner(settings, query).await })
     }
     fn create(
         &self,

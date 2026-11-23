@@ -19,3 +19,5 @@ Spec: [../spec.md](../spec.md)
 ## Comments
 
 - Đã triển khai Reminder, thông báo và công cụ; test qua `run()` bao phủ online, SessionBusy, offline và nhắc lỡ. Test qua `run()` xác nhận huỷ theo nhãn không dấu và snooze giữ lịch lặp.
+
+- Review fix: `at` nhận giờ có múi (`…[Asia/Ho_Chi_Minh]`), RFC 3339 hoặc giờ địa phương không offset; lưu dạng có múi. Reminder lặp bị lỡ nhiều ngày ghi một mục "đã lỡ" rồi nhảy thẳng tới lần kế tiếp chưa lỡ.

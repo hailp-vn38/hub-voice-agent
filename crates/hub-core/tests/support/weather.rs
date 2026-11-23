@@ -3,6 +3,7 @@ use serde_json::{Value, json};
 #[derive(Default)]
 pub struct FakeWeather {
     pub calls: std::sync::atomic::AtomicUsize,
+    pub home_calls: std::sync::atomic::AtomicUsize,
     pub fail: std::sync::atomic::AtomicBool,
 }
 impl hub_core::WeatherSource for FakeWeather {
@@ -11,9 +12,11 @@ impl hub_core::WeatherSource for FakeWeather {
         location: hub_core::WeatherLocation,
     ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Value>> + Send + '_>>
     {
-        if matches!(&location, hub_core::WeatherLocation::City(_)) {
-            self.calls.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
-        }
+        let counter = match &location {
+            hub_core::WeatherLocation::City(_) => &self.calls,
+            _ => &self.home_calls,
+        };
+        counter.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
         let fail = self.fail.load(std::sync::atomic::Ordering::SeqCst);
         Box::pin(async move {
             if fail {

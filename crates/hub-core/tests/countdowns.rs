@@ -50,7 +50,7 @@ async fn countdown_updates_at_midnight_through_run() {
         Store::open(&dir).unwrap(),
         Ports {
             clock: Arc::new(TestClock::at(start.clone())),
-            calendar: Arc::new(hub_core::sources::google_calendar::GoogleCalendar::default()),
+            calendar: Arc::new(hub_core::GoogleCalendar::default()),
             weather: Arc::new(hub_core::OpenMeteo::default()),
             home: Arc::new(hub_core::HomeAssistant::default()),
             images: Arc::new(hub_core::HttpImageFetcher),
@@ -141,7 +141,7 @@ async fn countdown_updates_at_midnight_through_run() {
         Store::open(&dir).unwrap(),
         Ports {
             clock: Arc::new(TestClock::at(start)),
-            calendar: Arc::new(hub_core::sources::google_calendar::GoogleCalendar::default()),
+            calendar: Arc::new(hub_core::GoogleCalendar::default()),
             weather: Arc::new(hub_core::OpenMeteo::default()),
             home: Arc::new(hub_core::HomeAssistant::default()),
             images: Arc::new(hub_core::HttpImageFetcher),

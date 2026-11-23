@@ -22,3 +22,5 @@ Spec: [../spec.md](../spec.md)
 ## Comments
 
 Đã kiểm thử qua `run` với clock giả: hết giờ, hàng đợi, chưa đồng bộ, tự tắt và dismiss. Đã kiểm thử qua `run` việc đợi `TtsStop` trong khi mic vẫn mở để nghe tiếp. Adapter NTP Pi chưa triển khai (ngoài phạm vi spec); placeholder Pi trả `false`, desktop trả `true`. Audio desktop hiện chỉ tiêu thụ lệnh, chưa phát âm thanh thật.
+
+- Review fix: adapter Pi trong `apps/hub` coi giờ đã đồng bộ khi có `/run/systemd/timesync/synchronized` (systemd-timesyncd); desktop vẫn trả `true`.

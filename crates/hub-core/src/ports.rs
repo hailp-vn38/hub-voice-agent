@@ -1,4 +1,7 @@
+use crate::CalendarSettings;
 use jiff::Zoned;
+use serde::{Deserialize, Serialize};
+use std::{future::Future, pin::Pin};
 
 /// Source of the current time. Time always enters hub-core through this port.
 pub trait Clock: Send + Sync {
@@ -76,4 +79,50 @@ pub trait ImageFetcher: Send + Sync {
     ) -> std::pin::Pin<
         Box<dyn std::future::Future<Output = anyhow::Result<FetchedImage>> + Send + '_>,
     >;
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CalendarEvent {
+    #[serde(default)]
+    pub location: Option<String>,
+    pub id: String,
+    pub summary: String,
+    pub start: String,
+    pub end: String,
+}
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct NewCalendarEvent {
+    pub location: Option<String>,
+    pub summary: String,
+    pub start: String,
+    pub end: String,
+}
+#[derive(Default, Debug)]
+pub struct CalendarDelta {
+    pub events: Vec<CalendarEvent>,
+    pub removed: Vec<String>,
+    pub sync_token: Option<String>,
+    pub expired: bool,
+}
+pub type CalendarFuture<T> = Pin<Box<dyn Future<Output = anyhow::Result<T>> + Send>>;
+/// What a calendar listing asks for: a full window or the changes since a sync token.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum CalendarQuery {
+    Full {
+        time_min: jiff::Timestamp,
+        time_max: jiff::Timestamp,
+    },
+    Since(String),
+}
+pub trait CalendarSource: Send + Sync {
+    fn list(
+        &self,
+        settings: CalendarSettings,
+        query: CalendarQuery,
+    ) -> CalendarFuture<CalendarDelta>;
+    fn create(
+        &self,
+        settings: CalendarSettings,
+        event: NewCalendarEvent,
+    ) -> CalendarFuture<CalendarEvent>;
 }

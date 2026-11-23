@@ -1,6 +1,16 @@
 use rusqlite::Connection;
 use std::path::Path;
 
+/// Numbered schema migrations, applied in order. Each is idempotent.
+const MIGRATIONS: &[&str] = &[
+    include_str!("migrations/0001_init.sql"),
+    include_str!("migrations/0002_countdowns.sql"),
+    include_str!("migrations/0003_reminders.sql"),
+    include_str!("migrations/0004_weather.sql"),
+    include_str!("migrations/0005_photos.sql"),
+    include_str!("migrations/0006_calendar.sql"),
+];
+
 pub struct Store {
     pub(crate) connection: Connection,
     pub(crate) photos_dir: std::path::PathBuf,
@@ -31,15 +41,9 @@ impl Store {
         ephemeral_photos: bool,
     ) -> anyhow::Result<Self> {
         connection.pragma_update(None, "journal_mode", "WAL")?;
-        connection.execute_batch(include_str!("migrations/0001_init.sql"))?;
-        connection.execute_batch(include_str!("migrations/0002_countdowns.sql"))?;
-        connection.execute_batch(include_str!("migrations/0003_reminders.sql"))?;
-        connection.execute_batch("CREATE TABLE IF NOT EXISTS calendar_cache (id INTEGER PRIMARY KEY, events TEXT NOT NULL, token TEXT)")?;
-        connection.execute_batch(
-            "CREATE TABLE IF NOT EXISTS calendar_sync (id INTEGER PRIMARY KEY, last_sync INTEGER)",
-        )?;
-        connection.execute_batch(include_str!("migrations/0003_weather.sql"))?;
-        connection.execute_batch(include_str!("migrations/0004_photos.sql"))?;
+        for migration in MIGRATIONS {
+            connection.execute_batch(migration)?;
+        }
         Ok(Self {
             connection,
             photos_dir,

@@ -1,4 +1,6 @@
-use schemars::{JsonSchema, schema_for};
+use super::rules::ReminderRepeat;
+use crate::features::tool_args::{definition, error, parse_value};
+use schemars::JsonSchema;
 use serde::Deserialize;
 use serde_json::Value;
 use voice_client::{ToolDef, ToolError};
@@ -7,8 +9,11 @@ use voice_client::{ToolDef, ToolError};
 #[serde(deny_unknown_fields)]
 pub struct Create {
     pub label: String,
+    /// When to remind: RFC 3339 (`2026-11-23T09:00:00+07:00`) or local time
+    /// without offset (`2026-11-23T09:00:00`).
     pub at: String,
-    pub repeat: String,
+    pub repeat: ReminderRepeat,
+    /// Weekdays for `weekly`, 1 = Monday … 7 = Sunday.
     #[serde(default)]
     pub weekdays: Vec<u8>,
 }
@@ -41,24 +46,12 @@ pub fn definitions() -> Vec<ToolDef> {
         definition::<Snooze>("hub_reminder_snooze", "Snooze the active reminder"),
     ]
 }
-fn definition<T: JsonSchema>(name: &str, description: &str) -> ToolDef {
-    ToolDef {
-        name: name.into(),
-        description: description.into(),
-        input_schema: serde_json::to_value(schema_for!(T)).expect("schema serializes"),
-    }
-}
 pub fn parse(name: &str, args: Value) -> Result<Tool, ToolError> {
-    let result = match name {
-        "hub_reminder_create" => serde_json::from_value(args).map(Tool::Create),
-        "hub_reminder_list" => serde_json::from_value::<List>(args).map(|_| Tool::List),
-        "hub_reminder_cancel" => serde_json::from_value(args).map(Tool::Cancel),
-        "hub_reminder_snooze" => serde_json::from_value(args).map(Tool::Snooze),
-        _ => {
-            return Err(crate::features::timers::tools::error(
-                "Unknown reminder tool",
-            ));
-        }
-    };
-    result.map_err(|e| crate::features::timers::tools::error(&format!("Invalid arguments: {e}")))
+    match name {
+        "hub_reminder_create" => parse_value(args).map(Tool::Create),
+        "hub_reminder_list" => parse_value::<List>(args).map(|_| Tool::List),
+        "hub_reminder_cancel" => parse_value(args).map(Tool::Cancel),
+        "hub_reminder_snooze" => parse_value(args).map(Tool::Snooze),
+        _ => Err(error("Unknown reminder tool")),
+    }
 }

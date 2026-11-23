@@ -2,13 +2,12 @@
 
 mod alerts;
 mod audio;
-mod calendar;
 mod config;
 mod conversation;
 mod features;
-pub mod lunar;
-pub mod selector;
-pub mod sources;
+mod lunar;
+mod selector;
+mod sources;
 
 mod ports;
 mod runtime;
@@ -22,15 +21,13 @@ use std::sync::Arc;
 
 pub use alerts::Alert;
 pub use audio::{AudioCommand, AudioEvent, Sensitivity, Sound};
-pub use calendar::{
-    CalendarDelta, CalendarEvent, CalendarFuture, CalendarSource, NewCalendarEvent,
-};
 pub use config::{
     CalendarSettings, Config, ConfigStore, HomeSettings, VoiceSettings, WeatherSettings,
 };
 pub use ports::{
-    Clock, FetchedImage, HomeEntity, HomeEvent, HomeSource, ImageFetcher, System, SystemClock,
-    WeatherLocation, WeatherSource,
+    CalendarDelta, CalendarEvent, CalendarFuture, CalendarQuery, CalendarSource, Clock,
+    FetchedImage, HomeEntity, HomeEvent, HomeSource, ImageFetcher, NewCalendarEvent, System,
+    SystemClock, WeatherLocation, WeatherSource,
 };
 pub use runtime::run;
 use tokio::sync::{mpsc, watch};
@@ -77,12 +74,11 @@ pub struct Io {
 
 pub use features::countdowns::{Countdown, CountdownView};
 pub use features::photos::Photo;
-pub use features::reminders::{
-    Due as ReminderDue, Reminder, ReminderHistory, Repeat as ReminderRepeat,
-};
+pub use features::reminders::{Reminder, ReminderDue, ReminderHistory, ReminderRepeat};
 pub use features::timers::Timer;
 pub use features::weather::WeatherView;
-pub use sources::{HomeAssistant, HttpImageFetcher, OpenMeteo};
+pub use lunar::{LunarDate, to_lunar, to_solar};
+pub use sources::{GoogleCalendar, HomeAssistant, HttpImageFetcher, OpenMeteo};
 pub use store::Store;
 
 pub fn tool_definitions() -> Vec<voice_client::ToolDef> {

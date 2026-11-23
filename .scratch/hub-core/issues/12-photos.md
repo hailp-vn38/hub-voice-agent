@@ -23,3 +23,7 @@ Spec: [../spec.md](../spec.md)
 - Test transport nội bộ xác minh từ chối `Content-Length` và body streaming vượt 10 MiB, cùng redirect đến localhost; production vẫn kiểm tra DNS ở mỗi bước.
 
 - Review: bổ sung `hub_image_list` và `hub_image_control` (mở, chuyển, ghim, bỏ ghim) trên cache; đã kiểm thử qua `run()`.
+
+## Comments
+
+- Review fix: chặn địa chỉ IPv6 6to4 (`2002::/16`) và Teredo (`2001::/32`) khi tải ảnh.

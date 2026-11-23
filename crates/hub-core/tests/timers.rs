@@ -64,7 +64,7 @@ async fn timers_are_saved_reloaded_and_limit_is_reported() {
         Store::open(&dir).unwrap(),
         Ports {
             clock: Arc::new(TestClock::at(start.clone())),
-            calendar: Arc::new(hub_core::sources::google_calendar::GoogleCalendar::default()),
+            calendar: Arc::new(hub_core::GoogleCalendar::default()),
             weather: Arc::new(hub_core::OpenMeteo::default()),
             home: Arc::new(hub_core::HomeAssistant::default()),
             images: Arc::new(hub_core::HttpImageFetcher),
@@ -134,7 +134,13 @@ async fn timers_are_saved_reloaded_and_limit_is_reported() {
         }
     }
     assert_eq!(ui_rx.borrow().timers.len(), 4);
-    tokio::time::advance(Duration::from_secs(420)).await;
+    assert_eq!(ui_rx.borrow().view.screen, Screen::Timers);
+    tokio::time::advance(Duration::from_secs(60)).await;
+    for _ in 0..20 {
+        tokio::task::yield_now().await;
+    }
+    assert_eq!(ui_rx.borrow().view.screen, Screen::Center);
+    tokio::time::advance(Duration::from_secs(360)).await;
     tokio::task::yield_now().await;
     assert!(ui_rx.borrow().alert.is_none());
     assert!(_audio_rx.try_recv().is_err());
@@ -182,7 +188,7 @@ async fn timers_are_saved_reloaded_and_limit_is_reported() {
         Store::open(&dir).unwrap(),
         Ports {
             clock: Arc::new(TestClock::at(start)),
-            calendar: Arc::new(hub_core::sources::google_calendar::GoogleCalendar::default()),
+            calendar: Arc::new(hub_core::GoogleCalendar::default()),
             weather: Arc::new(hub_core::OpenMeteo::default()),
             home: Arc::new(hub_core::HomeAssistant::default()),
             images: Arc::new(hub_core::HttpImageFetcher),

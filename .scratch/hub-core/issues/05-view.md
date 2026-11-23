@@ -1,6 +1,6 @@
 # 05 — View: điều hướng, focus, tự về màn trung tâm
 
-Status: needs-info
+Status: completed
 Blocked by: 04
 Spec: [../spec.md](../spec.md)
 
@@ -13,10 +13,12 @@ Spec: [../spec.md](../spec.md)
 
 ## Nghiệm thu
 
-- [ ] Test: `hub_timer_start` → `UiState.view.screen == Timers` với focus thẻ mới; tiến clock 60 s không thao tác → `Center`.
+- [x] Test: `hub_timer_start` → `UiState.view.screen == Timers` với focus thẻ mới; tiến clock 60 s không thao tác → `Center`.
 - [x] Thao tác người dùng đặt lại bộ đếm tự quay về.
-- [ ] `ServerTool{name, Started}` với tên đã biết → mở đúng màn.
+- [x] `ServerTool{name, Started}` với tên đã biết → mở đúng màn.
 
 ## Comments
 
 Điều hướng bằng `UserInput`, focus timer vừa tạo và thời hạn 60 giây đã có; đã kiểm tra focus khi tạo timer và thời hạn/reset qua `run`. Chưa có bảng tên tool server đáng tin cậy: vela-server dùng external MCP có tên theo cấu hình, còn `server_*_reminder` quản lý dữ liệu khác Reminder cục bộ (concept yêu cầu chặn). Cần xác nhận tên tool server thực tế trước khi ánh xạ. Ambient có thể mở bằng input, thoát khi chạm hoặc wake word; tự vào Ambient sau 5 phút không tương tác; chưa áp dụng lịch ban đêm theo quyết định trong spec. Vị trí tạm xem và cache thuộc ticket 09: khi rời màn trở về vị trí nhà, giữ cache dự báo 30 phút theo spec đã cập nhật.
+
+- Review fix: `view::screen_for_server_tool` ánh xạ tên tool phía server theo từ khoá (calendar/event → Lịch, weather/forecast → Thời tiết, hass/home/light/switch → Nhà, image/photo → Ảnh); tên lạ giữ nguyên màn. Chỉ `Started` mới chuyển màn. Test qua `run()`: `ServerTool` mở Lịch; `hub_timer_start` → Timers + focus, 60 s → Center.

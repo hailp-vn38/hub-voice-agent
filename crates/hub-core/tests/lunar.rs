@@ -1,4 +1,4 @@
-use hub_core::lunar::{LunarDate, to_lunar, to_solar};
+use hub_core::{LunarDate, to_lunar, to_solar};
 use jiff::civil::date;
 
 #[test]

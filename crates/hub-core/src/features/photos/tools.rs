@@ -1,4 +1,5 @@
-use schemars::{JsonSchema, schema_for};
+use crate::features::tool_args::definition;
+use schemars::JsonSchema;
 use serde::Deserialize;
 use voice_client::ToolDef;
 
@@ -35,20 +36,8 @@ pub enum Action {
 
 pub fn definitions() -> Vec<ToolDef> {
     vec![
-        ToolDef {
-            name: "hub_show_image".into(),
-            description: "Show one to six images from URLs".into(),
-            input_schema: serde_json::to_value(schema_for!(Show)).unwrap(),
-        },
-        ToolDef {
-            name: "hub_image_list".into(),
-            description: "List cached images".into(),
-            input_schema: serde_json::to_value(schema_for!(List)).unwrap(),
-        },
-        ToolDef {
-            name: "hub_image_control".into(),
-            description: "Open, navigate, pin or unpin an image".into(),
-            input_schema: serde_json::to_value(schema_for!(Control)).unwrap(),
-        },
+        definition::<Show>("hub_show_image", "Show one to six images from URLs"),
+        definition::<List>("hub_image_list", "List cached images"),
+        definition::<Control>("hub_image_control", "Open, navigate, pin or unpin an image"),
     ]
 }

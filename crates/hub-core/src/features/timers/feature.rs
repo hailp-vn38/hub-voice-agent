@@ -1,7 +1,6 @@
-use super::rules::Timer;
-use super::rules::Timers;
-use super::tools::TimerTool;
-use crate::{Store, runtime::effects::Effect};
+use super::rules::{Timer, Timers};
+use super::tools::{self, TimerTool};
+use crate::{Focus, Screen, Store, features::tool_args, runtime::effects::Effect, view::View};
 use voice_client::ToolCall;
 
 pub struct Feature {
@@ -25,13 +24,8 @@ impl Feature {
             true
         }))]
     }
-    pub fn on_tool(
-        &mut self,
-        view: &mut crate::view::View,
-        call: ToolCall,
-        now: i64,
-    ) -> Vec<Effect> {
-        let tool = match super::tools::parse(&call.name, call.arguments.clone()) {
+    pub fn on_tool(&mut self, view: &mut View, call: ToolCall, now: i64) -> Vec<Effect> {
+        let tool = match tools::parse(&call.name, call.arguments.clone()) {
             Ok(tool) => tool,
             Err(err) => return vec![Effect::Reply(call, Err(err))],
         };
@@ -47,43 +41,31 @@ impl Feature {
                     .adjust(&args.label, args.delta_seconds, args.paused, now)
             }
             TimerTool::Cancel(args) => self.timers.cancel(&args.label),
-            TimerTool::List => {
-                let mut effects = view.open(crate::Screen::Timers, None, now);
-                effects.push(Effect::Reply(
-                    call,
-                    Ok(serde_json::json!({"timers": self.timers.items})),
-                ));
-                return effects;
-            }
+            TimerTool::List => return vec![self.reply(call)],
         };
-        match result {
-            Ok(()) => {
-                let mut effects = vec![Effect::Persist(self.timers.items.clone())];
-                effects.extend(self.snapshot());
-                let focus = if is_start {
-                    self.timers
-                        .items
-                        .last()
-                        .map(|timer| crate::Focus::Timer(timer.id))
-                } else {
-                    None
-                };
-                effects.extend(view.open(crate::Screen::Timers, focus, now));
-                effects.push(Effect::Reply(
-                    call,
-                    Ok(serde_json::json!({"timers": self.timers.items})),
-                ));
-                effects
-            }
-            Err(err) => vec![Effect::Reply(call, Err(super::tools::error(&err)))],
+        if let Err(err) = result {
+            return vec![Effect::Reply(call, Err(tool_args::error(&err)))];
         }
+        let mut effects = self.changed();
+        if is_start && let Some(timer) = self.timers.items.last() {
+            effects.extend(view.open(Screen::Timers, Some(Focus::Timer(timer.id)), now));
+        }
+        effects.push(self.reply(call));
+        effects
     }
     pub fn due(&self, now: i64) -> Vec<Timer> {
         self.timers.due(now)
     }
     pub fn dismiss(&mut self, id: i64) -> Vec<Effect> {
         self.timers.items.retain(|timer| timer.id != id);
-        let mut effects = vec![Effect::Persist(self.timers.items.clone())];
+        self.changed()
+    }
+    fn reply(&self, call: ToolCall) -> Effect {
+        Effect::Reply(call, Ok(serde_json::json!({"timers": self.timers.items})))
+    }
+    fn changed(&self) -> Vec<Effect> {
+        let items = self.timers.items.clone();
+        let mut effects = vec![Effect::store(move |store| store.timers_save(&items))];
         effects.extend(self.snapshot());
         effects
     }

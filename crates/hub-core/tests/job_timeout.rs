@@ -2,8 +2,8 @@
 mod support;
 use futures_util::{SinkExt, StreamExt};
 use hub_core::{
-    CalendarDelta, CalendarEvent, CalendarFuture, CalendarSettings, CalendarSource, Io,
-    NewCalendarEvent, Ports, Store, UiState, run,
+    CalendarDelta, CalendarEvent, CalendarFuture, CalendarQuery, CalendarSettings, CalendarSource,
+    Io, NewCalendarEvent, Ports, Store, UiState, run,
 };
 use serde_json::{Value, json};
 use std::sync::Arc;
@@ -16,7 +16,7 @@ use tokio::{
 use tokio_tungstenite::{accept_async, tungstenite::Message};
 struct Fake(std::sync::Arc<tokio::sync::Notify>);
 impl CalendarSource for Fake {
-    fn list(&self, _: CalendarSettings, _: Option<String>) -> CalendarFuture<CalendarDelta> {
+    fn list(&self, _: CalendarSettings, _: CalendarQuery) -> CalendarFuture<CalendarDelta> {
         Box::pin(async {
             Ok(CalendarDelta {
                 sync_token: Some("token".into()),

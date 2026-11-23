@@ -29,7 +29,7 @@ impl Alerts {
             Alert::Reminder(reminder) => reminders.iter().any(|item| item.id == reminder.id),
         });
     }
-    pub fn push(&mut self, timer: Timer) {
+    pub fn push_timer(&mut self, timer: Timer) {
         self.push_alert(Alert::Timer(timer));
     }
     pub fn push_reminder(&mut self, reminder: Reminder) {

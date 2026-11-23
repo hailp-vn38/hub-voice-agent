@@ -58,7 +58,7 @@ async fn weather_preview_returns_home_and_uses_cache() {
         Ports {
             clock: Arc::new(TestClock::at(start.clone())),
             weather: source.clone(),
-            calendar: Arc::new(hub_core::sources::google_calendar::GoogleCalendar::default()),
+            calendar: Arc::new(hub_core::GoogleCalendar::default()),
             home: Arc::new(hub_core::HomeAssistant::default()),
             images: Arc::new(hub_core::HttpImageFetcher),
             system: Arc::new(support::Synced),
@@ -100,6 +100,16 @@ async fn weather_preview_returns_home_and_uses_cache() {
     }
     assert_eq!(ui_rx.borrow().view.screen, hub_core::Screen::Center);
     assert_ne!(ui_rx.borrow().weather.location.as_deref(), Some("Đà Nẵng"));
+    let home_before = source.home_calls.load(std::sync::atomic::Ordering::SeqCst);
+    tokio::time::advance(std::time::Duration::from_secs(1)).await;
+    for _ in 0..20 {
+        tokio::task::yield_now().await;
+    }
+    assert_eq!(
+        source.home_calls.load(std::sync::atomic::Ordering::SeqCst),
+        home_before,
+        "a fresh home forecast is not fetched again after leaving the preview"
+    );
     let before = source.calls.load(std::sync::atomic::Ordering::SeqCst);
     let frame = json!({"type":"mcp","payload":{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"hub_weather_get","arguments":{"location":"Đà Nẵng"}}}});
     socket

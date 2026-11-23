@@ -1,4 +1,10 @@
-use crate::{HomeEntity, HomeEvent, HomeSource, runtime::effects::Effect};
+use super::tools::Args;
+use crate::{
+    HomeEntity, HomeEvent, HomeSource,
+    features::tool_args,
+    runtime::{effects::Effect, jobs::JobResult},
+    selector::{self, Selection},
+};
 use std::{sync::Arc, time::Duration};
 use voice_client::ToolCall;
 
@@ -46,83 +52,62 @@ impl Feature {
         }
         vec![self.snapshot()]
     }
-    pub fn on_tool(&self, view: &mut crate::view::View, call: ToolCall, now: i64) -> Vec<Effect> {
-        let mut effects = view.open(crate::Screen::Home, None, now);
-        let args: super::tools::Args = match serde_json::from_value(call.arguments.clone()) {
+    /// `hub_home_get` answers from the last known state, marked stale while
+    /// disconnected; turning a device on or off needs a live connection.
+    pub fn on_tool(&self, call: ToolCall) -> Vec<Effect> {
+        let args: Args = match tool_args::parse(&call) {
             Ok(args) => args,
-            Err(e) => {
-                effects.push(Effect::Reply(
-                    call,
-                    Err(crate::features::countdowns::tools::error(&format!(
-                        "Invalid arguments: {e}"
-                    ))),
-                ));
-                return effects;
-            }
+            Err(e) => return vec![Effect::Reply(call, Err(e))],
         };
-        let names: Vec<_> = self
-            .entities
-            .iter()
-            .map(|entity| entity.name.as_str())
-            .collect();
-        let name = match crate::selector::select(&names, &args.entity) {
-            crate::selector::Selection::Found(name) => name,
-            crate::selector::Selection::Ambiguous(names) => {
-                effects.push(Effect::Reply(
-                    call,
-                    Err(crate::features::countdowns::tools::error(&format!(
-                        "Ambiguous entity: {}",
-                        names.join(", ")
-                    ))),
-                ));
-                return effects;
-            }
-            crate::selector::Selection::NotFound => {
-                effects.push(Effect::Reply(
-                    call,
-                    Err(crate::features::countdowns::tools::error(
-                        "Entity not found",
-                    )),
-                ));
-                return effects;
-            }
-        };
-        let entity = self
-            .entities
-            .iter()
-            .find(|entity| entity.name == name)
-            .unwrap();
-        if !self.connected {
-            effects.push(Effect::ReplyError(call, "Home Assistant disconnected"));
-            return effects;
-        }
-        if call.name == "hub_home_get" {
-            effects.push(Effect::Reply(
-                call,
-                Ok(serde_json::to_value(entity).unwrap()),
-            ));
-            return effects;
-        }
         let service = match call.name.as_str() {
-            "hub_home_turn_on" => "turn_on",
-            "hub_home_turn_off" => "turn_off",
-            _ => {
-                effects.push(Effect::ReplyError(call, "Unknown Home Assistant tool"));
-                return effects;
+            "hub_home_get" => None,
+            "hub_home_turn_on" => Some("turn_on"),
+            "hub_home_turn_off" => Some("turn_off"),
+            _ => return vec![Effect::ReplyError(call, "Unknown Home Assistant tool")],
+        };
+        if service.is_some() && !self.connected {
+            return vec![Effect::ReplyError(call, "Home Assistant disconnected")];
+        }
+        let names: Vec<_> = self.entities.iter().map(|e| e.name.as_str()).collect();
+        let entity = match selector::select(&names, &args.entity) {
+            Selection::Found(index) => &self.entities[index],
+            Selection::NotFound if !self.connected => {
+                return vec![Effect::ReplyError(call, "Home Assistant disconnected")];
             }
+            Selection::NotFound => {
+                return vec![Effect::Reply(
+                    call,
+                    Err(tool_args::error("Entity not found")),
+                )];
+            }
+            Selection::Ambiguous(names) => {
+                let message = format!("Ambiguous entity: {}", names.join(", "));
+                return vec![Effect::Reply(call, Err(tool_args::error(&message)))];
+            }
+        };
+        let Some(service) = service else {
+            let state = serde_json::to_value(entity).expect("entity serializes");
+            return vec![Effect::Reply(call, Ok(state))];
         };
         let source = self.source.clone();
         let entity_id = entity.id.clone();
-        let job = format!("home:{entity_id}");
-        effects.push(Effect::Spawn {
-            job,
+        vec![Effect::Spawn {
+            job: format!("home:{entity_id}"),
             work: Box::pin(async move {
                 source.call_service(entity_id, service.into()).await?;
                 Ok(Box::new(()) as Box<dyn std::any::Any + Send>)
             }),
             reply: Some(call),
             timeout: Duration::from_secs(10),
-        });
-        effects
+        }]
+    }
+    pub fn on_job(&self, result: JobResult, reply: Option<ToolCall>) -> Vec<Effect> {
+        let Some(call) = reply else {
+            return Vec::new();
+        };
+        vec![match result {
+            Ok(_) => Effect::Reply(call, Ok(serde_json::json!({"ok": true}))),
+            Err(e) => Effect::Reply(call, Err(tool_args::error(&e.to_string()))),
+        }]
     }
 }

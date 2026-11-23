@@ -1,34 +1,27 @@
-use super::effects::Effect;
-use crate::features::timers::{Feature, tools};
+use super::{effects::Effect, hub::Hub};
+use crate::{Screen, Store, features::tool_args, view::screen_for_hub_tool};
 use voice_client::ToolCall;
 
-#[allow(clippy::too_many_arguments)]
-pub(super) fn route(
-    timers: &mut Feature,
-    reminders: &mut crate::features::reminders::Feature,
-    countdowns: &mut crate::features::countdowns::Feature,
-    view: &mut crate::view::View,
-    alerts: &mut crate::alerts::Alerts,
-    weather: &mut crate::features::weather::Feature,
-    home: &crate::features::home::Feature,
-    photos: &crate::features::photos::Feature,
-    store: &crate::Store,
-    call: ToolCall,
-    now: jiff::Zoned,
-) -> Vec<Effect> {
-    if call.name == "hub_show_image" || call.name.starts_with("hub_image_") {
-        photos.on_tool(view, call, now.timestamp().as_second(), store)
-    } else if call.name.starts_with("hub_reminder_") {
-        reminders.on_tool(view, call, now.timestamp().as_second(), alerts)
-    } else if call.name.starts_with("hub_home_") {
-        home.on_tool(view, call, now.timestamp().as_second())
-    } else if call.name == "hub_weather_get" {
-        weather.on_tool(view, call, now.timestamp().as_second(), store)
-    } else if call.name.starts_with("hub_timer_") {
-        timers.on_tool(view, call, now.timestamp().as_second())
-    } else if call.name.starts_with("hub_countdown_") {
-        countdowns.on_tool(view, call, now)
-    } else {
-        vec![Effect::Reply(call, Err(tools::error("Unknown tool")))]
+impl Hub {
+    /// Opens the tool's screen, then lets its feature handle the call.
+    pub(super) fn on_tool(&mut self, call: ToolCall, store: &Store) -> Vec<Effect> {
+        let now = self.now();
+        let seconds = now.timestamp().as_second();
+        let Some(screen) = screen_for_hub_tool(&call.name) else {
+            return vec![Effect::Reply(call, Err(tool_args::error("Unknown tool")))];
+        };
+        let mut effects = self.view.show(screen, seconds);
+        let view = &mut self.view;
+        effects.extend(match screen {
+            Screen::Calendar => self.calendar.on_tool(view, call, &now),
+            Screen::Timers => self.timers.on_tool(view, call, seconds),
+            Screen::Countdowns => self.countdowns.on_tool(view, call, &now),
+            Screen::Reminders => self.reminders.on_tool(call, &now, &mut self.alerts),
+            Screen::Weather => self.weather.on_tool(view, call, seconds, store),
+            Screen::Home => self.home.on_tool(call),
+            Screen::Photos => self.photos.on_tool(view, call, seconds, store),
+            _ => vec![Effect::Reply(call, Err(tool_args::error("Unknown tool")))],
+        });
+        effects
     }
 }
