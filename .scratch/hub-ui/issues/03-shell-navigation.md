@@ -30,17 +30,17 @@ Kịch bản: vuốt bằng chuột qua lại; "Mở Thời tiết (tool)" từ 
 
 ## Map với hub-core
 
-Map: chờ hub-core #05 (view), #03/#06 (offline, giờ); Wi-Fi chưa có ticket
+Map: done; bridge hub-mac #01.
 
 | Hợp đồng | UiState / UserInput |
 |---|---|
-| `Nav.screen` | |
-| `Nav.navigate(Screen)` | |
-| `StatusBar.time` | |
-| `StatusBar.offline` | |
-| `StatusBar.wifi-strength` | |
-| `StatusBar.mic-muted` | |
-| `StatusBar.day-phase` | |
+| `Nav.screen` | `HubView.nav` → Slint `Screen`; `first-boot` không có biến thể trong `hub-core::Screen`. |
+| `Nav.navigate(Screen)` | `UserInput::Open(Screen)`; ghi log và bỏ qua `first-boot`. |
+| `StatusBar.time` | `HubView.status.time`. |
+| `StatusBar.offline` | `HubView.status.offline`. |
+| `StatusBar.wifi-strength` | Giữ mặc định của hợp đồng là `3`; `hub-core` chưa có trường này. |
+| `StatusBar.mic-muted` | Giữ mặc định của hợp đồng là `false`; B1 chưa có trường này trong `hub-core`. |
+| `StatusBar.day-phase` | Giữ mặc định của hợp đồng là `0.5`; B1 chưa có trường này trong `hub-core`. |
 
 ## Answer
 

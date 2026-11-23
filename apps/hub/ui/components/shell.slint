@@ -75,11 +75,11 @@ export component Shell inherits Rectangle {
         handle-swipe-left: root.shown == Screen.center;
         handle-swipe-right: root.shown != Screen.center && root.shown != Screen.first-boot && !SettingsData.dragging && !(root.shown == Screen.photos && PhotosData.viewing);
         changed swiping => { if (self.swiping) { root.t0 = animation-tick(); } }
+        changed pressed-position => { Nav.activity(); }
         swiped => {
             // Đủ xa (> 30% chiều rộng) hoặc vuốt nhanh thì hoàn tất.
             if (abs(root.dx) > root.w * 0.3 || (abs(root.dx) > 120px && animation-tick() - root.t0 < 250ms)) {
-                root.shown = root.shown == Screen.center ? Screen.menu : (root.shown == Screen.menu ? Screen.center : BackNav.origin);
-                Nav.navigate(root.shown);
+                Nav.navigate(root.shown == Screen.center ? Screen.menu : (root.shown == Screen.menu ? Screen.center : BackNav.origin));
             }
         }
 
