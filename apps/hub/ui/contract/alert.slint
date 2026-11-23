@@ -1,0 +1,18 @@
+// Hợp đồng lớp báo và thanh trượt giọng nói. Ticket UI: .scratch/hub-ui/issues/14-alert-overlays.md.
+export enum AlertKind { none, timer, reminder }
+export enum SliderKind { brightness, volume }
+
+export global AlertData {
+    in property <AlertKind> kind;
+    in property <int> serial;
+    in property <string> title;
+    in property <string> time;
+    in property <string> body;
+    callback dismiss();
+}
+
+export global VoiceSlider {
+    in property <SliderKind> kind;
+    in property <float> value;
+    in property <int> serial;
+}

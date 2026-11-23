@@ -47,6 +47,18 @@ pub fn all() -> Vec<Scenario> {
             a.set_night(true);
             app.global::<Nav>().set_screen(Screen::Ambient)
         }),
+        ("Hết giờ trứng", |app| super::alerts::alert(app, crate::AlertKind::Timer, "Trứng", "", "")),
+        ("Reminder uống thuốc", |app| super::alerts::alert(app, crate::AlertKind::Reminder, "Nhắc", "08:00", "Uống thuốc huyết áp")),
+        ("Hai báo liên tiếp", |app| {
+            super::alerts::alert(app, crate::AlertKind::Timer, "Trứng", "", "");
+            super::alerts::alert(app, crate::AlertKind::Reminder, "Nhắc", "08:00", "Uống thuốc huyết áp")
+        }),
+        ("Báo khi đang Ambient", |app| {
+            app.global::<Nav>().set_screen(Screen::Ambient);
+            super::alerts::alert(app, crate::AlertKind::Timer, "Trứng", "", "")
+        }),
+        ("Độ sáng 30%", |app| super::alerts::slider(app, crate::SliderKind::Brightness, 0.3)),
+        ("Âm lượng 80%", |app| super::alerts::slider(app, crate::SliderKind::Volume, 0.8)),
         ("Bảng mẫu", |app| app.set_show_sample(true)),
         ("Wake", |app| {
             let v = app.global::<Voice>();

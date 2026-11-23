@@ -1,4 +1,5 @@
 //! Adapter demo: ghi fixture vào các global hợp đồng, không cần hub-core.
+mod alerts;
 mod clock;
 mod fixtures;
 mod levels;

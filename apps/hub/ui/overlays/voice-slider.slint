@@ -1,0 +1,57 @@
+import { Theme } from "../theme.slint";
+import { VoiceSlider, SliderKind } from "../contract/alert.slint";
+
+// Thanh trượt độ sáng / âm lượng do giọng nói đặt; tự ẩn sau 3 s, không đổi màn.
+export component VoiceSliderOverlay inherits Rectangle {
+    private property <int> serial: VoiceSlider.serial;
+    private property <bool> shown: false;
+    private property <float> shown-value: 0;
+    private property <duration> hide-at;
+    private property <duration> now: animation-tick();
+    changed serial => {
+        root.shown = true;
+        root.shown-value = VoiceSlider.value;
+        root.hide-at = animation-tick() + 3000ms;
+    }
+    changed now => { if (root.shown && root.now > root.hide-at) { root.shown = false; } }
+    animate shown-value { duration: 400ms; easing: ease-out; }
+
+    card := Rectangle {
+    opacity: root.shown ? 1 : 0;
+    animate opacity { duration: 250ms; }
+    x: (root.width - self.width) / 2;
+    y: 140px;
+    width: 720px;
+    height: 120px;
+    border-radius: Theme.radius;
+    background: Theme.card;
+    Text {
+        x: Theme.space-m;
+        y: 0;
+        height: parent.height;
+        text: VoiceSlider.kind == SliderKind.brightness ? "Độ sáng" : "Âm lượng";
+        color: Theme.text;
+        font-size: Theme.font-small;
+        vertical-alignment: center;
+    }
+    Rectangle {
+        x: 220px;
+        y: (parent.height - self.height) / 2;
+        width: parent.width - 220px - 120px - Theme.space-m;
+        height: 16px;
+        border-radius: 8px;
+        background: #2a3440;
+        Rectangle { width: parent.width * clamp(root.shown-value, 0, 1); border-radius: 8px; background: Theme.accent; }
+    }
+    Text {
+        x: parent.width - 120px;
+        width: 96px;
+        height: parent.height;
+        text: Math.round(clamp(root.shown-value, 0, 1) * 100) + "%";
+        color: Theme.text;
+        font-size: Theme.font-small;
+        horizontal-alignment: right;
+        vertical-alignment: center;
+    }
+    }
+}
