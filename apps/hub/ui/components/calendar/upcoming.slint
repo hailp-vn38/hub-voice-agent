@@ -10,7 +10,7 @@ component UpcomingRow inherits Rectangle {
     private property <duration> t0: -10000ms;
     private property <float> glow: CalendarData.focus == root.item.key && animation-tick() - root.t0 < 1600ms
         ? 0.5 + 0.5 * sin((animation-tick() - root.t0) / 400ms * 1turn) : 0;
-    changed serial => { if (CalendarData.focus == root.item.key) { root.t0 = animation-tick(); } }
+    changed serial => { if (CalendarData.focus != "" && CalendarData.focus == root.item.key) { root.t0 = animation-tick(); } }
     SpawnIn {
         key: root.item.key;
         Rectangle {

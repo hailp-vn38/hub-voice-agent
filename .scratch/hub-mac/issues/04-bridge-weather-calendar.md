@@ -1,6 +1,6 @@
 # 04 — Bridge Thời tiết và Lịch
 
-Status: ready-for-agent
+Status: ready-for-human
 Blocked by: 01
 Spec: [../spec.md](../spec.md) · UI: hub-ui #09, #10
 

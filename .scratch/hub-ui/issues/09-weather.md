@@ -34,19 +34,19 @@ Fixture: Hà Nội (nhà) và Đà Nẵng (tạm xem). Kịch bản: mỗi kiể
 
 ## Map với hub-core
 
-Map: chờ hub-core #09
+Map: done (hub-mac #04)
 
 | Hợp đồng | UiState / UserInput |
 |---|---|
-| `WeatherData.location` / `.preview` | |
-| `.updated` / `.stale` | |
-| `.background` / `.is-day` | |
-| `.now` | |
-| `.hours` / `.selected-day` | |
-| `.days` / `.week-min` / `.week-max` | |
-| `.focus` / `.focus-serial` | |
-| `select-day(key)` | |
-| `WeatherHour.peak` | |
+| `WeatherData.location` / `.preview` | `HubView.weather.location` / `.preview` |
+| `.updated` / `.stale` | `HubView.weather.updated` / `.stale` |
+| `.background` / `.is-day` | `HubView.weather.background` / `.is_day` |
+| `.now` | `HubView.weather.now`; `aqi_color` string đổi sang Slint `Color` |
+| `.hours` / `.selected-day` | `HubView.weather.hours` / `.selected_day` (core đã lọc giờ theo ngày chọn) |
+| `.days` / `.week-min` / `.week-max` | `HubView.weather.days` / `.week_min` / `.week_max` |
+| `.focus` / `.focus-serial` | `HubView.weather.focus` / `.focus_serial` |
+| `select-day(key)` | `UserInput::Focus(Some(Focus::Weather(key)))` |
+| `WeatherHour.peak` | `HubView.weather.hours[].peak` |
 
 ## Answer
 
