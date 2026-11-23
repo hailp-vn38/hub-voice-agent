@@ -1,0 +1,117 @@
+import { Theme } from "../theme.slint";
+import { Nav, Screen } from "../contract/nav.slint";
+import { RemindersData, ReminderItem, ReminderPast } from "../contract/reminders.slint";
+import { Icon } from "../components/icon.slint";
+import { SpawnIn } from "../components/spawn.slint";
+
+component ItemRow inherits Rectangle {
+    in property <ReminderItem> item;
+    height: 88px;
+    SpawnIn {
+        key: root.item.key;
+        Rectangle {
+            background: Theme.card;
+            border-radius: Theme.radius;
+            opacity: root.item.fading ? 0 : 1;
+            animate opacity { duration: 500ms; easing: ease-out; }
+            for f in RemindersData.focus: Rectangle {
+                if f == root.item.key: Rectangle {
+                    border-width: 3px;
+                    border-color: Theme.accent;
+                    border-radius: Theme.radius;
+                    background: Theme.accent.with-alpha(0.15);
+                }
+            }
+            HorizontalLayout {
+                padding-left: Theme.space-m;
+                padding-right: Theme.space-m;
+                spacing: Theme.space-m;
+                Text { text: root.item.time; color: Theme.accent; font-size: Theme.font-body; font-weight: 600; vertical-alignment: center; width: 110px; }
+                Text { text: root.item.text; color: Theme.text; font-size: Theme.font-body; vertical-alignment: center; overflow: elide; horizontal-stretch: 1; }
+                if root.item.repeats: Icon { name: "alarm"; color: Theme.text-dim; size: 40px; }
+            }
+        }
+    }
+}
+
+component PastCard inherits Rectangle {
+    in property <ReminderPast> past;
+    background: Theme.card;
+    border-radius: Theme.radius;
+    border-width: root.past.missed ? 2px : 0px;
+    border-color: Theme.error;
+    opacity: root.past.missed ? 1 : 0.7;
+    VerticalLayout {
+        alignment: center;
+        padding: Theme.space-s;
+        Text { text: root.past.time + (root.past.missed ? " · Đã lỡ" : ""); color: root.past.missed ? Theme.error : Theme.done; font-size: Theme.font-small; font-weight: 600; }
+        Text { text: root.past.text; color: Theme.text; font-size: Theme.font-small; overflow: elide; }
+    }
+}
+
+export component Reminders inherits Rectangle {
+    VerticalLayout {
+        padding: Theme.space-l;
+        spacing: Theme.space-m;
+        Rectangle {
+            height: Theme.touch-min;
+            Text {
+                text: "‹ Reminder · " + RemindersData.title;
+                color: Theme.text;
+                font-size: Theme.font-title;
+                horizontal-alignment: left;
+                vertical-alignment: center;
+            }
+            TouchArea { width: 640px; x: 0; clicked => { Nav.navigate(Screen.menu); } }
+        }
+        if !RemindersData.has-next && RemindersData.groups.length == 0: Text {
+            text: "Hey Jarvis, nhắc tôi uống thuốc lúc 9 giờ tối";
+            color: Theme.text-dim;
+            font-size: Theme.font-title;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+            wrap: word-wrap;
+            vertical-stretch: 1;
+        }
+        if RemindersData.has-next || RemindersData.groups.length > 0: HorizontalLayout {
+            spacing: Theme.space-l;
+            vertical-stretch: 1;
+            Rectangle {
+                width: 560px;
+                background: Theme.card;
+                border-radius: Theme.radius;
+                if RemindersData.has-next: VerticalLayout {
+                    alignment: center;
+                    padding: Theme.space-m;
+                    spacing: Theme.space-s;
+                    Text { text: "Kế tiếp"; color: Theme.text-dim; font-size: Theme.font-small; }
+                    Text { text: RemindersData.next.time; color: Theme.accent; font-size: 120px * Theme.text-scale; font-weight: 600; }
+                    Text { text: RemindersData.next.until; color: Theme.warm; font-size: Theme.font-body; }
+                    Text { text: RemindersData.next.text; color: Theme.text; font-size: Theme.font-title; wrap: word-wrap; }
+                    if RemindersData.next.repeat-text != "": Text { text: RemindersData.next.repeat-text; color: Theme.text-dim; font-size: Theme.font-small; }
+                }
+            }
+            Flickable {
+                viewport-height: tl.preferred-height;
+                tl := VerticalLayout {
+                    spacing: Theme.space-s;
+                    for g in RemindersData.groups: VerticalLayout {
+                        spacing: Theme.space-s;
+                        Text { text: g.label; color: Theme.text-dim; font-size: Theme.font-small; font-weight: 600; }
+                        for it in g.items: ItemRow { item: it; }
+                    }
+                }
+            }
+        }
+        if RemindersData.recent.length > 0: VerticalLayout {
+            spacing: Theme.space-s;
+            height: 160px;
+            Text { text: "Đã nhắc gần đây"; color: Theme.text-dim; font-size: Theme.font-small; font-weight: 600; }
+            HorizontalLayout {
+                spacing: Theme.space-m;
+                for p in RemindersData.recent: PastCard { past: p; }
+            }
+        }
+        Rectangle { height: 240px; } // chừa Voice dock
+    }
+}

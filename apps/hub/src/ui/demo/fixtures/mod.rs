@@ -7,6 +7,8 @@ use crate::App;
 
 pub mod home;
 pub mod weather;
+mod center;
+pub use center::{add_timer, countdown_today, end_timer, focus_weather, stale};
 
 pub fn init(app: &App) {
     super::settings::init(app);
@@ -14,6 +16,12 @@ pub fn init(app: &App) {
     home::init(app);
     weather::init(app);
     first_boot::init(app);
+    center::init(app);
+    super::reminders::init(app);
+    super::timers::init(app);
 }
 
-pub fn tick(_app: &App) {}
+pub fn tick(app: &App) {
+    center::tick(app);
+    super::timers::tick(app);
+}
