@@ -33,7 +33,7 @@ async fn touch_timer_controls_change_the_presented_timer() {
     .await;
     let id = hub.ui_rx.borrow().timers[0].id;
     let view = present(&hub.ui_rx.borrow());
-    assert_eq!(view.timers.title, "Hẹn giờ");
+    assert_eq!(view.timers.title, "Hẹn giờ · 1 đang chạy");
     assert_eq!(view.timers.items[0].key, id.to_string());
     assert_eq!(view.timers.items[0].label, "5 phút");
     assert_eq!(view.timers.items[0].remaining, "5:00");

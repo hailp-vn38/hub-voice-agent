@@ -18,7 +18,12 @@ Spec: [../spec.md](../spec.md) · UI: hub-ui #04, #05
 - [x] Test: `ToolCall` thành công và lỗi → `tool_trail` có hai bước với trạng thái đúng; lượt mới xoá trail.
 - [x] Test: `OrbTapped` khi Idle → `ListenStart` + mic bật.
 
+## Theo dõi sau phụ thuộc
+
+- [ ] Sau khi protocol voice-client/vela-server bổ sung metadata nhấn, ánh xạ metadata vào `Word.emphasis` và nghiệm thu thủ công phản hồi TTS trên hub-ui.
+
 ## Comments
 
 - `present` hiện cung cấp `voice`, `response` và `tool_trail`; chữ STT/TTS được tách theo khoảng trắng. `mic_muted` là `false` cho tới G5. Nguồn `TtsText` hiện không có metadata nhấn nên `Word.emphasis` là `false`.
+- Phụ thuộc còn thiếu: `VoiceEvent::TtsText` chưa mang metadata nhấn. Cần một ticket riêng cho thay đổi protocol ở voice-client/vela-server trước khi hub-core có thể đặt `Word.emphasis`; không dùng heuristic để suy đoán. Việc cập nhật protocol, ánh xạ metadata và nghiệm thu thủ công là bước theo dõi riêng; ticket này giữ `ready-for-human` tới khi bước đó được lên kế hoạch.
 - Sau khi ghép tip integration #16, đã chạy `scripts/test.sh -p hub-core` (123 passed), `cargo fmt --all -- --check`, `cargo check -p hub-core --all-targets` và `git diff --check` (đều thành công).

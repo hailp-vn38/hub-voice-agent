@@ -28,7 +28,7 @@ pub enum TimerPhase {
 }
 
 pub(super) fn from_state(state: &UiState) -> TimersView {
-    let items = state
+    let items: Vec<_> = state
         .timers
         .iter()
         .map(|timer| card(timer, &state.now))
@@ -37,9 +37,13 @@ pub(super) fn from_state(state: &UiState) -> TimersView {
         Some(Focus::Timer(id)) => Some(id.to_string()),
         _ => None,
     };
+    let running = items
+        .iter()
+        .filter(|timer| matches!(timer.phase, TimerPhase::Running | TimerPhase::FinalSeconds))
+        .count();
     TimersView {
         items,
-        title: "Hẹn giờ".into(),
+        title: format!("Hẹn giờ · {running} đang chạy"),
         focus,
         serial: state.events.focus,
     }

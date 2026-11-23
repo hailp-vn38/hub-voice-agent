@@ -1,3 +1,4 @@
+use super::date_format;
 use crate::{Reminder, ReminderHistory, ReminderRepeat, UiState};
 use jiff::{Span, Timestamp, Zoned, civil::Date};
 use std::collections::BTreeMap;
@@ -140,15 +141,7 @@ fn group_label(date: Date, today: Date) -> String {
     if date == today.checked_add(Span::new().days(1)).unwrap_or(today) {
         return "Ngày mai".into();
     }
-    let weekday = match date.weekday().to_monday_one_offset() {
-        1 => "Thứ Hai",
-        2 => "Thứ Ba",
-        3 => "Thứ Tư",
-        4 => "Thứ Năm",
-        5 => "Thứ Sáu",
-        6 => "Thứ Bảy",
-        _ => "Chủ nhật",
-    };
+    let weekday = date_format::weekday_name(&date);
     if date.year() == today.year() {
         format!("{weekday} {:02}/{:02}", date.day(), date.month())
     } else {

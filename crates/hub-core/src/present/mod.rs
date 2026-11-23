@@ -3,6 +3,7 @@ mod ambient;
 mod calendar;
 mod center;
 mod countdowns;
+mod date_format;
 mod home;
 mod menu;
 mod nav;

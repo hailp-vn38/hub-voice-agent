@@ -244,11 +244,15 @@ impl Hub {
                     .on_user(UserInput::Activity, now.timestamp().as_second()),
             );
         }
+        self.clear_tool_trail_if_starting_turn(starts_turn, &mut effects);
+        effects.extend(audio::on(event, &mut self.conversation, now));
+        effects
+    }
+
+    fn clear_tool_trail_if_starting_turn(&mut self, starts_turn: bool, effects: &mut Vec<Effect>) {
         if starts_turn && let Some(effect) = self.tool_trail.clear() {
             effects.push(effect);
         }
-        effects.extend(audio::on(event, &mut self.conversation, now));
-        effects
     }
 
     pub fn on_home(&mut self, event: HomeEvent) -> Vec<Effect> {
@@ -296,9 +300,7 @@ impl Hub {
             let mut effects = hub
                 .view
                 .on_user(UserInput::Activity, now.timestamp().as_second());
-            if starts_turn && let Some(effect) = hub.tool_trail.clear() {
-                effects.push(effect);
-            }
+            hub.clear_tool_trail_if_starting_turn(starts_turn, &mut effects);
             effects.extend(hub.conversation.on(Input::OrbTapped, now.clone()));
             effects
         })

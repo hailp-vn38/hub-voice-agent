@@ -13,3 +13,5 @@ The skills speak in terms of five canonical triage roles. This file maps those r
 When a skill mentions a role (e.g. "apply the AFK-ready triage label"), use the corresponding label string from this table.
 
 Edit the "Label in our tracker" column to match whatever vocabulary you actually use.
+
+`completed` is a terminal implementation lifecycle state, not a sixth triage role. Use it once all acceptance boxes in the issue pass; it does not replace any of the five triage roles while work is still being triaged or implemented.

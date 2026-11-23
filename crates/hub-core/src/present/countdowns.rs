@@ -1,3 +1,4 @@
+use super::date_format;
 use crate::{CountdownView, Repeat, UiState, lunar::to_lunar};
 use jiff::{Zoned, civil::Date};
 
@@ -157,15 +158,7 @@ fn progress(countdown: &CountdownView, now: &Zoned, target: Option<&Zoned>) -> f
 }
 
 fn target_label(target: Date, today: Date) -> String {
-    let weekday = match target.weekday().to_monday_one_offset() {
-        1 => "Thứ Hai",
-        2 => "Thứ Ba",
-        3 => "Thứ Tư",
-        4 => "Thứ Năm",
-        5 => "Thứ Sáu",
-        6 => "Thứ Bảy",
-        _ => "Chủ nhật",
-    };
+    let weekday = date_format::weekday_name(&target);
     if target.year() == today.year() {
         format!("{weekday} {:02}/{:02}", target.day(), target.month())
     } else {

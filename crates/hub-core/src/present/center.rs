@@ -1,6 +1,6 @@
 use super::{
     CountdownUnit, CountdownsView, HomeTileView, HomeView, RemindersView, TimersView,
-    WeatherDataView, calendar,
+    WeatherDataView, calendar, date_format,
 };
 use crate::{Focus, UiState, lunar::to_lunar};
 
@@ -107,15 +107,7 @@ pub(super) fn from_state(
 
 fn date_label(state: &UiState) -> String {
     let date = state.now.date();
-    let weekday = match date.weekday().to_monday_one_offset() {
-        1 => "Thứ Hai",
-        2 => "Thứ Ba",
-        3 => "Thứ Tư",
-        4 => "Thứ Năm",
-        5 => "Thứ Sáu",
-        6 => "Thứ Bảy",
-        _ => "Chủ nhật",
-    };
+    let weekday = date_format::weekday_name(&date);
     let lunar = to_lunar(date);
     let leap = if lunar.leap { " nhuận" } else { "" };
     format!(
