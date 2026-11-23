@@ -1,0 +1,8 @@
+// Hợp đồng Ambient. Ticket UI: .scratch/hub-ui/issues/18-ambient.md.
+export global AmbientData {
+    in property <string> time: "--:--";
+    in property <string> temp;
+    in property <string> icon: "sun";
+    in property <bool> night;
+    callback wake();
+}

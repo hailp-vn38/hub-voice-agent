@@ -21,6 +21,12 @@ pub fn start(app: &App) -> anyhow::Result<Demo> {
             app.global::<Nav>().set_screen(s);
         }
     });
+    let weak = app.as_weak();
+    app.global::<crate::AmbientData>().on_wake(move || {
+        if let Some(app) = weak.upgrade() {
+            app.global::<Nav>().set_screen(crate::Screen::Center);
+        }
+    });
     fixtures::init(app);
 
     let tick = Timer::default();

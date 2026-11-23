@@ -3,6 +3,7 @@ import { Nav, Screen } from "../contract/nav.slint";
 import { PageDots } from "page-dots.slint";
 import { StatusBarView } from "status-bar.slint";
 import { IdleBackground } from "idle-background.slint";
+import { Ambient } from "../screens/ambient.slint";
 import { Placeholder } from "../screens/placeholder.slint";
 import { Home } from "../screens/home.slint";
 
@@ -67,7 +68,7 @@ export component Shell inherits Rectangle {
                 background: Theme.background;
                 Placeholder { title: "menu"; }
             }
-            if root.feat-p > 0: Rectangle {
+            if root.feat-p > 0 && root.shown != Screen.ambient: Rectangle {
                 x: (1 - root.feat-p) * root.w;
                 opacity: root.feat-p;
                 background: Theme.background;
@@ -76,6 +77,11 @@ export component Shell inherits Rectangle {
             }
         }
     }
+
+    // Ambient: fade vào/ra, phủ nội dung; chạm để thoát (AmbientData.wake).
+    private property <float> amb-p: shown == Screen.ambient ? 1 : 0;
+    animate amb-p { duration: Theme.anim-screen; easing: ease-out; }
+    if amb-p > 0: Ambient { opacity: root.amb-p; }
 
     // Lớp trên cùng cố định: thanh trạng thái, chấm trang. Không nhận chuột.
     StatusBarView { y: 0; width: parent.width; }

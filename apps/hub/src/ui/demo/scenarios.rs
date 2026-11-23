@@ -1,5 +1,5 @@
 //! Bảng kịch bản của Demo panel. Ticket sau đăng ký kịch bản bằng một dòng.
-use crate::{App, Nav, Screen, StatusBar, Theme};
+use crate::{AmbientData, App, Nav, Screen, StatusBar, Theme};
 use slint::ComponentHandle;
 
 pub type Scenario = (&'static str, fn(&App));
@@ -30,6 +30,21 @@ pub fn all() -> Vec<Scenario> {
         }),
         ("Nhà: mất kết nối HA", |app| super::fixtures::home::disconnect(app)),
         ("Nhà: chưa cấu hình", |app| super::fixtures::home::unconfigure(app)),
+        ("Vào Ambient", |app| {
+            app.set_show_sample(false);
+            let a = app.global::<AmbientData>();
+            a.set_time("14:32".into());
+            a.set_temp("27°C".into());
+            a.set_night(false);
+            app.global::<Nav>().set_screen(Screen::Ambient)
+        }),
+        ("Ambient ban đêm", |app| {
+            let a = app.global::<AmbientData>();
+            a.set_time("02:07".into());
+            a.set_temp("24°C".into());
+            a.set_night(true);
+            app.global::<Nav>().set_screen(Screen::Ambient)
+        }),
         ("Bảng mẫu", |app| app.set_show_sample(true)),
         ("Chữ nhỏ", |app| app.global::<Theme>().set_text_scale(0.85)),
         ("Chữ vừa", |app| app.global::<Theme>().set_text_scale(1.0)),
