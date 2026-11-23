@@ -30,7 +30,10 @@ pub use ports::{
     FetchedImage, HomeEntity, HomeEvent, HomeSource, ImageFetcher, NewCalendarEvent, System,
     SystemClock, WeatherLocation, WeatherSource,
 };
-pub use present::{AlertKind, AlertView, HubView, TimerCardView, TimerPhase, TimersView, present};
+pub use present::{
+    AlertKind, AlertView, HubView, TimerCardView, TimerPhase, TimersView, WeatherBackground,
+    WeatherDataView, WeatherDayView, WeatherHourView, WeatherNowView, present,
+};
 pub use runtime::run;
 use tokio::sync::{mpsc, watch};
 pub use ui_state::{UiEvents, UiState, VoiceSettingsState, VoiceState, VoiceUiState};
@@ -87,7 +90,9 @@ pub use features::countdowns::{Countdown, CountdownView};
 pub use features::photos::Photo;
 pub use features::reminders::{Reminder, ReminderDue, ReminderHistory, ReminderRepeat};
 pub use features::timers::Timer;
-pub use features::weather::WeatherView;
+pub use features::weather::{
+    AirQuality, WeatherCurrent, WeatherDay, WeatherForecast, WeatherHour, WeatherView,
+};
 pub use lunar::{LunarDate, to_lunar, to_solar};
 pub use sources::{GoogleCalendar, HomeAssistant, HttpImageFetcher, OpenMeteo};
 pub use store::Store;

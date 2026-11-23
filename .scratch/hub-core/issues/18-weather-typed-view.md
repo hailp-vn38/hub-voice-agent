@@ -1,6 +1,6 @@
 # 18 — Thời tiết: WeatherView có kiểu và dữ liệu hiển thị
 
-Status: ready-for-agent
+Status: completed
 Blocked by: 14
 Spec: [../spec.md](../spec.md) · UI: hub-ui #09
 
@@ -16,10 +16,11 @@ Spec: [../spec.md](../spec.md) · UI: hub-ui #09
 
 ## Nghiệm thu
 
-- [ ] Test parse với JSON mẫu Open-Meteo (fixture trong `tests/support/weather.rs`).
-- [ ] Test `present`: giờ nóng nhất có `peak`; mã mưa → `background == rain`; dữ liệu cũ → `stale`.
-- [ ] Test: focus key giờ của ngày mai → `selected-day` là ngày mai, `hours` là 24 giờ của ngày mai.
+- [x] Test parse với JSON mẫu Open-Meteo (fixture trong `tests/support/weather.rs`).
+- [x] Test `present`: giờ nóng nhất có `peak`; mã mưa → `background == rain`; dữ liệu cũ → `stale`.
+- [x] Test: focus key giờ của ngày mai → `selected-day` là ngày mai, `hours` là 24 giờ của ngày mai.
 
 ## Comments
 
 - 2026-11-23: đã chốt ở #14, `selected-day` do hub-core giữ qua `Focus`.
+- 2026-11-23: `UiState.weather` giờ giữ `WeatherForecast` có kiểu; SQLite tiếp tục lưu JSON. `present` trả đủ hợp đồng thời tiết và suy ngày chọn từ `Focus::Weather`. Đã qua `cargo test -p hub-core`, `cargo build -p hub`, `cargo fmt --all -- --check`, `git diff --check` trên nhánh ticket.

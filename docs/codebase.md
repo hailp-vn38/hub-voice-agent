@@ -64,7 +64,7 @@ ai-hub/
 │       │   │   ├── timers/       # mod.rs (khai báo), feature.rs (điều phối), rules.rs, store.rs, tools.rs
 │       │   │   ├── countdowns/
 │       │   │   ├── reminders/
-│       │   │   ├── weather/      # vị trí nhà / tạm xem, WMO → icon & nền
+│       │   │   ├── weather/      # vị trí nhà / tạm xem, Open-Meteo JSON → kiểu có cấu trúc
 │       │   │   ├── calendar/     # cache 60 ngày, syncToken, sự kiện mới tạo
 │       │   │   ├── home/         # entity demo, trạng thái cũ
 │       │   │   └── photos/       # 100 ảnh / 200 MB, ghim, xoá cũ nhất
@@ -212,7 +212,7 @@ Integration test dùng server WebSocket giả tại `tests/`; test backoff dùng
 
 #### Interface bên ngoài
 
-Interface bên dưới là thiết kế đích. Hiện `run(config, store, ports, io)` xử lý voice settings, hội thoại và các tool hẹn giờ. `ConfigStore` giữ cấu hình voice, Google Calendar, Home Assistant và vị trí nhà; `Store::open(dir)` hoặc `Store::in_memory()` mở SQLite; `tool_definitions()` cung cấp schema cho tool hẹn giờ, đếm ngược, Reminder, lịch, thời tiết, Home Assistant và ảnh. `HomeSource` nhận cấu hình qua watch, phát sự kiện kết nối và trạng thái; `HomeAssistant` xác thực, đăng ký sự kiện và tự kết nối lại. `UiState.home` giữ các entity và đánh dấu dữ liệu cũ khi mất kết nối. `WeatherSource` cung cấp dự báo theo tọa độ hoặc tên thành phố; `OpenMeteo` là adapter HTTP, còn `UiState.weather` giữ dữ liệu, trạng thái cũ và icon/nền. Cache SQLite được dùng trong 30 phút và tạm xem kết thúc ngay khi rời màn Thời tiết.
+Interface bên dưới là thiết kế đích. Hiện `run(config, store, ports, io)` xử lý voice settings, hội thoại và các tool hẹn giờ. `ConfigStore` giữ cấu hình voice, Google Calendar, Home Assistant và vị trí nhà; `Store::open(dir)` hoặc `Store::in_memory()` mở SQLite; `tool_definitions()` cung cấp schema cho tool hẹn giờ, đếm ngược, Reminder, lịch, thời tiết, Home Assistant và ảnh. `HomeSource` nhận cấu hình qua watch, phát sự kiện kết nối và trạng thái; `HomeAssistant` xác thực, đăng ký sự kiện và tự kết nối lại. `UiState.home` giữ các entity và đánh dấu dữ liệu cũ khi mất kết nối. `WeatherSource` cung cấp dự báo theo tọa độ hoặc tên thành phố; `OpenMeteo` là adapter HTTP. Cache SQLite giữ JSON nguyên bản, còn `UiState.weather` giữ `WeatherForecast` có kiểu cùng vị trí, giờ cập nhật và trạng thái cũ. Cache được dùng trong 30 phút và tạm xem kết thúc ngay khi rời màn Thời tiết.
  Hẹn giờ đến hạn được xếp hàng vào `UiState.alert`; `System::time_synced()` chặn báo khi giờ chưa tin cậy. Desktop trả `true`; trên Pi, `apps/hub` coi giờ đã đồng bộ khi systemd-timesyncd tạo `/run/systemd/timesync/synchronized`. `UserInput::DismissAlert` tắt chuông.
 
 ```rust
@@ -266,7 +266,7 @@ pub enum AudioEvent {
 
 Biên độ mic và năng lượng TTS không đi qua `hub-core`: audio ghi thẳng vào `watch<Levels>` mà UI đọc. Hiện tại adapter desktop chỉ tiêu thụ lệnh, chưa thu hoặc phát âm thanh; `UiState.voice` chứa trạng thái hội thoại, transcript và phản hồi.
 
-`UiState.now` là `jiff::Zoned` do actor cập nhật mỗi tick; `UiState.events` giữ serial tăng dần cho hiệu ứng một lần. `present(&UiState) -> HubView` chuẩn bị dữ liệu cho các hợp đồng UI gồm `nav`, `status`, `ambient`, `timers` và `alert`; hàm không đọc đồng hồ. Thẻ hẹn giờ có thời gian còn lại, chi tiết, tiến độ và phase; lớp báo mang serial từ `events.alert`.
+`UiState.now` là `jiff::Zoned` do actor cập nhật mỗi tick; `UiState.events` giữ serial tăng dần cho hiệu ứng một lần. `present(&UiState) -> HubView` chuẩn bị dữ liệu cho các hợp đồng UI gồm `nav`, `status`, `ambient`, `timers`, `alert` và `weather`; hàm không đọc đồng hồ. Thẻ hẹn giờ có thời gian còn lại, chi tiết, tiến độ và phase; lớp báo mang serial từ `events.alert`. Dữ liệu thời tiết đã định dạng gồm thời tiết hiện tại, 24 giờ của ngày được chọn, 7 ngày, thang nhiệt tuần và focus; ngày được chọn suy ra từ `Focus::Weather`.
 
 #### Module bên trong
 
@@ -286,7 +286,7 @@ Hai lớp:
 | `features::timers` | ≤ 4 hẹn giờ, giờ kết thúc tuyệt đối, thời lượng tổng, tạm dừng | `start`, `adjust`, `cancel`, `due(now)`; thao tác chạm qua `UserInput::Timer` |
 | `features::countdowns` | ≤ 8 mốc, `none` / `yearly` / `yearly_lunar` | `create`, `remove`, `next_occurrence(now)` |
 | `features::reminders` | `none` / `daily` / `weekly`, đã nhắc, đã lỡ (< 1 giờ thì nhắc một lần) | `create`, `cancel`, `snooze`, `due(now)` |
-| `features::weather` | Vị trí nhà, thành phố tạm xem (giữ ~30 phút), WMO → icon/nền | `snapshot(focus)`, `apply(forecast)` |
+| `features::weather` | Vị trí nhà, thành phố tạm xem (giữ ~30 phút), JSON cache → `WeatherForecast` có kiểu, trạng thái cũ | `tick(now)`, `on_tool(..)`, `on_job(..)`, `snapshot()` |
 | `features::calendar` | Cache ~60 ngày, `syncToken`, sự kiện mới tạo | `events(range)`, `apply(delta)` |
 | `features::photos` | Chỉ mục ảnh, ghim, chính sách xoá | `add`, `pin`, `evict()` |
 | `selector` | Chọn mục theo nhãn (dùng chung cho hẹn giờ, mốc, Reminder) | `select(items, query) -> Found / Ambiguous(Vec) / NotFound` |
