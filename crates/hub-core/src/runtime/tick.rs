@@ -1,9 +1,8 @@
-use crate::Clock;
-
 use super::effects::Effect;
 
-pub(super) fn tick(clock: &dyn Clock) -> Vec<Effect> {
-    let clock = clock.now().strftime("%H:%M:%S").to_string();
+/// Publishes the local clock as `HH:MM:SS`.
+pub(super) fn tick(now: &jiff::Zoned) -> Vec<Effect> {
+    let clock = now.strftime("%H:%M:%S").to_string();
     vec![Effect::Ui(Box::new(move |state| {
         let changed = state.clock != clock;
         if changed {

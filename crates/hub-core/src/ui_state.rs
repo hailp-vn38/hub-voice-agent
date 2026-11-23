@@ -3,6 +3,17 @@
 pub struct UiState {
     /// Local time as `HH:MM:SS`.
     pub clock: String,
+    pub calendar: Vec<crate::CalendarEvent>,
+    pub calendar_online: Option<bool>,
+    pub calendar_last_sync: Option<i64>,
+    pub weather: crate::WeatherView,
+    pub home: Vec<crate::HomeEntity>,
+    pub photos: Vec<crate::Photo>,
+    pub alert: Option<crate::Alert>,
+    pub reminders: Vec<crate::Reminder>,
+    pub reminder_history: Vec<crate::ReminderHistory>,
+    pub countdowns: Vec<crate::CountdownView>,
+    pub view: crate::ViewState,
     pub voice_settings: VoiceSettingsState,
     pub timers: Vec<crate::Timer>,
     pub voice: VoiceUiState,

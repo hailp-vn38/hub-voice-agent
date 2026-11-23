@@ -1,6 +1,6 @@
 # 09 — Thời tiết (Open-Meteo)
 
-Status: ready-for-agent
+Status: completed
 Blocked by: 05
 Spec: [../spec.md](../spec.md)
 
@@ -12,6 +12,12 @@ Spec: [../spec.md](../spec.md)
 
 ## Nghiệm thu
 
-- [ ] Adapter parse được fixture; không gọi mạng trong test.
-- [ ] Test qua `run()`: tool hỏi thời tiết Đà Nẵng → mở màn Thời tiết ở chế độ tạm xem, reply có nhiệt độ; 30 phút sau quay về vị trí nhà.
-- [ ] Nguồn lỗi → giữ dữ liệu cache, `UiState` đánh dấu cũ.
+- [x] Adapter parse được fixture; không gọi mạng trong test.
+- [x] Test qua `run()`: tool hỏi thời tiết Đà Nẵng → mở màn Thời tiết ở chế độ tạm xem, reply có nhiệt độ; rời màn → quay về vị trí nhà ngay, cache giữ 30 phút.
+- [x] Nguồn lỗi → giữ dữ liệu cache, `UiState` đánh dấu cũ.
+
+## Comments
+
+- Đã thêm Open-Meteo, cache SQLite, refresh theo tick và job tool; test adapter dùng fixture API, test actor dùng fake không gọi mạng.
+
+- Review fix: rời màn tạm xem khôi phục hạn làm mới theo cache của vị trí nhà (30 phút sau lần tải), không tải lại ngay khi cache còn mới.

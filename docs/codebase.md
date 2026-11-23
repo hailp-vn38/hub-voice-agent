@@ -46,10 +46,11 @@ ai-hub/
 │   └── hub-core/                 # toàn bộ hành vi của hub
 │       ├── src/
 │       │   ├── lib.rs            # run(), Io, Ports, re-export type công khai
-│       │   ├── runtime/          # actor: select! qua mọi input, giữ HubState
-│       │   │   ├── mod.rs        # vòng select!
-│       │   │   ├── voice.rs, audio.rs, input.rs, tick.rs
-│       │   │   ├── tools.rs      # định tuyến ToolCall theo tiền tố tên → tính năng
+│       │   ├── runtime/          # actor: select! qua mọi input, giữ Hub
+│       │   │   ├── run.rs        # vòng select!: mỗi nhánh gọi Hub, rồi thực thi Vec<Effect>
+│       │   │   ├── hub.rs        # struct Hub: trạng thái tính năng + handler theo loại input
+│       │   │   ├── voice.rs, audio.rs, setup.rs, tick.rs
+│       │   │   ├── tools.rs      # mở màn của tool (view::screen_for_hub_tool) → tính năng
 │       │   │   ├── effects.rs    # enum Effect + executor duy nhất
 │       │   │   └── jobs.rs       # task mạng: giữ ToolCall, timeout, huỷ job cũ cùng khoá
 │       │   ├── conversation.rs   # Idle / Listening / Thinking / Speaking / Offline
@@ -58,7 +59,8 @@ ai-hub/
 │       │   ├── ui_state.rs       # UiState, UserInput
 │       │   ├── audio.rs          # AudioCommand, AudioEvent (adapter ở apps/hub)
 │       │   ├── features/         # mỗi tính năng một thư mục cùng khuôn (xem 3.2)
-│       │   │   ├── timers/       # mod.rs (điều phối), rules.rs, store.rs, tools.rs, tests.rs
+│       │   │   ├── tool_args.rs  # definition(), parse(), error() dùng chung cho tool
+│       │   │   ├── timers/       # mod.rs (khai báo), feature.rs (điều phối), rules.rs, store.rs, tools.rs
 │       │   │   ├── countdowns/
 │       │   │   ├── reminders/
 │       │   │   ├── weather/      # vị trí nhà / tạm xem, WMO → icon & nền
@@ -75,7 +77,7 @@ ai-hub/
 │       │   │   └── image_fetch.rs      # giới hạn, chặn LAN/localhost, thu nhỏ
 │       │   ├── store/
 │       │   │   ├── mod.rs        # Store::open(dir) / Store::in_memory(), chạy migration
-│       │   │   └── migrations/   # 0001_init.sql, … (method theo tính năng ở features/*/store.rs)
+│       │   │   └── migrations/   # 0001_init.sql … 0006_calendar.sql, chạy theo thứ tự (method theo tính năng ở features/*/store.rs)
 │       │   ├── config.rs         # ConfigStore: TOML 0600, watch
 │       │   └── setup_web/
 │       │       ├── mod.rs        # serve(addr, …)
@@ -219,7 +221,8 @@ Integration test dùng server WebSocket giả tại `tests/`; test backoff dùng
 
 #### Interface bên ngoài
 
-Interface bên dưới là thiết kế đích. Hiện `run(config, store, ports, io)` xử lý voice settings, hội thoại và các tool hẹn giờ. `ConfigStore` giữ cấu hình voice; `Store::open(dir)` hoặc `Store::in_memory()` mở SQLite; `tool_definitions()` cung cấp schema cho bốn tool hẹn giờ. Báo hết giờ thuộc ticket 06.
+Interface bên dưới là thiết kế đích. Hiện `run(config, store, ports, io)` xử lý voice settings, hội thoại và các tool hẹn giờ. `ConfigStore` giữ cấu hình voice, Google Calendar, Home Assistant và vị trí nhà; `Store::open(dir)` hoặc `Store::in_memory()` mở SQLite; `tool_definitions()` cung cấp schema cho tool hẹn giờ, đếm ngược, Reminder, lịch, thời tiết, Home Assistant và ảnh. `HomeSource` nhận cấu hình qua watch, phát sự kiện kết nối và trạng thái; `HomeAssistant` xác thực, đăng ký sự kiện và tự kết nối lại. `UiState.home` giữ các entity và đánh dấu dữ liệu cũ khi mất kết nối. `WeatherSource` cung cấp dự báo theo tọa độ hoặc tên thành phố; `OpenMeteo` là adapter HTTP, còn `UiState.weather` giữ dữ liệu, trạng thái cũ và icon/nền. Cache SQLite được dùng trong 30 phút và tạm xem kết thúc ngay khi rời màn Thời tiết.
+ Hẹn giờ đến hạn được xếp hàng vào `UiState.alert`; `System::time_synced()` chặn báo khi giờ chưa tin cậy. Desktop trả `true`; trên Pi, `apps/hub` coi giờ đã đồng bộ khi systemd-timesyncd tạo `/run/systemd/timesync/synchronized`. `UserInput::DismissAlert` tắt chuông.
 
 ```rust
 pub async fn run(config: ConfigStore, store: Store, ports: Ports, io: Io) -> anyhow::Result<()>;
@@ -248,7 +251,9 @@ pub fn tool_definitions() -> Vec<ToolDef>;   // hub-core đưa vào VoiceConfig
 
 Gần như mọi hành vi của sản phẩm — luồng voice, 21 tool `hub_*`, điều hướng, báo hết giờ, Reminder, cache offline, Setup web — test được qua đúng interface này: gửi `VoiceEvent`/`AudioEvent`/`UserInput`, tiến clock, rồi kiểm `VoiceCommand`/`AudioCommand` đã gửi và `UiState`.
 
-`run` tự spawn Setup web và actor. Làm mới dữ liệu (thời tiết 30 phút, lịch 5 phút) chạy trên tick của actor qua `Effect::Spawn`; HA đẩy event qua `HomeSource::subscribe()`.
+Ứng dụng mở Setup web trên `0.0.0.0:8080` và gửi thay đổi tới actor; OAuth dùng redirect loopback, có thể dán URL từ điện thoại. Làm mới dữ liệu (thời tiết 30 phút, lịch 5 phút) chạy trên tick của actor qua `Effect::Spawn`; HA đẩy event qua `HomeSource::subscribe()`.
+
+Calendar dùng `CalendarSource` và adapter `GoogleCalendar`: actor làm mới mỗi năm phút, lưu cache cùng sync token trong SQLite, đồng bộ lại đầy đủ (`CalendarQuery::Full`, cửa sổ 30 ngày trước đến 60 ngày sau theo ngày địa phương) khi khởi động, mỗi ngày địa phương mới hoặc khi Google trả 410, và dùng cache khi offline. Setup web lưu refresh token trong `ConfigStore`; tool lịch mở màn ngay cả khi yêu cầu thất bại; sau khi tạo thành công, focus sự kiện mới. `hub_calendar_get` nhận khoảng thời gian và `focus` tùy chọn. `hub_calendar_create` nhận giờ RFC3339 hoặc ngày YYYY-MM-DD (kết thúc độc quyền) cùng địa điểm tùy chọn. `UiState.calendar_online` và `calendar_last_sync` cho phép bridge hiển thị trạng thái và giờ đồng bộ gần nhất; giờ này được lưu cùng cache.
 
 #### Kênh audio
 
@@ -277,12 +282,12 @@ Actor (`runtime/`) nhận mọi input, gọi các module dưới đây, rồi th
 Hai lớp:
 
 - **Luật** (`features/*/rules.rs`, `lunar`, `selector`): hàm thuần nhận `now`, trả kết quả nghiệp vụ (`Result<TimerId, TimerError>`, `Vec<DueTimer>`…). Không biết `Effect`.
-- **Điều phối** (`conversation`, `view`, `alerts`, `features/*/mod.rs`): nhận input + `now`, trả `Vec<Effect>`. `features/<x>/mod.rs` là chỗ duy nhất dịch kết quả luật sang `Effect`.
+- **Điều phối** (`conversation`, `view`, `alerts`, `features/*/feature.rs`): nhận input + `now`, trả `Vec<Effect>`. `features/<x>/feature.rs` là chỗ duy nhất dịch kết quả luật sang `Effect`.
 
 | Module | Giữ gì | Interface chính |
 |---|---|---|
 | `conversation` | Trạng thái voice, chờ im lặng 10 s sau TTS, mic tắt | `on(input, now) -> Vec<Effect>`; `turn_active()` |
-| `view` | Màn hiện tại, focus, tự về màn trung tâm sau ~60 s, Ambient, "tạm xem", tool phía server → màn | `open(screen, focus)`, `on_user(..)`, `tick(now)`, `screen_for_server_tool(name)` |
+| `view` | Màn hiện tại, focus, tự về màn trung tâm sau ~60 s, Ambient, "tạm xem", tool phía server → màn | `open(screen, focus)`, `show(screen)`, `on_user(..)`, `tick(now)`, `screen_for_hub_tool(name)`, `screen_for_server_tool(name)` (theo từ khoá) |
 | `runtime::jobs` | Task mạng đang chạy, `ToolCall` đang chờ | `Effect::Spawn { job, work, reply, timeout }` → `Internal::JobDone(id, result)`; hết giờ → reply lỗi; job mới cùng khoá huỷ job cũ |
 | `alerts` | Hàng đợi trạng thái báo (hết giờ, Reminder): lần lượt, tự tắt 2 phút / 60 s, đợi hết lượt nói | `push(alert)`, `dismiss()`, `tick(now, turn_active)` |
 | `features::timers` | ≤ 4 hẹn giờ, giờ kết thúc tuyệt đối, tạm dừng | `start`, `adjust`, `cancel`, `due(now)` |
@@ -298,18 +303,19 @@ Hai lớp:
 
 Luật tính năng là **logic thuần nhận `now`, trả kết quả**; actor lo ghi `Store` và phát hiệu ứng. Vì vậy test một luật (vd. Reminder `weekly` qua Chủ nhật) không cần actor.
 
-**Khuôn thư mục tính năng.** Thêm hoặc sửa một tính năng chỉ chạm thư mục của nó, cộng một dòng định tuyến trong `runtime/tools.rs`:
+**Khuôn thư mục tính năng.** Thêm hoặc sửa một tính năng chỉ chạm thư mục của nó, cộng một tiền tố trong `view::screen_for_hub_tool` và một nhánh trong `runtime/tools.rs`:
 
 ```
 features/<x>/
-  mod.rs     # điều phối: on_tool, on_job, tick, snapshot → Vec<Effect>
+  mod.rs     # khai báo submodule, re-export Feature và type công khai
+  feature.rs # điều phối: on_tool, on_job, tick, snapshot → Vec<Effect>
   rules.rs   # luật thuần
   store.rs   # impl Store { <x>_* }
   tools.rs   # struct tham số (serde + schemars), definitions(), parse()
   tests.rs
 ```
 
-Không có enum `ToolRequest` chung: `runtime/tools.rs` định tuyến theo tiền tố tên (`hub_timer_*` → `timers`), `tool_definitions()` nối `definitions()` của từng tính năng. Không có trait `Feature`: các tính năng khác nhau nhiều (mạng, push, file), runtime gọi qua `match`; chỉ rút trait khi đã có 3–4 tính năng thật cùng hình dạng.
+Không có enum `ToolRequest` chung: `view::screen_for_hub_tool` ánh xạ tiền tố tên (`hub_timer_*` → màn Hẹn giờ) và `runtime/tools.rs` chuyển cho tính năng của màn đó, `tool_definitions()` nối `definitions()` của từng tính năng. Không có trait `Feature`: các tính năng khác nhau nhiều (mạng, push, file), runtime gọi qua `match`; chỉ rút trait khi đã có 3–4 tính năng thật cùng hình dạng.
 
 #### Seam bên ngoài (port)
 
@@ -322,7 +328,7 @@ Không có enum `ToolRequest` chung: `runtime/tools.rs` định tuyến theo ti�
 | `ImageFetcher` | `sources::image_fetch` | Fake |
 | `System` (độ sáng, Wi-Fi, AP setup, khởi động lại/tắt máy) | `apps/hub/system/pi.rs` | `system/desktop.rs`, fake |
 
-Không phải seam (một adapter): `Store` (test dùng `Store::in_memory()`), `ConfigStore` (test dùng thư mục tạm), `setup_web`, OAuth Google (nằm trong `sources::google_calendar`, Setup web gọi trực tiếp).
+Không phải seam (một adapter): `Store` (test dùng `Store::in_memory()`), `ConfigStore` (test dùng thư mục tạm), `setup_web`, OAuth đổi mã (trong `setup_web`), refresh access token (trong `sources::google_calendar`).
 
 ### 3.3 `apps/hub`
 
@@ -356,8 +362,8 @@ voice: TtsStart / TtsAudio / TtsStop → AudioCommand::PlayTts …; UiState.voic
 
 ```
 voice: VoiceEvent::ToolCall
-  → runtime/tools: định tuyến theo tiền tố → features/<x>/tools::parse (lỗi tham số → reply lỗi ngay)
-  → features/<x>::on_tool → Vec<Effect>: view.open(screen, focus), Persist, Ui, Reply
+  → runtime/tools: view.show(màn của tool) → features/<x>/tools::parse (lỗi tham số → reply lỗi ngay)
+  → features/<x>::on_tool → Vec<Effect>: view.open(screen, focus) khi có focus, Store, Ui, Reply
   → phần cần mạng (calendar_create, weather location khác, show_image): Effect::Spawn kèm ToolCall,
     runtime/jobs chờ → Internal::JobDone → features/<x>::on_job → hoàn tất trạng thái → Reply
     (quá timeout → jobs reply lỗi)
@@ -373,6 +379,8 @@ tick 1 Hz → reminders.due(now) → alerts.push(Reminder)
       DirectSpeechRejected(session_busy) → thử lại sau; Offline → chỉ chuông + chữ
   → ~60 s → alert vào "Đã nhắc gần đây"
 ```
+
+`voice.reminder_speech` trong `config.toml` bật hoặc tắt đọc Reminder; mặc định bật. Tool `hub_reminder_snooze` dời Reminder đang báo theo số phút cung cấp.
 
 Actor tick 1 Hz cho mọi thứ theo giờ (hẹn giờ, Reminder, tự quay về, chữ số đếm ngược, làm mới thời tiết/lịch); vòng tròn hẹn giờ mượt nhờ Slint `animate` tuyến tính 1 s giữa hai tick. Tick chỉ là nhịp: luật luôn so sánh với giờ tuyệt đối từ `Clock`, không đếm tick.
 
@@ -397,7 +405,7 @@ Model wake word: `models/` cạnh binary (Pi: `/opt/ai-hub/models/`).
 | Tầng | Cách test | Chạy ở |
 |---|---|---|
 | Luật (`lunar`, `selector`, `features/*/rules.rs`) | Unit test, truyền `now`, kiểm kết quả nghiệp vụ | `cargo test -p hub-core` |
-| Điều phối (`conversation`, `view`, `alerts`, `features/*/mod.rs`) | Unit test, truyền input + `now`, kiểm `Vec<Effect>` | `cargo test -p hub-core` |
+| Điều phối (`conversation`, `view`, `alerts`, `features/*/feature.rs`) | Unit test, truyền input + `now`, kiểm `Vec<Effect>` | `cargo test -p hub-core` |
 | Hành vi hub | `tests/` của hub-core: harness dựng `run()` với channel, fake port, `Store::in_memory()`, tokio time paused | Mac |
 | Adapter `sources::*` | Parse fixture JSON thật; không gọi mạng trong CI | Mac |
 | `voice-client` | Server WS giả | Mac |
@@ -411,3 +419,10 @@ Ví dụ test qua interface của hub-core: gửi `ToolCall("hub_timer_start", {
 - **Giờ trước khi NTP đồng bộ.** Pi 4 không có RTC; khởi động khi mất mạng thì giờ hệ thống sai (fake-hwclock chỉ giữ giờ lúc tắt). Hẹn giờ/Reminder theo giờ tuyệt đối có thể báo sai hoặc gắn "Đã lỡ" sai. Đề xuất: `System` báo trạng thái đồng bộ giờ, `alerts` không xử lý mục quá hạn cho tới khi đã đồng bộ.
 - **Đổi độ phân giải lúc chạy.** Chưa rõ Slint `linuxkms` có đổi mode KMS mà không khởi động lại app không. Nếu phải khởi động lại, luồng "Giữ độ phân giải này? 10" cần lưu mode cũ vào config để quay về sau lần khởi động kế.
 - **Sample rate.** Kiểm sample rate Opus mà Voice Protocol yêu cầu; openWakeWord cần 16 kHz. Khác nhau thì `capture` phải resample một nhánh.
+
+### Giao diện đếm ngược của hub-core
+
+`hub_countdown_create` nhận `label`, `date` (YYYY-MM-DD), `repeat` (`none`, `yearly`, `yearly_lunar`) và `lunar_leap` tùy chọn. Với `yearly_lunar`, `date` là ngày âm lịch Việt Nam UTC+7; ngày 30 trong tháng thiếu được chuyển thành ngày 29, còn tháng nhuận chỉ lặp vào lần có cùng tháng nhuận. Ngày 29/2 dương lịch lặp vào 28/2 trong năm không nhuận. `hub_countdown_remove` tìm nhãn không phân biệt dấu và trả các lựa chọn khi mơ hồ; `hub_countdown_list` trả cùng các mốc và số ngày như `UiState.countdowns`.
+**View hiện có:** `UiState.view` chứa `Screen` và `Focus`; `UserInput::Open`, `Back`, `Activity` điều hướng và đặt lại hạn 60 giây. Tool timer thành công mở màn Hẹn giờ và timer mới được focus theo ID. Chạm hoặc wake word thoát Ambient; tự vào Ambient sau 5 phút không tương tác, chưa áp dụng lịch ban đêm. Bảng ánh xạ tool server chưa được xác định. Vị trí thời tiết tạm xem và cache thuộc ticket 09.
+
+`ImageFetcher` trả PNG đã thu nhỏ cùng thumbnail; `HttpImageFetcher` kiểm tra mọi địa chỉ DNS và từng chuyển hướng, giới hạn tải 10 MiB và thời gian 20 giây. `UiState.photos` cung cấp chỉ mục ảnh; `UserInput::PinPhoto` cập nhật ghim. `hub_image_list` trả chỉ mục cache, còn `hub_image_control` nhận `action` (`open`, `next`, `previous`, `pin`, `unpin`) và `id` tùy chọn; `Focus::Photo(id)` xác định ảnh đang xem.

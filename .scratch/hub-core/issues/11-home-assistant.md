@@ -1,6 +1,6 @@
 # 11 — Home Assistant
 
-Status: ready-for-agent
+Status: completed
 Blocked by: 05
 Spec: [../spec.md](../spec.md)
 
@@ -12,6 +12,12 @@ Spec: [../spec.md](../spec.md)
 
 ## Nghiệm thu
 
-- [ ] Adapter test với fixture message HA.
-- [ ] Test qua `run()`: tool bật đèn → fake nhận call service, `UiState.home` cập nhật khi fake đẩy state mới.
-- [ ] Mất kết nối → entity đánh dấu cũ, tool reply lỗi rõ.
+- [x] Adapter test với fixture message HA.
+- [x] Test qua `run()`: tool bật đèn → fake nhận call service, `UiState.home` cập nhật khi fake đẩy state mới.
+- [x] Mất kết nối → entity đánh dấu cũ, tool reply lỗi rõ.
+
+## Comments
+
+Đã triển khai adapter WebSocket và tool qua actor; kiểm thử fixture và `run()` dùng fake. Cần kiểm thử kết nối với Home Assistant thật.
+
+- Review fix: `hub_home_get` trả trạng thái cũ (đánh dấu `stale`) khi mất kết nối; chưa kết nối và không có entity → lỗi "disconnected"; bật/tắt khi mất kết nối → lỗi "disconnected".

@@ -1,4 +1,5 @@
-use schemars::{JsonSchema, schema_for};
+use crate::features::tool_args::{definition, error, parse_value};
+use schemars::JsonSchema;
 use serde::Deserialize;
 use serde_json::Value;
 use voice_client::{ToolDef, ToolError};
@@ -43,27 +44,12 @@ pub fn definitions() -> Vec<ToolDef> {
         definition::<List>("hub_timer_list", "List timers"),
     ]
 }
-fn definition<T: JsonSchema>(name: &str, description: &str) -> ToolDef {
-    ToolDef {
-        name: name.into(),
-        description: description.into(),
-        input_schema: serde_json::to_value(schema_for!(T)).expect("schema serializes"),
-    }
-}
 pub fn parse(name: &str, args: Value) -> Result<TimerTool, ToolError> {
-    let parsed = match name {
-        "hub_timer_start" => serde_json::from_value(args).map(TimerTool::Start),
-        "hub_timer_adjust" => serde_json::from_value(args).map(TimerTool::Adjust),
-        "hub_timer_cancel" => serde_json::from_value(args).map(TimerTool::Cancel),
-        "hub_timer_list" => serde_json::from_value::<List>(args).map(|_| TimerTool::List),
-        _ => return Err(error("Unknown timer tool")),
-    };
-    parsed.map_err(|e| error(&format!("Invalid arguments: {e}")))
-}
-pub fn error(message: &str) -> ToolError {
-    ToolError {
-        code: -32602,
-        message: message.into(),
-        data: None,
+    match name {
+        "hub_timer_start" => parse_value(args).map(TimerTool::Start),
+        "hub_timer_adjust" => parse_value(args).map(TimerTool::Adjust),
+        "hub_timer_cancel" => parse_value(args).map(TimerTool::Cancel),
+        "hub_timer_list" => parse_value::<List>(args).map(|_| TimerTool::List),
+        _ => Err(error("Unknown timer tool")),
     }
 }

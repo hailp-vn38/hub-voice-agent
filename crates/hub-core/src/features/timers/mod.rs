@@ -1,72 +1,7 @@
 mod rules;
 mod store;
 pub(crate) mod tools;
-
-use crate::{Store, runtime::effects::Effect};
 pub use rules::Timer;
-use rules::Timers;
-use tools::TimerTool;
-use voice_client::ToolCall;
+mod feature;
 
-pub struct Feature {
-    timers: Timers,
-}
-impl Feature {
-    pub fn load(store: &Store) -> anyhow::Result<Self> {
-        Ok(Self {
-            timers: Timers {
-                items: store.timers_load()?,
-            },
-        })
-    }
-    pub fn snapshot(&self) -> Vec<Effect> {
-        let timers = self.timers.items.clone();
-        vec![Effect::Ui(Box::new(move |state| {
-            if state.timers == timers {
-                return false;
-            }
-            state.timers = timers;
-            true
-        }))]
-    }
-    pub fn on_tool(&mut self, call: ToolCall, now: i64) -> Vec<Effect> {
-        let tool = match tools::parse(&call.name, call.arguments.clone()) {
-            Ok(tool) => tool,
-            Err(err) => return vec![Effect::Reply(call, Err(err))],
-        };
-        let result = match tool {
-            TimerTool::Start(args) => i64::try_from(args.minutes)
-                .ok()
-                .and_then(|m| m.checked_mul(60))
-                .ok_or_else(|| "Duration too large".to_string())
-                .and_then(|s| self.timers.start(args.label, s, now)),
-            TimerTool::Adjust(args) => {
-                self.timers
-                    .adjust(&args.label, args.delta_seconds, args.paused, now)
-            }
-            TimerTool::Cancel(args) => self.timers.cancel(&args.label),
-            TimerTool::List => {
-                return vec![Effect::Reply(
-                    call,
-                    Ok(serde_json::json!({"timers": self.timers.items})),
-                )];
-            }
-        };
-        match result {
-            Ok(()) => {
-                let mut effects = vec![Effect::Persist(self.timers.items.clone())];
-                effects.extend(self.snapshot());
-                effects.push(Effect::Reply(
-                    call,
-                    Ok(serde_json::json!({"timers": self.timers.items})),
-                ));
-                effects
-            }
-            Err(err) => vec![Effect::Reply(call, Err(tools::error(&err)))],
-        }
-    }
-    pub fn tick(&mut self, now: i64) -> Vec<Effect> {
-        let _due = self.timers.due(now);
-        Vec::new()
-    }
-}
+pub(crate) use feature::Feature;

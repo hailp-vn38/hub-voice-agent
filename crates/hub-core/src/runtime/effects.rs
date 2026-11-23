@@ -6,8 +6,8 @@ use std::time::Duration;
 
 use crate::{AudioCommand, UiState};
 
-// Variants are introduced here for the subsequent voice and audio slices.
-#[allow(dead_code)]
+type StoreWrite = Box<dyn FnOnce(&mut crate::Store) -> anyhow::Result<()> + Send>;
+
 pub(crate) enum Effect {
     Ui(Box<dyn FnOnce(&mut UiState) -> bool + Send>),
     Voice(VoiceCommand),
@@ -18,9 +18,37 @@ pub(crate) enum Effect {
         reply: Option<ToolCall>,
         timeout: Duration,
     },
-    Persist(Vec<crate::Timer>),
+    /// Persist feature data; the closure owns a copy of what it writes.
+    Store(StoreWrite),
+    PinPhoto(String, bool),
+    PersistPhotos(
+        Vec<(String, anyhow::Result<crate::FetchedImage>)>,
+        i64,
+        Option<ToolCall>,
+    ),
+    CancelJob(JobId),
     Reply(ToolCall, Result<serde_json::Value, ToolError>),
     ReplyError(ToolCall, &'static str),
+}
+
+impl Effect {
+    pub(crate) fn store(
+        write: impl FnOnce(&mut crate::Store) -> anyhow::Result<()> + Send + 'static,
+    ) -> Self {
+        Self::Store(Box::new(write))
+    }
+}
+
+pub(super) async fn execute_all(
+    effects: Vec<Effect>,
+    io: &crate::Io,
+    jobs: &mut Jobs,
+    store: &mut crate::Store,
+) -> anyhow::Result<()> {
+    for effect in effects {
+        execute(effect, &io.ui_tx, &io.voice_tx, &io.audio_tx, jobs, store).await?;
+    }
+    Ok(())
 }
 
 pub(super) async fn execute(
@@ -32,7 +60,37 @@ pub(super) async fn execute(
     store: &mut crate::Store,
 ) -> anyhow::Result<()> {
     match effect {
-        Effect::Persist(timers) => store.timers_save(&timers)?,
+        Effect::Store(write) => write(store)?,
+        Effect::CancelJob(id) => {
+            if let Some(call) = jobs.cancel(&id) {
+                reply_error(call, "Job cancelled");
+            }
+        }
+        Effect::PinPhoto(id, pinned) => {
+            if store.photos_pin(&id, pinned).is_ok() {
+                let photos = store.photos_load()?;
+                ui_tx.send_modify(|ui| ui.photos = photos);
+            }
+        }
+        Effect::PersistPhotos(results, now, reply) => {
+            let mut loaded = 0;
+            for (caption, image) in results {
+                if let Ok(image) = image
+                    && store.photos_add(caption, image, now).is_ok()
+                {
+                    loaded += 1;
+                }
+            }
+            let photos = store.photos_load()?;
+            ui_tx.send_modify(|ui| ui.photos = photos);
+            if let Some(call) = reply {
+                if loaded > 0 {
+                    call.reply(Ok(serde_json::json!({"loaded": loaded})));
+                } else {
+                    reply_error(call, "Images unavailable");
+                }
+            }
+        }
         Effect::Reply(call, result) => call.reply(result),
         Effect::Ui(patch) => {
             ui_tx.send_if_modified(patch);
