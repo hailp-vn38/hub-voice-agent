@@ -1,6 +1,6 @@
 # 15 — Màn Ảnh và xem ảnh
 
-Status: ready-for-agent
+Status: resolved
 Blocked by: 06
 Spec: [../spec.md](../spec.md)
 Thiết kế: concept.md §6 "Màn Ảnh"
@@ -44,3 +44,7 @@ Map: chờ hub-core #12 (ảnh đã thu nhỏ → `image` ở bridge)
 | `.viewing` / `.viewer` / `.viewer-index` / `.auto-advance` | |
 | `open` / `next` / `previous` / `close-viewer` | |
 | `toggle-pin` / `remove` | |
+
+## Answer
+
+Implemented `contract/photos.slint`, `screens/photos.slint` (grid), `screens/photo-viewer.slint` (Ken Burns, crossfade, edge taps, auto-advance timer, swipe right to grid, pin bounce), demo adapter `src/ui/demo/photos.rs` with 10 generated images in `assets/demo/` and 6 scenarios. Deviations: Xoá calls `remove` directly (confirm card from ticket 14 not yet wired); Shell right-swipe is disabled while the viewer is open so the viewer handles it; pin icon added (`pin.svg`). fps on Pi not measured.

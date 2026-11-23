@@ -85,6 +85,12 @@ pub fn all() -> Vec<Scenario> {
         ("Lưu → lỗi", super::spawn::save_fail),
         ("Thẻ nổi", super::spawn::floating),
         ("Thẻ nổi mờ", super::spawn::floating_fade),
+        ("Ảnh: agent gửi 3 ảnh Đà Lạt", super::photos::agent_sends),
+        ("Ảnh: lỗi", super::photos::failed),
+        ("Ảnh: tiếp", super::photos::next),
+        ("Ảnh: trước", super::photos::previous),
+        ("Ảnh: giữ ảnh này", super::photos::pin_current),
+        ("Ảnh: xem lại lúc nãy", super::photos::reopen),
         ("Chữ lớn", |app| app.global::<Theme>().set_text_scale(1.25)),
     ]
 }

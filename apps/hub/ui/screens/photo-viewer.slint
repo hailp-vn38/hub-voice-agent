@@ -1,0 +1,147 @@
+import { Theme } from "../theme.slint";
+import { PhotosData, PhotoState, Photo } from "../contract/photos.slint";
+import { SpawnIn } from "../components/spawn.slint";
+import { PendingState } from "../contract/spawn.slint";
+import { Icon } from "../components/icon.slint";
+
+// Xem ảnh toàn màn: Ken Burns, crossfade, chạm mép đổi ảnh, vuốt trái → phải về lưới.
+export component PhotoViewer inherits Rectangle {
+    private property <int> idx: PhotosData.viewer-index;
+    private property <Photo> cur: PhotosData.viewer[root.idx];
+    private property <bool> ready: root.cur.state == PhotoState.ready;
+    private property <bool> captions: true;
+    private property <duration> now: animation-tick();
+    private property <duration> t0: animation-tick();
+    private property <duration> pin-t: -10000ms;
+    private property <float> fade: clamp((root.now - root.t0) / 600ms, 0, 1);
+    // Ken Burns: phóng 1.0 → 1.12 trong 12 giây; chỉ số chẵn/lẻ đổi điểm neo.
+    private property <float> kb: clamp((root.now - root.t0) / 12000ms, 0, 1);
+    private property <float> pin-bump: clamp((root.now - root.pin-t) / 350ms, 0, 1);
+    private property <image> shown; // ảnh đang hiện, thành ảnh nền khi crossfade
+    private property <image> prev;
+    private property <bool> pinned: root.cur.pinned;
+    private property <float> grow: root.ready ? 1 : 0;
+    animate grow { duration: 500ms; easing: ease-out; }
+
+    init => { root.shown = root.cur.full; root.t0 = animation-tick(); }
+    changed idx => {
+        root.prev = root.shown;
+        root.shown = root.cur.full;
+        root.t0 = animation-tick();
+    }
+    changed ready => { root.t0 = animation-tick(); root.shown = root.cur.full; }
+    changed pinned => { root.pin-t = animation-tick(); }
+
+    Rectangle { background: black; opacity: 0.92; }
+
+    // Khung chờ / lỗi: thẻ nhỏ sinh từ Orb, nở thành toàn màn khi ảnh xong.
+    SpawnIn {
+        key: "photo";
+        pending: root.cur.state == PhotoState.failed ? PendingState.failed : PendingState.none;
+        width: parent.width * (0.3 + 0.7 * root.grow);
+        height: parent.height * (0.3 + 0.7 * root.grow);
+        x: (parent.width - self.width) / 2;
+        y: (parent.height - self.height) / 2;
+        Rectangle {
+            border-radius: Theme.radius * (1 - root.grow);
+            background: Theme.card;
+            clip: true;
+            Image {
+                source: root.prev;
+                width: parent.width;
+                height: parent.height;
+                image-fit: cover;
+            }
+            Image {
+                source: root.shown;
+                width: parent.width;
+                height: parent.height;
+                image-fit: cover;
+                opacity: root.ready ? root.fade : 0;
+                transform-scale: 1 + 0.12 * root.kb;
+                transform-origin: { x: mod(root.idx, 2) == 0 ? 0px : parent.width, y: parent.height / 2 };
+            }
+            if !root.ready: VerticalLayout {
+                alignment: center;
+                spacing: Theme.space-s;
+                Icon { name: "photo"; color: Theme.text-dim; size: 96px; x: (parent.width - self.width) / 2; }
+                Text {
+                    text: root.cur.state == PhotoState.failed ? "Không tải được ảnh" : "Đang tải ảnh…";
+                    color: Theme.text-dim;
+                    font-size: Theme.font-body;
+                    horizontal-alignment: center;
+                }
+            }
+        }
+    }
+
+    // Chạm giữa = ẩn/hiện chú thích; chạm mép = đổi ảnh; vuốt trái → phải = về lưới.
+    SwipeGestureHandler {
+        handle-swipe-right: true;
+        swiped => { PhotosData.close-viewer(); }
+        TouchArea {
+            clicked => {
+                if (self.mouse-x < 240px) { PhotosData.previous(); }
+                else if (self.mouse-x > self.width - 240px) { PhotosData.next(); }
+                else { root.captions = !root.captions; }
+            }
+        }
+    }
+
+    // Chấm chỉ số ở mép trên.
+    if PhotosData.viewer.length > 1: HorizontalLayout {
+        y: 48px;
+        height: 16px;
+        alignment: center;
+        spacing: 12px;
+        for p[i] in PhotosData.viewer: Rectangle {
+            width: 16px;
+            height: 16px;
+            border-radius: 8px;
+            background: i == root.idx ? Theme.text : Theme.text-dim;
+            opacity: i == root.idx ? 1 : 0.5;
+        }
+    }
+
+    if root.captions && root.ready: Rectangle {
+        y: parent.height - self.height - 240px;
+        width: parent.width * 0.6;
+        height: 140px;
+        VerticalLayout {
+            padding-left: Theme.space-l;
+            alignment: end;
+            Text { text: root.cur.caption; color: Theme.text; font-size: Theme.font-title; overflow: elide; }
+            Text { text: root.cur.source; color: Theme.text-dim; font-size: Theme.font-small; overflow: elide; }
+        }
+    }
+
+    // Ghim (nhảy lên khi đổi trạng thái) và xoá.
+    if root.captions && root.ready: HorizontalLayout {
+        x: parent.width - self.width - Theme.space-l;
+        y: 96px;
+        spacing: Theme.space-m;
+        Rectangle {
+            width: Theme.touch-min;
+            height: Theme.touch-min;
+            Icon {
+                name: "pin";
+                color: root.pinned ? Theme.warm : Theme.text;
+                size: 56px;
+                y: (parent.height - self.height) / 2 - 24px * sin(root.pin-bump * 180deg);
+            }
+            TouchArea { clicked => { PhotosData.toggle-pin(root.cur.key); } }
+        }
+        Rectangle {
+            width: Theme.touch-min * 1.5;
+            height: Theme.touch-min;
+            Text { text: "Xoá"; color: Theme.error; font-size: Theme.font-body; horizontal-alignment: center; vertical-alignment: center; }
+            TouchArea { clicked => { PhotosData.remove(root.cur.key); } }
+        }
+    }
+
+    Timer {
+        interval: 6s;
+        running: PhotosData.auto-advance && PhotosData.viewer.length > 1 && root.ready;
+        triggered => { PhotosData.next(); }
+    }
+}

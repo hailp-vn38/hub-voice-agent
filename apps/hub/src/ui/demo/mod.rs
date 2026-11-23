@@ -2,6 +2,7 @@
 mod clock;
 mod fixtures;
 mod levels;
+mod photos;
 mod qr;
 mod scenarios;
 mod settings;

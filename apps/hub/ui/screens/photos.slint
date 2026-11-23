@@ -1,0 +1,92 @@
+import { Theme } from "../theme.slint";
+import { Nav, Screen } from "../contract/nav.slint";
+import { PhotosData, PhotoState } from "../contract/photos.slint";
+import { Icon } from "../components/icon.slint";
+import { PhotoViewer } from "photo-viewer.slint";
+
+export component Photos inherits Rectangle {
+    private property <length> gap: Theme.space-m;
+    private property <length> cell-w: (grid.width - 3 * root.gap) / 4;
+    private property <length> cell-h: (grid.height - root.gap) / 2;
+    private property <int> rows: ceil(PhotosData.photos.length / 4);
+
+    VerticalLayout {
+        padding: Theme.space-l;
+        spacing: Theme.space-m;
+        Rectangle {
+            height: Theme.touch-min;
+            Text {
+                text: "‹ " + PhotosData.title;
+                color: Theme.text;
+                font-size: Theme.font-title;
+                horizontal-alignment: left;
+                vertical-alignment: center;
+            }
+            Text {
+                text: PhotosData.pinned-text;
+                color: Theme.text-dim;
+                font-size: Theme.font-body;
+                horizontal-alignment: right;
+                vertical-alignment: center;
+            }
+            TouchArea { width: 360px; x: 0; clicked => { Nav.navigate(Screen.menu); } }
+        }
+        if PhotosData.photos.length == 0: Text {
+            text: "Hey Jarvis, cho tôi xem ảnh vịnh Hạ Long";
+            color: Theme.text-dim;
+            font-size: Theme.font-body;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+            wrap: word-wrap;
+            vertical-stretch: 1;
+        }
+        grid := Flickable {
+            vertical-stretch: 1;
+            content-width: self.width;
+            content-height: max(self.height, root.rows * root.cell-h + (root.rows - 1) * root.gap);
+            for p[i] in PhotosData.photos: Rectangle {
+                x: mod(i, 4) * (root.cell-w + root.gap);
+                y: floor(i / 4) * (root.cell-h + root.gap);
+                width: root.cell-w;
+                height: root.cell-h;
+                border-radius: Theme.radius;
+                background: Theme.card;
+                clip: true;
+                if p.state == PhotoState.ready: Image {
+                    source: p.thumb;
+                    width: parent.width;
+                    height: parent.height;
+                    image-fit: cover;
+                }
+                if p.state != PhotoState.ready: VerticalLayout {
+                    alignment: center;
+                    spacing: Theme.space-s;
+                    Icon { name: "photo"; color: Theme.text-dim; size: 64px; x: (parent.width - self.width) / 2; }
+                    Text {
+                        text: p.state == PhotoState.failed ? "Không tải được" : "Đang tải…";
+                        color: Theme.text-dim;
+                        font-size: Theme.font-small;
+                        horizontal-alignment: center;
+                    }
+                }
+                Rectangle {
+                    y: parent.height - self.height;
+                    height: 72px;
+                    background: #000000a0;
+                    VerticalLayout {
+                        padding-left: Theme.space-s;
+                        padding-right: Theme.space-s;
+                        alignment: center;
+                        Text { text: p.caption; color: Theme.text; font-size: Theme.font-small; overflow: elide; }
+                        Text { text: p.time; color: Theme.text-dim; font-size: Theme.font-small * 0.8; overflow: elide; }
+                    }
+                }
+                if p.pinned: Icon { x: parent.width - self.width - Theme.space-s; y: Theme.space-s; name: "pin"; color: Theme.warm; size: 40px; }
+                TouchArea { clicked => { PhotosData.open(p.key); } }
+            }
+        }
+        Rectangle { height: 240px; } // chừa Voice dock
+    }
+
+    if PhotosData.viewing: PhotoViewer { }
+}
