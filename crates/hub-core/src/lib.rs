@@ -54,6 +54,7 @@ pub enum UserInput {
         id: String,
         pinned: bool,
     },
+    RemoveCountdown(i64),
     Open(Screen),
     Back,
     Activity,
@@ -75,7 +76,7 @@ pub struct Io {
     pub ui_tx: watch::Sender<UiState>,
 }
 
-pub use features::countdowns::{Countdown, CountdownView};
+pub use features::countdowns::{Countdown, CountdownView, Repeat};
 pub use features::photos::Photo;
 pub use features::reminders::{Reminder, ReminderDue, ReminderHistory, ReminderRepeat};
 pub use features::timers::Timer;

@@ -213,7 +213,7 @@ Integration test dùng server WebSocket giả tại `tests/`; test backoff dùng
 #### Interface bên ngoài
 
 Interface bên dưới là thiết kế đích. Hiện `run(config, store, ports, io)` xử lý voice settings, hội thoại và các tool hẹn giờ. `ConfigStore` giữ cấu hình voice, Google Calendar, Home Assistant và vị trí nhà; `Store::open(dir)` hoặc `Store::in_memory()` mở SQLite; `tool_definitions()` cung cấp schema cho tool hẹn giờ, đếm ngược, Reminder, lịch, thời tiết, Home Assistant và ảnh. `HomeSource` nhận cấu hình qua watch, phát sự kiện kết nối và trạng thái; `HomeAssistant` xác thực, đăng ký sự kiện và tự kết nối lại. `UiState.home` giữ các entity và đánh dấu dữ liệu cũ khi mất kết nối. `WeatherSource` cung cấp dự báo theo tọa độ hoặc tên thành phố; `OpenMeteo` là adapter HTTP, còn `UiState.weather` giữ dữ liệu, trạng thái cũ và icon/nền. Cache SQLite được dùng trong 30 phút và tạm xem kết thúc ngay khi rời màn Thời tiết.
- Hẹn giờ đến hạn được xếp hàng vào `UiState.alert`; `System::time_synced()` chặn báo khi giờ chưa tin cậy. Desktop trả `true`; trên Pi, `apps/hub` coi giờ đã đồng bộ khi systemd-timesyncd tạo `/run/systemd/timesync/synchronized`. `UserInput::DismissAlert` tắt chuông.
+ Hẹn giờ đến hạn được xếp hàng vào `UiState.alert`; `System::time_synced()` chặn báo khi giờ chưa tin cậy. Desktop trả `true`; trên Pi, `apps/hub` coi giờ đã đồng bộ khi systemd-timesyncd tạo `/run/systemd/timesync/synchronized`. `UserInput::DismissAlert` tắt chuông; `UserInput::RemoveCountdown(id)` xoá mốc ngay khỏi Store và `UiState`, còn animation mờ dần thuộc UI.
 
 ```rust
 pub async fn run(config: ConfigStore, store: Store, ports: Ports, io: Io) -> anyhow::Result<()>;
@@ -266,7 +266,7 @@ pub enum AudioEvent {
 
 Biên độ mic và năng lượng TTS không đi qua `hub-core`: audio ghi thẳng vào `watch<Levels>` mà UI đọc. Hiện tại adapter desktop chỉ tiêu thụ lệnh, chưa thu hoặc phát âm thanh; `UiState.voice` chứa trạng thái hội thoại, transcript và phản hồi.
 
-`UiState.now` là `jiff::Zoned` do actor cập nhật mỗi tick; `UiState.events` giữ serial tăng dần cho hiệu ứng một lần. `present(&UiState) -> HubView` chuẩn bị dữ liệu cho các hợp đồng UI, bắt đầu với `nav`, `status` và `ambient`; hàm không đọc đồng hồ. Chạm đổi lựa chọn do hub-core sở hữu qua `UserInput::Focus`, giữ nguyên màn hình và không tăng serial focus.
+`UiState.now` là `jiff::Zoned` do actor khởi tạo từ clock và cập nhật mỗi tick; `UiState.events` giữ serial tăng dần cho hiệu ứng một lần. `present(&UiState) -> HubView` chuẩn bị dữ liệu cho các hợp đồng UI: `nav`, `status`, `ambient`, `countdowns` và `reminders`; hàm không đọc đồng hồ. Mốc đếm ngược lưu thời điểm tạo để tính `progress`; bản ghi cũ không có metadata bắt đầu với tiến độ 0. Chạm đổi lựa chọn do hub-core sở hữu qua `UserInput::Focus`, giữ nguyên màn hình và không tăng serial focus.
 
 #### Module bên trong
 
@@ -284,7 +284,8 @@ Hai lớp:
 | `runtime::jobs` | Task mạng đang chạy, `ToolCall` đang chờ | `Effect::Spawn { job, work, reply, timeout }` → `Internal::JobDone(id, result)`; hết giờ → reply lỗi; job mới cùng khoá huỷ job cũ |
 | `alerts` | Hàng đợi trạng thái báo (hết giờ, Reminder): lần lượt, tự tắt 2 phút / 60 s, đợi hết lượt nói | `push(alert)`, `dismiss()`, `tick(now, turn_active)` |
 | `features::timers` | ≤ 4 hẹn giờ, giờ kết thúc tuyệt đối, tạm dừng | `start`, `adjust`, `cancel`, `due(now)` |
-| `features::countdowns` | ≤ 8 mốc, `none` / `yearly` / `yearly_lunar` | `create`, `remove`, `next_occurrence(now)` |
+| `features::countdowns` | ≤ 8 mốc, `none` / `yearly` / `yearly_lunar`, thời điểm tạo dùng cho tiến độ | `create`, `remove`, `remove_id`, `next_occurrence(now)` |
+| `present` | Dữ liệu hiển thị cho từng hợp đồng UI, không đọc đồng hồ hệ thống | `present(&UiState) -> HubView` |
 | `features::reminders` | `none` / `daily` / `weekly`, đã nhắc, đã lỡ (< 1 giờ thì nhắc một lần) | `create`, `cancel`, `snooze`, `due(now)` |
 | `features::weather` | Vị trí nhà, thành phố tạm xem (giữ ~30 phút), WMO → icon/nền | `snapshot(focus)`, `apply(forecast)` |
 | `features::calendar` | Cache ~60 ngày, `syncToken`, sự kiện mới tạo | `events(range)`, `apply(delta)` |

@@ -25,19 +25,44 @@ impl Feature {
             .iter()
             .filter_map(|item| item.view(today))
             .collect();
-        views.sort_by_key(|item| item.days);
+        views.sort_by_key(|item| (item.days < 0, item.days.abs()));
         views
     }
     pub fn snapshot(&self, today: Date) -> Vec<Effect> {
         let countdowns = self.views(today);
         vec![Effect::Ui(Box::new(move |state| {
-            if state.countdowns == countdowns {
+            let arrived_today = countdowns.iter().any(|countdown| {
+                countdown.days == 0
+                    && !state
+                        .countdowns
+                        .iter()
+                        .any(|current| current.id == countdown.id && current.days == 0)
+            });
+            let changed = state.countdowns != countdowns;
+            if !changed && !arrived_today {
                 return false;
             }
-            state.countdowns = countdowns;
+            if changed {
+                state.countdowns = countdowns;
+            }
+            if arrived_today {
+                state.events.confetti = state.events.confetti.saturating_add(1);
+            }
             true
         }))]
     }
+
+    pub fn remove_id(&mut self, id: i64, today: Date) -> Vec<Effect> {
+        let Some(index) = self.items.iter().position(|item| item.id == id) else {
+            return Vec::new();
+        };
+        self.items.remove(index);
+        let items = self.items.clone();
+        let mut effects = vec![Effect::store(move |store| store.countdowns_save(&items))];
+        effects.extend(self.snapshot(today));
+        effects
+    }
+
     pub fn on_tool(&mut self, view: &mut View, call: ToolCall, now: &jiff::Zoned) -> Vec<Effect> {
         let today = now.date();
         let request = match tools::parse(&call.name, call.arguments.clone()) {
@@ -45,7 +70,7 @@ impl Feature {
             Err(e) => return vec![Effect::Reply(call, Err(e))],
         };
         let result = match request {
-            Request::Create(args) => self.create(args).map(Some),
+            Request::Create(args) => self.create(args, now).map(Some),
             Request::Remove(args) => self.remove(&args.label).map(|()| None),
             Request::List => {
                 return vec![self.reply(call, today)];
@@ -55,9 +80,7 @@ impl Feature {
             Ok(created) => created,
             Err(message) => return vec![Effect::Reply(call, Err(tool_args::error(&message)))],
         };
-        let items = self.items.clone();
-        let mut effects = vec![Effect::store(move |store| store.countdowns_save(&items))];
-        effects.extend(self.snapshot(today));
+        let mut effects = self.changed(today);
         if let Some(id) = created {
             effects.extend(view.open(
                 Screen::Countdowns,
@@ -68,7 +91,7 @@ impl Feature {
         effects.push(self.reply(call, today));
         effects
     }
-    fn create(&mut self, args: tools::Create) -> Result<i64, String> {
+    fn create(&mut self, args: tools::Create, now: &jiff::Zoned) -> Result<i64, String> {
         if self.items.len() >= 8 {
             return Err("Maximum of 8 countdowns".into());
         }
@@ -81,6 +104,7 @@ impl Feature {
             date: args.date,
             repeat: args.repeat,
             lunar_leap: args.lunar_leap,
+            created_at: now.to_string(),
         };
         if !item.is_valid() {
             return Err("Invalid date for calendar".into());
@@ -108,5 +132,12 @@ impl Feature {
             call,
             Ok(serde_json::json!({"countdowns": self.views(today)})),
         )
+    }
+
+    fn changed(&self, today: Date) -> Vec<Effect> {
+        let items = self.items.clone();
+        let mut effects = vec![Effect::store(move |store| store.countdowns_save(&items))];
+        effects.extend(self.snapshot(today));
+        effects
     }
 }

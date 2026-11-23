@@ -9,6 +9,7 @@ const MIGRATIONS: &[&str] = &[
     include_str!("migrations/0004_weather.sql"),
     include_str!("migrations/0005_photos.sql"),
     include_str!("migrations/0006_calendar.sql"),
+    include_str!("migrations/0008_countdown_metadata.sql"),
 ];
 
 pub struct Store {

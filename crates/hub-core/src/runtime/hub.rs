@@ -1,6 +1,6 @@
 use super::{audio, effects::Effect, jobs::Internal, tick, voice};
 use crate::{
-    Alert, AudioEvent, Clock, Config, HomeEvent, Ports, Screen, Store, System, UserInput,
+    Alert, AudioEvent, Clock, Config, Focus, HomeEvent, Ports, Screen, Store, System, UserInput,
     alerts::Alerts,
     conversation::{Conversation, Input},
     features::{calendar, countdowns, home, photos, reminders, timers, weather},
@@ -58,9 +58,11 @@ impl Hub {
 
     /// The first UI snapshot from the loaded state.
     pub fn snapshot(&self) -> Vec<Effect> {
-        let mut effects = vec![self.weather.snapshot(), self.photos.snapshot()];
+        let now = self.now();
+        let mut effects = tick::tick(&now);
+        effects.extend([self.weather.snapshot(), self.photos.snapshot()]);
         effects.extend(self.timers.snapshot());
-        effects.extend(self.countdowns.snapshot(self.now().date()));
+        effects.extend(self.countdowns.snapshot(now.date()));
         effects.extend(self.reminders.snapshot());
         effects.extend(self.calendar.snapshot());
         effects
@@ -189,7 +191,18 @@ impl Hub {
     }
 
     pub fn on_input(&mut self, input: UserInput, store: &Store) -> Vec<Effect> {
-        let now = self.now().timestamp().as_second();
-        self.track_view(store, |hub| hub.view.on_user(input, now))
+        let now = self.now();
+        let seconds = now.timestamp().as_second();
+        match input {
+            UserInput::RemoveCountdown(id) => self.track_view(store, |hub| {
+                let mut effects = hub.countdowns.remove_id(id, now.date());
+                effects.extend(hub.view.on_user(UserInput::Activity, seconds));
+                if hub.view.focus() == Some(&Focus::Countdown(id)) {
+                    effects.extend(hub.view.on_user(UserInput::Focus(None), seconds));
+                }
+                effects
+            }),
+            input => self.track_view(store, |hub| hub.view.on_user(input, seconds)),
+        }
     }
 }

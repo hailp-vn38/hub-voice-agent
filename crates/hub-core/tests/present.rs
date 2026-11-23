@@ -1,7 +1,10 @@
 mod support;
 
 use futures_util::{SinkExt, StreamExt};
-use hub_core::{Focus, Screen, UiState, UserInput, VoiceState, present};
+use hub_core::{
+    Countdown, Focus, Reminder, ReminderHistory, ReminderRepeat, Repeat, Screen, UiState,
+    UserInput, VoiceState, present, present::CountdownUnit,
+};
 use serde_json::{Value, json};
 use std::{sync::Arc, time::Duration};
 use tokio::{
@@ -38,6 +41,167 @@ fn present_maps_nav_status_and_ambient_from_the_snapshot_time() {
     assert_eq!(view.ambient.temp, "29°");
     assert_eq!(view.ambient.icon, "rain");
     assert!(view.ambient.night);
+}
+
+#[test]
+fn present_prepares_countdowns_from_the_snapshot_time() {
+    let mut state = UiState::default();
+    state.now = "2025-11-24T21:00:00+07:00[Asia/Ho_Chi_Minh]"
+        .parse()
+        .unwrap();
+    state.events.confetti = 7;
+    let today = state.now.date();
+    state.countdowns = [
+        Countdown {
+            id: 1,
+            label: "Hôm nay".into(),
+            date: "2025-11-24".into(),
+            repeat: Repeat::None,
+            lunar_leap: false,
+            created_at: "2025-11-20T00:00:00+07:00[Asia/Ho_Chi_Minh]".into(),
+        },
+        Countdown {
+            id: 2,
+            label: "Sắp tới".into(),
+            date: "2025-11-25".into(),
+            repeat: Repeat::None,
+            lunar_leap: false,
+            created_at: "2025-11-20T00:00:00+07:00[Asia/Ho_Chi_Minh]".into(),
+        },
+        Countdown {
+            id: 3,
+            label: "Đã qua".into(),
+            date: "2025-11-20".into(),
+            repeat: Repeat::None,
+            lunar_leap: false,
+            created_at: "2025-11-19T00:00:00+07:00[Asia/Ho_Chi_Minh]".into(),
+        },
+        Countdown {
+            id: 4,
+            label: "Tết".into(),
+            date: "2026-1-1".into(),
+            repeat: Repeat::YearlyLunar,
+            lunar_leap: false,
+            created_at: "2025-11-20T00:00:00+07:00[Asia/Ho_Chi_Minh]".into(),
+        },
+        Countdown {
+            id: 5,
+            label: "Chuyến đi".into(),
+            date: "2025-11-28".into(),
+            repeat: Repeat::None,
+            lunar_leap: false,
+            created_at: "2025-11-20T00:00:00+07:00[Asia/Ho_Chi_Minh]".into(),
+        },
+    ]
+    .into_iter()
+    .map(|countdown| countdown.view(today).unwrap())
+    .collect();
+    state.countdowns.swap(0, 1);
+
+    let view = present(&state);
+    let countdowns = view.countdowns;
+    assert_eq!(countdowns.title, "Đếm ngược · 5 mốc");
+    assert!(countdowns.has_main);
+    assert_eq!(countdowns.main.key, "1");
+    assert_eq!(countdowns.main.unit, CountdownUnit::Today);
+    assert_eq!(countdowns.main.value, "Hôm nay là Hôm nay");
+    assert_eq!(countdowns.main.target, "Thứ Hai 24/11");
+    assert_eq!(countdowns.confetti_serial, 7);
+
+    let live = countdowns
+        .others
+        .iter()
+        .find(|countdown| countdown.key == "2")
+        .unwrap();
+    assert_eq!(live.unit, CountdownUnit::Live);
+    assert_eq!(live.value, "03:00:00");
+    assert_eq!(live.repeat_text, "");
+
+    let passed = countdowns
+        .others
+        .iter()
+        .find(|countdown| countdown.key == "3")
+        .unwrap();
+    assert_eq!(passed.unit, CountdownUnit::Passed);
+    assert_eq!(passed.value, "Đã qua");
+
+    let lunar = countdowns
+        .others
+        .iter()
+        .find(|countdown| countdown.key == "4")
+        .unwrap();
+    assert_eq!(lunar.lunar, "1/1 âm lịch");
+    assert_eq!(lunar.repeat_text, "Hằng năm âm lịch");
+
+    let trip = countdowns
+        .others
+        .iter()
+        .find(|countdown| countdown.key == "5")
+        .unwrap();
+    assert_eq!(trip.unit, CountdownUnit::Days);
+    assert_eq!(trip.progress, 0.609375);
+    assert_eq!(trip.progress_text, "61% chặng đường");
+}
+
+#[test]
+fn present_groups_reminders_and_formats_until_and_recent_history() {
+    let mut state = UiState::default();
+    state.now = "2025-11-24T12:00:00+07:00[Asia/Ho_Chi_Minh]"
+        .parse()
+        .unwrap();
+    state.reminders = vec![
+        Reminder {
+            id: 1,
+            label: "Uống thuốc".into(),
+            at: "2025-11-24T12:25:00+07:00[Asia/Ho_Chi_Minh]".into(),
+            repeat: ReminderRepeat::Daily,
+            weekdays: Vec::new(),
+            scheduled_at: None,
+        },
+        Reminder {
+            id: 2,
+            label: "Khám răng".into(),
+            at: "2025-11-25T09:00:00+07:00[Asia/Ho_Chi_Minh]".into(),
+            repeat: ReminderRepeat::None,
+            weekdays: Vec::new(),
+            scheduled_at: None,
+        },
+        Reminder {
+            id: 3,
+            label: "Gọi mẹ".into(),
+            at: "2025-11-28T18:00:00+07:00[Asia/Ho_Chi_Minh]".into(),
+            repeat: ReminderRepeat::None,
+            weekdays: Vec::new(),
+            scheduled_at: None,
+        },
+    ];
+    let past = state.now.checked_sub(jiff::Span::new().minutes(5)).unwrap();
+    state.reminder_history.push(ReminderHistory {
+        reminder: state.reminders[1].clone(),
+        missed: true,
+        at_seconds: past.timestamp().as_second(),
+    });
+
+    let reminders = present(&state).reminders;
+    assert_eq!(reminders.title, "3 sắp tới");
+    assert!(reminders.has_next);
+    assert_eq!(reminders.next.key, "1");
+    assert_eq!(reminders.next.time, "12:25");
+    assert_eq!(reminders.next.until, "còn 25 phút");
+    assert_eq!(reminders.groups[0].label, "Hôm nay");
+    assert_eq!(reminders.groups[0].items[0].repeat_text, "Hằng ngày");
+    assert!(reminders.groups[0].items[0].repeats);
+    assert_eq!(reminders.groups[1].label, "Ngày mai");
+    assert_eq!(reminders.groups[1].items[0].repeat_text, "");
+    assert!(!reminders.groups[1].items[0].repeats);
+    assert_eq!(reminders.groups[2].label, "Thứ Sáu 28/11");
+    assert_eq!(reminders.recent[0].time, "11:55");
+    assert!(reminders.recent[0].missed);
+
+    state.now = "2025-11-24T12:05:00+07:00[Asia/Ho_Chi_Minh]"
+        .parse()
+        .unwrap();
+    assert_eq!(present(&state).reminders.next.until, "còn 20 phút");
 }
 
 #[tokio::test(start_paused = true)]
