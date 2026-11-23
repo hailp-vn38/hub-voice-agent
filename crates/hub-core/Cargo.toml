@@ -11,9 +11,11 @@ serde = { workspace = true }
 toml = "1"
 url = { workspace = true }
 uuid = { version = "1", features = ["v4"] }
-tokio = { workspace = true, features = ["sync", "time", "macros"] }
+tokio = { workspace = true, features = ["sync", "time", "macros", "net"] }
 serde_json = { workspace = true }
 schemars = "1"
+axum = "0.8"
+reqwest = { workspace = true, features = ["json"] }
 rusqlite = { version = "0.37", features = ["bundled"] }
 
 [dev-dependencies]
