@@ -1,6 +1,6 @@
 # 01 — Hợp đồng, chế độ demo, Demo panel
 
-Status: ready-for-agent
+Status: resolved
 Blocked by: —
 Spec: [../spec.md](../spec.md)
 
@@ -34,3 +34,7 @@ Map: chờ hub-core #05
 |---|---|
 | `Nav.screen` | |
 | `Nav.navigate(Screen)` | |
+
+## Answer
+
+Đã dựng `ui/contract/nav.slint`, feature `demo`, `src/ui/demo/` (mod, fixtures/mod.rs, scenarios.rs, clock), `ui/demo/panel.slint`; App có `demo-mode` hiện tên màn. Đường thật không đổi. Ghi chú: `DemoPanel` được export từ app.slint nên Slint vẫn biên dịch panel trên Pi, chỉ Rust demo bị loại; đồng hồ demo theo UTC.

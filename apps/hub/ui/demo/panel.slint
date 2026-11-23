@@ -1,0 +1,19 @@
+// Demo panel: cột nút kịch bản. Ticket UI: .scratch/hub-ui/issues/01-contract-demo.md.
+import { Button } from "std-widgets.slint";
+
+export component DemoPanel inherits Window {
+    in property <[string]> names;
+    callback run(int);
+    title: "Demo panel";
+    preferred-width: 320px;
+    preferred-height: 600px;
+    VerticalLayout {
+        padding: 12px;
+        spacing: 8px;
+        alignment: start;
+        for name[i] in root.names: Button {
+            text: name;
+            clicked => { root.run(i); }
+        }
+    }
+}

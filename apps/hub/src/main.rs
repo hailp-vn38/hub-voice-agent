@@ -12,6 +12,15 @@ use std::{path::PathBuf, sync::Arc, thread};
 use tokio::sync::{mpsc, oneshot, watch};
 slint::include_modules!();
 
+#[cfg(feature = "demo")]
+fn main() -> anyhow::Result<()> {
+    let app = App::new()?;
+    let _demo = ui::demo::start(&app)?;
+    app.run()?;
+    Ok(())
+}
+
+#[cfg(not(feature = "demo"))]
 fn main() -> anyhow::Result<()> {
     let app = App::new()?;
     let data_dir = std::env::var_os("AI_HUB_DATA_DIR")

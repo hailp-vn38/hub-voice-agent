@@ -1,6 +1,9 @@
 import { Button } from "std-widgets.slint";
 import { Theme } from "theme.slint";
 import { VoiceSettings } from "screens/voice-settings.slint";
+import { Nav, Screen } from "contract/nav.slint";
+export { Nav, Screen } from "contract/nav.slint";
+export { DemoPanel } from "demo/panel.slint";
 
 export component App inherits Window {
     in property <string> clock: "--:--:--";
@@ -10,6 +13,7 @@ export component App inherits Window {
     in property <string> activation;
     in property <string> voice-error;
     in property <bool> enrolling;
+    in property <bool> demo-mode;
     private property <bool> settings-open: false;
     callback save-voice-url(string);
     callback connect-voice();
@@ -17,7 +21,17 @@ export component App inherits Window {
     preferred-height: 1080px;
     background: Theme.background;
 
-    if !root.settings-open: Rectangle {
+    if root.demo-mode: Text {
+        text: Nav.screen == Screen.center ? "center" : Nav.screen == Screen.menu ? "menu" : Nav.screen == Screen.weather ? "weather"
+            : Nav.screen == Screen.calendar ? "calendar" : Nav.screen == Screen.home ? "home" : Nav.screen == Screen.timers ? "timers"
+            : Nav.screen == Screen.countdowns ? "countdowns" : Nav.screen == Screen.reminders ? "reminders" : Nav.screen == Screen.photos ? "photos"
+            : Nav.screen == Screen.settings ? "settings" : Nav.screen == Screen.ambient ? "ambient" : "first-boot";
+        color: Theme.text;
+        font-size: 96px;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+    if !root.demo-mode && !root.settings-open: Rectangle {
         Text {
             text: root.clock;
             color: Theme.text;
@@ -27,7 +41,7 @@ export component App inherits Window {
         }
         Button { text: "Settings"; x: parent.width - self.width - 32px; y: 32px; clicked => { root.settings-open = true; } }
     }
-    if root.settings-open: VoiceSettings {
+    if !root.demo-mode && root.settings-open: VoiceSettings {
         ota-url <=> root.ota-url;
         device-id: root.device-id;
         status: root.voice-status;

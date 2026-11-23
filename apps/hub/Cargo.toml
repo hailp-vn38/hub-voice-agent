@@ -33,3 +33,4 @@ slint-build = { workspace = true }
 default = ["desktop"]
 desktop = ["slint/backend-winit", "slint/renderer-femtovg"]
 pi = ["slint/backend-linuxkms", "slint/renderer-femtovg"]
+demo = ["desktop"]
