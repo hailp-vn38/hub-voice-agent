@@ -63,3 +63,53 @@ fn reply_error(call: ToolCall, message: &str) {
 #[cfg(test)]
 #[path = "effects_tests.rs"]
 mod tests;
+
+/// Effects specific to persistent voice configuration.
+pub(super) enum SettingsEffect {
+    Initialize,
+    SaveUrl(String),
+    Connection(voice_client::ConnectionState),
+    Activation(String),
+}
+
+pub(super) fn execute_settings(
+    effect: SettingsEffect,
+    config: &mut crate::ConfigStore,
+    io: &crate::Io,
+) {
+    use crate::voice_settings;
+    match effect {
+        SettingsEffect::Initialize => {
+            io.ui_tx
+                .send_modify(|ui| ui.voice_settings = voice_settings::initial(config));
+            io.voice_config_tx
+                .send_replace(voice_settings::config(config));
+        }
+        SettingsEffect::SaveUrl(input) => {
+            let result = voice_settings::parse_url(&input).and_then(|url| {
+                let shown = url.to_string();
+                config.update(|c| c.voice.ota_url = Some(shown.clone()))?;
+                Ok(shown)
+            });
+            match result {
+                Ok(url) => {
+                    io.voice_config_tx
+                        .send_replace(voice_settings::config(config));
+                    io.ui_tx.send_modify(|ui| {
+                        ui.voice_settings.ota_url = url;
+                        ui.voice_settings.error = None;
+                    });
+                }
+                Err(error) => io
+                    .ui_tx
+                    .send_modify(|ui| ui.voice_settings.error = Some(error.to_string())),
+            }
+        }
+        SettingsEffect::Connection(connection) => io
+            .ui_tx
+            .send_modify(|ui| voice_settings::connection(&mut ui.voice_settings, connection)),
+        SettingsEffect::Activation(code) => io
+            .ui_tx
+            .send_modify(|ui| ui.voice_settings.activation = Some(code)),
+    }
+}
