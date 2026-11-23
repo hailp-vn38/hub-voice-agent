@@ -19,6 +19,7 @@ fn main() -> anyhow::Result<()> {
         .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from(".data"));
     let config = ConfigStore::open(&data_dir)?;
+    let store = hub_core::Store::open(&data_dir)?;
     let (ui_tx, ui_rx) = watch::channel(UiState::default());
     let (config_tx, config_rx) = watch::channel(None);
     let (input_tx, input_rx) = mpsc::channel(16);
@@ -36,7 +37,7 @@ fn main() -> anyhow::Result<()> {
             let (_audio_events, audio_rx) = mpsc::channel(16);
             tokio::spawn(async move { while audio_commands.recv().await.is_some() {} });
             tokio::select! {
-                result = hub_core::run(config, ports, Io { voice_config_tx: config_tx, voice_tx, voice_rx, audio_tx, audio_rx, input_rx, ui_tx }) => result,
+                result = hub_core::run(config, store, ports, Io { voice_config_tx: config_tx, voice_tx, voice_rx, audio_tx, audio_rx, input_rx, ui_tx }) => result,
                 _ = stop_rx => Ok(()),
             }
         })

@@ -3,8 +3,10 @@
 mod audio;
 mod config;
 mod conversation;
+mod features;
 mod ports;
 mod runtime;
+mod store;
 mod ui_state;
 mod voice_settings;
 
@@ -16,11 +18,8 @@ pub use ports::{Clock, SystemClock};
 pub use runtime::run;
 use tokio::sync::{mpsc, watch};
 pub use ui_state::{UiState, VoiceSettingsState, VoiceState, VoiceUiState};
-use voice_client::{ToolDef, VoiceCommand, VoiceConfig, VoiceEvent};
+use voice_client::{VoiceCommand, VoiceConfig, VoiceEvent};
 pub use voice_settings::DEFAULT_OTA_URL;
-pub fn tool_definitions() -> Vec<ToolDef> {
-    vec![]
-}
 
 pub struct Ports {
     pub clock: Arc<dyn Clock>,
@@ -40,4 +39,11 @@ pub struct Io {
     pub audio_rx: mpsc::Receiver<AudioEvent>,
     pub input_rx: mpsc::Receiver<UserInput>,
     pub ui_tx: watch::Sender<UiState>,
+}
+
+pub use features::timers::Timer;
+pub use store::Store;
+
+pub fn tool_definitions() -> Vec<voice_client::ToolDef> {
+    features::timers::tools::definitions()
 }

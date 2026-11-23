@@ -61,6 +61,7 @@ impl Hub {
         let (voice_config_tx, config_rx) = watch::channel(None);
         let task = tokio::spawn(run(
             config,
+            hub_core::Store::in_memory().unwrap(),
             Ports {
                 clock: Arc::new(TestClock::at(start)),
             },

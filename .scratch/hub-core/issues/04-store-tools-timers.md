@@ -1,6 +1,6 @@
 # 04 — Store + mẫu thư mục tính năng + hẹn giờ
 
-Status: ready-for-agent
+Status: ready-for-human
 Blocked by: 01
 Spec: [../spec.md](../spec.md)
 
@@ -21,7 +21,13 @@ Ticket này dựng **khuôn thư mục tính năng** (spec, thay đổi 4) mà t
 
 ## Nghiệm thu
 
-- [ ] Test qua `run()`: `ToolCall("hub_timer_start", {minutes:7, label:"luộc trứng"})` → reply OK, `UiState.timers` có một thẻ; khởi động lại `run` với cùng `Store` thì vẫn còn.
-- [ ] Hẹn giờ thứ 5 → reply lỗi có thông điệp rõ.
-- [ ] Unit test `timers/rules.rs` cho tạm dừng/tiếp tục và `due(now)`, không cần actor hay `Effect`.
-- [ ] `tool_definitions()` trả JSON Schema hợp lệ cho mọi tool.
+- [x] Test qua `run()`: `ToolCall("hub_timer_start", {minutes:7, label:"luộc trứng"})` → reply OK, `UiState.timers` có một thẻ; khởi động lại `run` với cùng `Store` thì vẫn còn.
+- [x] Hẹn giờ thứ 5 → reply lỗi có thông điệp rõ.
+- [x] Unit test `timers/rules.rs` cho tạm dừng/tiếp tục và `due(now)`, không cần actor hay `Effect`.
+- [x] `tool_definitions()` trả JSON Schema hợp lệ cho mọi tool.
+
+## Kiểm chứng
+
+- Integration test đi qua voice-client và WebSocket giả, kiểm tra reply, giới hạn bốn hẹn giờ và phục hồi SQLite sau khi chạy lại.
+- Test luật kiểm tra tạm dừng, tiếp tục và so sánh giờ tuyệt đối. Schema sinh từ schemars; test kiểm tra bốn schema có kiểu object, và Python jsonschema 4.25.0 xác thực cả bốn schema.
+- Báo hết giờ và âm thanh thuộc ticket 06; tick hiện chưa phát alert.

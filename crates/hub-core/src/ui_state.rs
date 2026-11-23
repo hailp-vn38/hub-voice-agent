@@ -4,6 +4,7 @@ pub struct UiState {
     /// Local time as `HH:MM:SS`.
     pub clock: String,
     pub voice_settings: VoiceSettingsState,
+    pub timers: Vec<crate::Timer>,
     pub voice: VoiceUiState,
 }
 

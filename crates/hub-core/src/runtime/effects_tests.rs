@@ -18,8 +18,10 @@ async fn voice_effect_sends_command_to_voice_channel() {
         &voice_tx,
         &audio_tx,
         &mut jobs,
+        &mut crate::Store::in_memory().unwrap(),
     )
-    .await;
+    .await
+    .unwrap();
 
     assert!(matches!(voice_rx.recv().await, Some(VoiceCommand::Connect)));
 }
