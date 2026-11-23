@@ -1,7 +1,7 @@
 #[allow(dead_code)]
 mod weather;
 #[allow(unused_imports)]
-pub use weather::FakeWeather;
+pub use weather::{FakeWeather, open_meteo_fixture};
 
 use hub_core::Clock;
 use jiff::{Span, Zoned};
@@ -55,10 +55,34 @@ pub struct Hub {
 
 impl Hub {
     pub fn start(start: Zoned) -> Self {
-        Self::start_with_store(start, hub_core::Store::in_memory().unwrap())
+        Self::start_inner(
+            start,
+            hub_core::Store::in_memory().unwrap(),
+            Arc::new(hub_core::OpenMeteo::default()),
+            false,
+        )
     }
 
     pub fn start_with_store(start: Zoned, store: hub_core::Store) -> Self {
+        Self::start_inner(
+            start,
+            store,
+            Arc::new(hub_core::OpenMeteo::default()),
+            false,
+        )
+    }
+
+    #[allow(dead_code)]
+    pub fn start_with_weather(start: Zoned, weather: Arc<dyn hub_core::WeatherSource>) -> Self {
+        Self::start_inner(start, hub_core::Store::in_memory().unwrap(), weather, true)
+    }
+
+    fn start_inner(
+        start: Zoned,
+        store: hub_core::Store,
+        weather: Arc<dyn hub_core::WeatherSource>,
+        configure_weather: bool,
+    ) -> Self {
         let (voice_tx, voice_rx) = mpsc::channel(16);
         let (voice_event_tx, voice_event_rx) = mpsc::channel(16);
         let (audio_tx, audio_rx) = mpsc::channel(16);
@@ -66,7 +90,15 @@ impl Hub {
         let (input_tx, input_rx) = mpsc::channel(16);
         let (ui_tx, ui_rx) = watch::channel(UiState::default());
         let dir = tempfile::tempdir().unwrap();
-        let config = hub_core::ConfigStore::open(dir.path()).unwrap();
+        let mut config = hub_core::ConfigStore::open(dir.path()).unwrap();
+        if configure_weather {
+            config
+                .update(|settings| {
+                    settings.weather.latitude = Some(21.0);
+                    settings.weather.longitude = Some(105.0);
+                })
+                .unwrap();
+        }
         let (voice_config_tx, config_rx) = watch::channel(None);
         let task = tokio::spawn(run(
             config,
@@ -74,7 +106,7 @@ impl Hub {
             Ports {
                 clock: Arc::new(TestClock::at(start)),
                 calendar: Arc::new(hub_core::GoogleCalendar::default()),
-                weather: Arc::new(hub_core::OpenMeteo::default()),
+                weather,
                 home: Arc::new(hub_core::HomeAssistant::default()),
                 images: Arc::new(hub_core::HttpImageFetcher),
                 system: Arc::new(Synced),

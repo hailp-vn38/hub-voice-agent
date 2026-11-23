@@ -3,7 +3,8 @@ mod support;
 use futures_util::{SinkExt, StreamExt};
 use hub_core::{
     Countdown, Focus, Reminder, ReminderHistory, ReminderRepeat, Repeat, Screen, UiState,
-    UserInput, VoiceState, present, present::CountdownUnit,
+    UserInput, VoiceState, WeatherCurrent, WeatherDay, WeatherForecast, present,
+    present::CountdownUnit,
 };
 use serde_json::{Value, json};
 use std::{sync::Arc, time::Duration};
@@ -22,15 +23,20 @@ fn present_maps_nav_status_and_ambient_from_the_snapshot_time() {
         .unwrap();
     state.view.screen = Screen::Calendar;
     state.voice.state = VoiceState::Offline;
-    state.weather.icon = "rain".into();
-    state.weather.forecast = Some(json!({
-        "current": {"temperature_2m": 28.9},
-        "daily": {
-            "time": ["2026-11-23"],
-            "sunrise": ["2026-11-23T06:10"],
-            "sunset": ["2026-11-23T17:20"]
-        }
-    }));
+    state.weather.forecast = Some(WeatherForecast {
+        current: WeatherCurrent {
+            temperature: Some(28.9),
+            weather_code: Some(61),
+            ..WeatherCurrent::default()
+        },
+        days: vec![WeatherDay {
+            date: "2026-11-23".into(),
+            sunrise: Some("2026-11-23T06:10".into()),
+            sunset: Some("2026-11-23T17:20".into()),
+            ..WeatherDay::default()
+        }],
+        ..WeatherForecast::default()
+    });
 
     let view = present(&state);
 
@@ -41,6 +47,7 @@ fn present_maps_nav_status_and_ambient_from_the_snapshot_time() {
     assert_eq!(view.ambient.temp, "29°");
     assert_eq!(view.ambient.icon, "rain");
     assert!(view.ambient.night);
+    assert!(!view.weather.is_day);
 }
 
 #[test]

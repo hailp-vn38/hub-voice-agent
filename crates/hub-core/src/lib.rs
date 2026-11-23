@@ -33,7 +33,8 @@ pub use ports::{
 pub use present::{
     AlertKind, AlertView, CalendarBlockView, CalendarDayView, CalendarDetailView, CalendarKind,
     CalendarMonthDayView, CalendarUpcomingView, CalendarView, HubView, PendingState, TimerCardView,
-    TimerPhase, TimersView, present,
+    TimerPhase, TimersView, WeatherBackground, WeatherDataView, WeatherDayView, WeatherHourView,
+    WeatherNowView, present,
 };
 pub use runtime::run;
 use tokio::sync::{mpsc, watch};
@@ -96,7 +97,9 @@ pub use features::countdowns::{Countdown, CountdownView, Repeat};
 pub use features::photos::Photo;
 pub use features::reminders::{Reminder, ReminderDue, ReminderHistory, ReminderRepeat};
 pub use features::timers::Timer;
-pub use features::weather::WeatherView;
+pub use features::weather::{
+    AirQuality, WeatherCurrent, WeatherDay, WeatherForecast, WeatherHour, WeatherView,
+};
 pub use lunar::{LunarDate, to_lunar, to_solar};
 pub use sources::{GoogleCalendar, HomeAssistant, HttpImageFetcher, OpenMeteo};
 pub use store::Store;
