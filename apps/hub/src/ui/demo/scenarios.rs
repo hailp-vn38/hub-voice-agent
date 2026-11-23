@@ -47,6 +47,18 @@ pub fn all() -> Vec<Scenario> {
             a.set_night(true);
             app.global::<Nav>().set_screen(Screen::Ambient)
         }),
+        ("Hết giờ trứng", |app| super::alerts::alert(app, crate::AlertKind::Timer, "Trứng", "", "")),
+        ("Reminder uống thuốc", |app| super::alerts::alert(app, crate::AlertKind::Reminder, "Nhắc", "08:00", "Uống thuốc huyết áp")),
+        ("Hai báo liên tiếp", |app| {
+            super::alerts::alert(app, crate::AlertKind::Timer, "Trứng", "", "");
+            super::alerts::alert(app, crate::AlertKind::Reminder, "Nhắc", "08:00", "Uống thuốc huyết áp")
+        }),
+        ("Báo khi đang Ambient", |app| {
+            app.global::<Nav>().set_screen(Screen::Ambient);
+            super::alerts::alert(app, crate::AlertKind::Timer, "Trứng", "", "")
+        }),
+        ("Độ sáng 30%", |app| super::alerts::slider(app, crate::SliderKind::Brightness, 0.3)),
+        ("Âm lượng 80%", |app| super::alerts::slider(app, crate::SliderKind::Volume, 0.8)),
         ("Bảng mẫu", |app| app.set_show_sample(true)),
         ("Wake", |app| {
             let v = app.global::<Voice>();
@@ -80,6 +92,11 @@ pub fn all() -> Vec<Scenario> {
         ("Đổi độ phân giải", super::settings::change_resolution),
         ("Chưa đăng ký voice", super::settings::not_enrolled),
         ("Tắt mic", super::settings::mute_mic),
+        ("Người dùng nói", super::response::user_says),
+        ("Agent trả lời", super::response::agent_reply),
+        ("Tool server: lịch", super::response::tool_server),
+        ("Tool lỗi", super::response::tool_failed),
+        ("Im lặng → mờ", super::response::silence),
         ("Sinh vào ô 3", super::spawn::spawn_cell3),
         ("Lưu → thành công", super::spawn::save_ok),
         ("Lưu → lỗi", super::spawn::save_fail),
@@ -92,6 +109,26 @@ pub fn all() -> Vec<Scenario> {
         ("Lịch: Tạo khám răng → ok", super::fixtures::calendar::scenarios::create_ok),
         ("Lịch: Tạo → lỗi", super::fixtures::calendar::scenarios::create_fail),
         ("Lịch: Offline", super::fixtures::calendar::scenarios::offline),
+        ("Trung tâm: thêm hẹn giờ", super::fixtures::add_timer),
+        ("Trung tâm: hết hẹn giờ", super::fixtures::end_timer),
+        ("Trung tâm: hôm nay là Tết", super::fixtures::countdown_today),
+        ("Trung tâm: hỏi mai có mưa", super::fixtures::focus_weather),
+        ("Trung tâm: offline", super::fixtures::stale),
+        ("Reminder: nhắc uống thuốc 21:00", |app| { app.global::<Nav>().set_screen(Screen::Reminders); super::reminders::add_medicine(app) }),
+        ("Reminder: mỗi sáng 7 giờ", |app| { app.global::<Nav>().set_screen(Screen::Reminders); super::reminders::add_gym(app) }),
+        ("Reminder: tối nay có gì?", super::reminders::focus_tonight),
+        ("Reminder: huỷ uống thuốc", super::reminders::cancel_medicine),
+        ("Reminder: hoãn 10 phút", super::reminders::postpone),
+        ("Reminder: một mục đã lỡ", super::reminders::missed),
+        ("Reminder: trống", super::reminders::empty),
+        ("Hẹn giờ: luộc trứng 7 phút", super::timers::boil_egg),
+        ("Hẹn giờ: thêm một cái", super::timers::add_another),
+        ("Hẹn giờ: 10 giây cuối", super::timers::final_seconds),
+        ("Hẹn giờ: tạm dừng / tiếp tục", super::timers::pause_resume),
+        ("Hẹn giờ: thêm 2 phút", super::timers::add_two_minutes),
+        ("Hẹn giờ: huỷ trứng", super::timers::cancel_egg),
+        ("Hẹn giờ: hết giờ", super::timers::finish),
+        ("Hẹn giờ: trứng còn bao lâu?", super::timers::focus_egg),
         ("Chữ lớn", |app| app.global::<Theme>().set_text_scale(1.25)),
     ]
 }

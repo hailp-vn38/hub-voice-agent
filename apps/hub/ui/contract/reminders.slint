@@ -1,0 +1,39 @@
+// Hợp đồng Reminders. Ticket UI: .scratch/hub-ui/issues/13-reminders.md.
+export struct ReminderItem {
+    key: string,
+    time: string,
+    text: string,
+    repeat-text: string,
+    repeats: bool,
+    fading: bool, // đang huỷ: mục mờ dần trước khi bị gỡ
+}
+
+export struct ReminderGroup {
+    label: string,
+    items: [ReminderItem],
+}
+
+export struct ReminderNext {
+    key: string,
+    time: string,
+    until: string, // "còn 25 phút"
+    text: string,
+    repeat-text: string,
+}
+
+export struct ReminderPast {
+    key: string,
+    time: string,
+    text: string,
+    missed: bool,
+}
+
+export global RemindersData {
+    in property <string> title; // "N sắp tới"
+    in property <bool> has-next;
+    in property <ReminderNext> next;
+    in property <[ReminderGroup]> groups;
+    in property <[ReminderPast]> recent;
+    in property <[string]> focus;
+    in property <int> focus-serial;
+}

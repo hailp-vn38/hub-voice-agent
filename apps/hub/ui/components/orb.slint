@@ -1,4 +1,5 @@
 import { Theme } from "../theme.slint";
+import { AlertData, AlertKind } from "../contract/alert.slint";
 import { Voice, VoiceState, VoiceLevels } from "../contract/voice.slint";
 
 // Tâm Orb (toạ độ cửa sổ) cho ticket 06 dùng làm điểm xuất phát.
@@ -60,7 +61,7 @@ export component Orb inherits Rectangle {
         width: root.d; height: root.d;
         border-radius: self.width / 2;
         background: root.tint;
-        opacity: root.grey ? 0.5 : (root.active ? 1 : 0.55 + 0.1 * root.breath);
+        opacity: root.grey ? 0.5 : (AlertData.kind != AlertKind.none ? 0.6 + 0.4 * sin(root.now / 1200ms * 1turn) : (root.active ? 1 : 0.55 + 0.1 * root.breath));
         transform-scale: root.size;
         animate opacity { duration: 300ms; }
     }

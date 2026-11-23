@@ -1,0 +1,22 @@
+// Hợp đồng Hẹn giờ. Ticket UI: .scratch/hub-ui/issues/11-timers.md.
+export enum TimerPhase { running, paused, final-seconds, finished }
+
+export struct TimerCard {
+    key: string,
+    label: string,
+    remaining: string, // "6:42"
+    detail: string, // "7 phút · xong lúc 14:32" hoặc "Đã hết giờ lúc 14:32"
+    progress: float, // 1 = đầy, 0 = hết
+    phase: TimerPhase,
+}
+
+export global TimersData {
+    in property <string> title;
+    in property <[TimerCard]> timers;
+    in property <string> focus;
+    in property <int> focus-serial;
+    callback quick-start(int);
+    callback toggle-pause(string);
+    callback add-minute(string);
+    callback cancel(string);
+}

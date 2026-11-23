@@ -1,0 +1,103 @@
+import { Theme } from "../theme.slint";
+import { TimerCard, TimerPhase } from "../contract/timers.slint";
+import { TimerRing } from "timer-ring.slint";
+
+// Thẻ một hẹn giờ. Huỷ: co về tâm 300 ms rồi mới gọi cancel.
+export component TimerCardView inherits Rectangle {
+    in property <TimerCard> timer;
+    in property <bool> focused;
+    in property <int> focus-serial;
+    callback toggle-pause();
+    callback add-minute();
+    callback cancel();
+    private property <bool> closing: false;
+    private property <duration> now: animation-tick();
+    private property <duration> glow-t0: -10000ms;
+    private property <bool> final: root.timer.phase == TimerPhase.final-seconds;
+    private property <bool> paused: root.timer.phase == TimerPhase.paused;
+    private property <bool> finished: root.timer.phase == TimerPhase.finished;
+    private property <color> tone: root.final || root.finished ? Theme.warm : Theme.accent;
+    private property <float> sec: (root.now / 1s) - floor(root.now / 1s);
+    private property <float> glow: 1 - clamp((root.now - root.glow-t0) / 1500ms, 0, 1);
+    changed focus-serial => { if (root.focused) { root.glow-t0 = animation-tick(); } }
+
+    Timer {
+        interval: 300ms;
+        running: root.closing;
+        triggered => { root.closing = false; root.cancel(); }
+    }
+
+    Rectangle {
+        background: Theme.card;
+        border-radius: Theme.radius;
+        border-width: 4px;
+        border-color: Theme.accent.with-alpha(root.glow);
+        transform-scale: root.closing ? 0 : 1;
+        opacity: root.closing ? 0 : 1;
+        animate transform-scale, opacity { duration: 300ms; easing: ease-in; }
+
+        HorizontalLayout {
+            padding: Theme.space-m;
+            spacing: Theme.space-m;
+            Rectangle {
+                width: self.height;
+                TimerRing {
+                    progress: root.timer.progress;
+                    tone: root.tone;
+                    stroke: root.final ? 8px + 6px * (1 - root.sec) : 10px;
+                    opacity: root.paused ? 0.45 : 1;
+                    animate opacity { duration: 300ms; }
+                }
+                Text {
+                    text: root.timer.remaining;
+                    color: root.tone;
+                    font-size: Theme.font-title;
+                    font-weight: 600;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                    opacity: root.paused ? 0.55 + 0.45 * abs(sin(root.now / 1s * 180deg)) : 1;
+                }
+            }
+            VerticalLayout {
+                spacing: Theme.space-s;
+                alignment: center;
+                Text {
+                    text: root.timer.label;
+                    color: Theme.text;
+                    font-size: Theme.font-body;
+                    overflow: elide;
+                }
+                Text {
+                    text: root.timer.detail;
+                    color: Theme.text-dim;
+                    font-size: Theme.font-small;
+                    overflow: elide;
+                }
+                HorizontalLayout {
+                    spacing: Theme.space-s;
+                    if !root.finished: Rectangle {
+                        height: Theme.touch-min;
+                        background: Theme.background;
+                        border-radius: Theme.radius;
+                        Text { text: root.paused ? "Tiếp tục" : "Tạm dừng"; color: Theme.text; font-size: Theme.font-small; }
+                        TouchArea { clicked => { root.toggle-pause(); } }
+                    }
+                    if !root.finished: Rectangle {
+                        height: Theme.touch-min;
+                        background: Theme.background;
+                        border-radius: Theme.radius;
+                        Text { text: "+1 phút"; color: Theme.text; font-size: Theme.font-small; }
+                        TouchArea { clicked => { root.add-minute(); } }
+                    }
+                    Rectangle {
+                        height: Theme.touch-min;
+                        background: Theme.background;
+                        border-radius: Theme.radius;
+                        Text { text: root.finished ? "Xoá" : "Huỷ"; color: Theme.error; font-size: Theme.font-small; }
+                        TouchArea { clicked => { root.closing = true; } }
+                    }
+                }
+            }
+        }
+    }
+}
