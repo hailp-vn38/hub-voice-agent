@@ -3,7 +3,11 @@ import { Nav, Screen } from "../contract/nav.slint";
 import { PageDots } from "page-dots.slint";
 import { StatusBarView } from "status-bar.slint";
 import { IdleBackground } from "idle-background.slint";
+import { Alert } from "../overlays/alert.slint";
+import { VoiceSliderOverlay } from "../overlays/voice-slider.slint";
 import { Orb } from "orb.slint";
+import { ResponseText } from "response-text.slint";
+import { ToolTrailView } from "tool-trail.slint";
 import { Ambient } from "../screens/ambient.slint";
 import { MenuScreen } from "../screens/menu.slint";
 import { Placeholder } from "../screens/placeholder.slint";
@@ -101,9 +105,21 @@ export component Shell inherits Rectangle {
         menu-progress: root.menu-p;
         opacity: 1 - root.feat-p;
     }
+    VoiceSliderOverlay { }
+    Alert { dock-height: root.dock-height; }
     Orb { x: (parent.width - self.width) / 2; y: parent.height - root.dock-height / 2 - self.height / 2; }
+    ToolTrailView {
+        x: 120px;
+        width: (parent.width - 88px * 2) / 2 - 24px - 120px;
+        y: parent.height - root.dock-height / 2 - 48px - 24px;
+    }
+    ResponseText {
+        x: 120px;
+        width: (parent.width - 88px * 2) / 2 - 24px - 120px;
+        height: 96px;
+        y: parent.height - root.dock-height / 2 - 48px;
+    }
     if SpawnDemo.show: SpawnDemoScreen { height: parent.height - root.dock-height; }
     FloatingCardsView { dock-height: root.dock-height; }
     if root.shown == Screen.first-boot: FirstBoot { }
-    // Lớp phủ (ticket 14) gắn vào đây.
 }

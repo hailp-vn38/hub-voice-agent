@@ -1,0 +1,21 @@
+import { Theme } from "../theme.slint";
+import { ToolTrail, StepState } from "../contract/tool-trail.slint";
+
+// Dải chấm: mỗi bước tool một chấm; running = accent nhấp nháy, done xanh, failed đỏ.
+export component ToolTrailView inherits Rectangle {
+    height: 24px;
+    private property <duration> now: animation-tick();
+    HorizontalLayout {
+        alignment: end;
+        spacing: 12px;
+        for s in ToolTrail.steps: Rectangle {
+            width: 16px;
+            height: 16px;
+            border-radius: 8px;
+            background: s.state == StepState.done ? Theme.done : s.state == StepState.failed ? Theme.error : Theme.accent;
+            opacity: s.state == StepState.running ? 0.5 + 0.5 * abs(sin(root.now / 800ms * 0.5turn)) : 1;
+            private property <duration> t0: animation-tick();
+            transform-scale: clamp((root.now - self.t0) / 300ms, 0, 1) * (1 + 0.3 * sin(clamp((root.now - self.t0) / 300ms, 0, 1) * 0.5turn));
+        }
+    }
+}
