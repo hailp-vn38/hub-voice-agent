@@ -8,7 +8,7 @@ use crate::{AudioCommand, UiState};
 
 // Variants are introduced here for the subsequent voice and audio slices.
 #[allow(dead_code)]
-pub(super) enum Effect {
+pub(crate) enum Effect {
     Ui(Box<dyn FnOnce(&mut UiState) -> bool + Send>),
     Voice(VoiceCommand),
     Audio(AudioCommand),

@@ -4,6 +4,7 @@ pub struct UiState {
     /// Local time as `HH:MM:SS`.
     pub clock: String,
     pub voice_settings: VoiceSettingsState,
+    pub voice: VoiceUiState,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -14,4 +15,21 @@ pub struct VoiceSettingsState {
     pub activation: Option<String>,
     pub error: Option<String>,
     pub enrolling: bool,
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum VoiceState {
+    #[default]
+    Offline,
+    Idle,
+    Listening,
+    Thinking,
+    Speaking,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct VoiceUiState {
+    pub state: VoiceState,
+    pub stt_text: String,
+    pub response_text: String,
 }

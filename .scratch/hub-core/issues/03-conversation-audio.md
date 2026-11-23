@@ -1,6 +1,6 @@
 # 03 — Conversation + kênh audio
 
-Status: ready-for-agent
+Status: ready-for-human
 Blocked by: 01
 Spec: [../spec.md](../spec.md)
 
@@ -14,6 +14,10 @@ Spec: [../spec.md](../spec.md)
 
 ## Nghiệm thu
 
-- [ ] Unit test `conversation` cho mọi chuyển trạng thái, gồm Offline khi `Connection(Offline)` và wake word khi Offline (không gửi `ListenStart`).
-- [ ] Test qua `run()`: WakeWord → đúng 3 command; tiến clock 10 s sau `TtsStop` → `ListenStop` + `Mic{on:false}`.
-- [ ] `MicFrame` khi Idle bị bỏ.
+- [x] Unit test `conversation` cho mọi chuyển trạng thái, gồm Offline khi `Connection(Offline)` và wake word khi Offline (không gửi `ListenStart`).
+- [x] Test qua `run()`: WakeWord → đúng 3 command; tiến clock 10 s sau `TtsStop` → `ListenStop` + `Mic{on:false}`.
+- [x] `MicFrame` khi Idle bị bỏ.
+
+## Comments
+
+- Đã kiểm thử state machine và luồng qua `run()` với clock ảo; adapter desktop là giả, chưa kiểm thử thu/phát audio hoặc thiết bị thật.

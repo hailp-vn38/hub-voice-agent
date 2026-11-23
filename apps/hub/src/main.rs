@@ -32,9 +32,11 @@ fn main() -> anyhow::Result<()> {
             let (voice_tx, voice_rx) = voice_client::spawn(config_rx);
             ui::spawn_bridge(weak, ui_rx);
             let ports = Ports { clock: Arc::new(SystemClock) };
-            let (audio_tx, _audio_commands) = mpsc::channel(16);
+            let (audio_tx, mut audio_commands) = mpsc::channel(16);
+            let (_audio_events, audio_rx) = mpsc::channel(16);
+            tokio::spawn(async move { while audio_commands.recv().await.is_some() {} });
             tokio::select! {
-                result = hub_core::run(config, ports, Io { voice_config_tx: config_tx, voice_tx, voice_rx, audio_tx, input_rx, ui_tx }) => result,
+                result = hub_core::run(config, ports, Io { voice_config_tx: config_tx, voice_tx, voice_rx, audio_tx, audio_rx, input_rx, ui_tx }) => result,
                 _ = stop_rx => Ok(()),
             }
         })
