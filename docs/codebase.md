@@ -209,6 +209,8 @@ Integration test dùng server WebSocket giả tại `tests/`; test backoff dùng
 
 #### Interface bên ngoài
 
+Interface bên dưới là thiết kế đích. Hiện `run(ports, io)` nhận `clock`, các channel voice, input, audio command và UI; audio command và input chưa có biến thể. Voice event và input chưa được xử lý.
+
 ```rust
 pub async fn run(config: ConfigStore, store: Store, ports: Ports, io: Io) -> anyhow::Result<()>;
 
