@@ -41,6 +41,47 @@ fn timer_chime_repeats_until_stopped() {
 }
 
 #[test]
+fn ding_does_not_replace_a_looping_alert_chime() {
+    for chime in [Sound::TimerChime, Sound::ReminderChime] {
+        let mut mixer = Mixer::new(Sounds::load(RATE).unwrap(), RATE);
+        mixer.apply(AudioCommand::Play(chime.clone()));
+        mixer.apply(AudioCommand::Play(Sound::Ding));
+
+        let mut output = vec![0.0; RATE as usize * 8];
+        mixer.pull(&mut output);
+
+        assert!(
+            output[5 * RATE as usize..6 * RATE as usize]
+                .iter()
+                .any(|sample| *sample != 0.0),
+            "{chime:?} should still be audible after Ding finishes"
+        );
+    }
+}
+
+#[test]
+fn stopping_an_alert_chime_keeps_the_overlapping_ding_one_shot() {
+    for chime in [Sound::TimerChime, Sound::ReminderChime] {
+        let mut mixer = Mixer::new(Sounds::load(RATE).unwrap(), RATE);
+        mixer.apply(AudioCommand::Play(chime.clone()));
+        mixer.apply(AudioCommand::Play(Sound::Ding));
+        mixer.apply(AudioCommand::StopSound(chime));
+
+        let mut ding = vec![0.0; RATE as usize / 2];
+        mixer.pull(&mut ding);
+        assert!(ding.iter().any(|sample| *sample != 0.0));
+
+        let mut after_ding = vec![0.0; RATE as usize * 3];
+        mixer.pull(&mut after_ding);
+        assert!(
+            after_ding[3 * RATE as usize / 2..]
+                .iter()
+                .all(|sample| *sample == 0.0)
+        );
+    }
+}
+
+#[test]
 fn stop_tts_discards_queued_audio() {
     let mut mixer = Mixer::new(Sounds::load(RATE).unwrap(), RATE);
     mixer.apply(AudioCommand::PlayTts(opus_frame(0.6)));

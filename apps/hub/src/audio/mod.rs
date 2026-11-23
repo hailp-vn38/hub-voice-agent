@@ -45,8 +45,8 @@ pub fn spawn(_config: AudioConfig) -> Result<AudioHandle> {
             let setup = (|| -> Result<_> {
                 let (pcm_tx, pcm_rx) = RingBuffer::new(PCM_RING_SAMPLES);
                 let (input_pcm_tx, input_pcm_rx) = RingBuffer::new(INPUT_PCM_RING_SAMPLES);
-                let (output_stream, rate) = devices::open_default_output(pcm_rx)?;
-                let (input_stream, input_rate) = devices::open_default_input(input_pcm_tx)?;
+                let (output_stream, rate) = devices::open_output(pcm_rx)?;
+                let (input_stream, input_rate) = devices::open_input(input_pcm_tx)?;
                 let mixer = mixer::Mixer::new(sounds::Sounds::load(rate)?, rate);
                 let resampler = (input_rate != 16_000)
                     .then(|| devices::InputResampler::new(input_rate))
