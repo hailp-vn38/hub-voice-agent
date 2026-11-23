@@ -1,6 +1,6 @@
 # Spec: hub dùng được trên macOS
 
-Status: ready-for-agent
+Status: ready-for-human
 
 ## Mục tiêu
 
@@ -80,3 +80,10 @@ pub struct AudioHandle {
 - Tách `src/ui/bridge.rs` thành thư mục trong một commit riêng, không đổi hành vi (AGENTS.md).
 - Test trong file riêng (`foo_tests.rs` hoặc `foo/tests.rs`), không viết `mod tests { .. }` trong file nguồn.
 - Kiểm tay trên Mac: `scripts/run.sh run`, đeo tai nghe, vela-server cục bộ ([development.md §3](../../docs/development.md)).
+
+## Comments
+
+- 2026-11-24: Đã tích hợp code cho tickets 01–10 trên `feat/hub-mac`. Gate cuối `scripts/test.sh -p hub` đạt **182 tests**; `cargo check -p hub --no-default-features --features pi` trên host macOS, rustfmt các file thuộc thay đổi và `git diff --check` cũng đạt.
+- `cargo fmt --all -- --check` vẫn báo format có sẵn trong các file demo không thuộc thay đổi; không format lại các file đó.
+- Các kiểm tra thủ công trên Mac với `scripts/run.sh run`, tai nghe/vela-server, mic/loa thật, các luồng màn hình, chuông, wake word, Orb và CPU khi rảnh vẫn chờ người chạy. Trong worktree tích hợp, dùng model sẵn ở checkout chính với `AI_HUB_MODELS_DIR=/Users/lamphuchai/Desktop/project_rust/ai-hub/models`.
+- Nguồn và giấy phép của `ping.mp3` / `reminder.mp3` vẫn `needs-info` trong ticket 07; hai file chưa được sửa hoặc commit.
