@@ -1,6 +1,6 @@
 # 10 — Màn Lịch
 
-Status: resolved
+Status: ready-for-human
 Blocked by: 06
 Spec: [../spec.md](../spec.md)
 Thiết kế: concept.md §6 "Màn Lịch"; ví dụ "tạo sự kiện" ở "Agent điều khiển hub"
@@ -46,7 +46,13 @@ Map: chờ hub-core #10 (lịch), #08 (Reminder trên dòng thời gian)
 | `.detail` | |
 | `.focus` / `.focus-serial` | |
 | `select-day` / `toggle-month` / `open-detail` / `close-detail` | |
+| `CalBlock.col` / `.cols` (cột khi trùng giờ) | |
+| `CalUpcoming.fresh` | |
 
 ## Answer
 
 Done: contract/calendar.slint, screens/calendar.slint, components/calendar/*, demo fixtures + 7 scenarios (fixtures/calendar/). Deviations: CalBlock gained col/cols (adapter assigns columns for overlaps, unit-tested) and CalUpcoming gained fresh; new event flies into the selected day timeline (and Upcoming for later days), week strip only gains a dot; "Lich tiep theo" lights the next event in whichever column holds it. Reminder dashes drawn as segments. Not visually verified.
+
+## Comments
+
+- 2026-11-23 (review hub-ui): Bỏ mẹo xoá `Spawn.key` sau khi bay (không còn cần sau khi sửa `SpawnIn`). Ghi bổ sung vào bảng Map các field thêm lúc làm: `CalBlock.col/cols`, `CalUpcoming.fresh`. Còn lại cho người (ready-for-human): kiểm bằng mắt theo kịch bản demo, đo fps trên Pi, rồi tick nghiệm thu.

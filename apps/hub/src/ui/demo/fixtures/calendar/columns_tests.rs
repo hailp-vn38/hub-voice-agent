@@ -1,4 +1,4 @@
-use super::columns::assign;
+use super::assign;
 
 #[test]
 fn disjoint_blocks_get_full_width() {

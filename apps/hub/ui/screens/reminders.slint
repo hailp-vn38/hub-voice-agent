@@ -1,21 +1,39 @@
 import { Theme } from "../theme.slint";
-import { Nav, Screen } from "../contract/nav.slint";
+import { Nav } from "../contract/nav.slint";
+import { BackNav } from "../components/back-nav.slint";
 import { RemindersData, ReminderItem, ReminderPast } from "../contract/reminders.slint";
 import { Icon } from "../components/icon.slint";
 import { SpawnIn } from "../components/spawn.slint";
 
+// Một dòng trên dòng thời gian. Huỷ: mờ dần. Hoãn (giờ đổi, cùng key): dòng trượt sang giờ mới.
+// Focus giọng nói (focus-serial đổi): các mục trong `focus` sáng lên rồi tắt dần.
 component ItemRow inherits Rectangle {
     in property <ReminderItem> item;
     height: 88px;
+    private property <duration> now: animation-tick();
+    private property <int> focus-serial: RemindersData.focus-serial;
+    private property <duration> focus-t: -10000ms;
+    changed focus-serial => { root.focus-t = animation-tick(); }
+    private property <float> glow: 1 - clamp((root.now - root.focus-t - 2s) / 800ms, 0, 1);
+    private property <string> time: root.item.time;
+    private property <string> time-key: root.item.key;
+    private property <duration> move-t: -10000ms;
+    changed time => {
+        if (root.item.key == root.time-key) { root.move-t = animation-tick(); }
+        root.time-key = root.item.key;
+    }
+    private property <float> mv: clamp((root.now - root.move-t) / 500ms, 0, 1);
     SpawnIn {
         key: root.item.key;
         Rectangle {
+            y: (1 - root.mv) * -root.height * 0.6;
             background: Theme.card;
             border-radius: Theme.radius;
             opacity: root.item.fading ? 0 : 1;
             animate opacity { duration: 500ms; easing: ease-out; }
             for f in RemindersData.focus: Rectangle {
-                if f == root.item.key: Rectangle {
+                if f == root.item.key && root.glow > 0: Rectangle {
+                    opacity: root.glow;
                     border-width: 3px;
                     border-color: Theme.accent;
                     border-radius: Theme.radius;
@@ -62,7 +80,7 @@ export component Reminders inherits Rectangle {
                 horizontal-alignment: left;
                 vertical-alignment: center;
             }
-            TouchArea { width: 640px; x: 0; clicked => { Nav.navigate(Screen.menu); } }
+            TouchArea { width: 640px; x: 0; clicked => { Nav.navigate(BackNav.origin); } }
         }
         if !RemindersData.has-next && RemindersData.groups.length == 0: Text {
             text: "Hey Jarvis, nhắc tôi uống thuốc lúc 9 giờ tối";

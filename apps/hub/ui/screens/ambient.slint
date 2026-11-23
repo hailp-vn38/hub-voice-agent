@@ -3,12 +3,12 @@ import { Icon } from "../components/icon.slint";
 import { StatusBar } from "../contract/status.slint";
 import { AmbientData } from "../contract/ambient.slint";
 
-// Màn chờ: đồng hồ lớn, tông tối, tương phản thấp. Độ sáng đèn nền do hub-core lo.
+// Màn chờ: đồng hồ lớn, tông tối, tương phản thấp. Orb thật (Shell) nằm trên màn này.
+// Độ sáng đèn nền do hub-core lo.
 export component Ambient inherits Rectangle {
     private property <float> dim: AmbientData.night ? 0.45 : 0.75;
     // Dịch chậm theo giờ (chống lưu ảnh): một vòng mỗi giờ.
     private property <float> drift: StatusBar.day-phase * 24;
-    private property <float> breath: 0;
     background: #05080b;
 
     TouchArea { clicked => { AmbientData.wake(); } }
@@ -37,21 +37,4 @@ export component Ambient inherits Rectangle {
             }
         }
     }
-
-    // Orb thở nhỏ và mờ (Orb thật ở ticket 04).
-    Rectangle {
-        x: parent.width - 120px;
-        y: parent.height - 120px;
-        width: 48px + 12px * root.breath;
-        height: self.width;
-        border-radius: self.width / 2;
-        background: Theme.accent;
-        opacity: 0.15;
-    }
-    Timer {
-        interval: 2s;
-        running: true;
-        triggered => { root.breath = root.breath < 0.5 ? 1 : 0; }
-    }
-    animate breath { duration: 2s; easing: ease-in-out; }
 }

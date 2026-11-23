@@ -53,8 +53,9 @@ pub fn init(app: &App) {
         .collect::<Vec<_>>();
     s.set_home(HomeSettings { entities: ModelRc::new(VecModel::from(entities)) });
     s.set_connection(ConnectionSettings {
-        server_connected: true,
-        latency_ms: 42,
+        server_status: "Đã kết nối · 42 ms".into(),
+        device_id: "demo-0001".into(),
+        error: "".into(),
         enrolled: true,
         enrollment_code: "".into(),
         wifi_name: "Nha-5G".into(),
@@ -70,6 +71,7 @@ pub fn init(app: &App) {
         timezones: strs(&["Asia/Ho_Chi_Minh", "Asia/Bangkok", "Asia/Tokyo", "UTC"]),
     });
     s.set_setup_url("192.168.1.20:8080".into());
+    s.set_setup_qr(crate::ui::demo::qr::image("http://192.168.1.20:8080"));
 
     let weak = app.as_weak();
     s.on_set_brightness(move |v| {
@@ -110,6 +112,10 @@ pub fn init(app: &App) {
                     c.calendar_status = "Đã xoá cache".into();
                     c.weather_status = "Đã xoá cache".into();
                 }
+                "photos" => super::photos::clear_all(&app),
+                "timers" => super::timers::clear_all(&app),
+                "countdowns" => super::countdowns::clear_all(&app),
+                "reminders" => super::reminders::empty(&app),
                 _ => {}
             }
             g.set_connection(c);
@@ -215,7 +221,7 @@ pub fn not_enrolled(app: &App) {
     g.set_connection(ConnectionSettings {
         enrolled: false,
         enrollment_code: "482 915".into(),
-        server_connected: false,
+        server_status: "Mất kết nối".into(),
         ..g.get_connection()
     });
 }

@@ -1,5 +1,6 @@
 //! Fixture và kịch bản demo cho màn Ảnh (ticket 15). Trạng thái ảnh giữ ở Rust, đẩy vào PhotosData.
-use crate::{App, Nav, Photo, PhotoState, PhotosData, Screen, Spawn};
+use crate::ui::demo::scenarios::show;
+use crate::{App, Photo, PhotoState, PhotosData, Screen};
 use slint::{ComponentHandle, Image, ModelRc, VecModel};
 use std::{cell::RefCell, path::Path, rc::Rc, time::Duration};
 
@@ -72,15 +73,9 @@ fn show_viewer(app: &App, keys: Vec<String>, auto: bool) {
     let d = app.global::<PhotosData>();
     d.set_auto_advance(auto);
     d.set_viewing(true);
-    app.set_show_sample(false);
-    app.global::<Nav>().set_screen(Screen::Photos);
+    show(app, Screen::Photos);
 }
 
-fn spawn(app: &App) {
-    let s = app.global::<Spawn>();
-    s.set_key("photo".into());
-    s.set_serial(s.get_serial() + 1);
-}
 
 pub fn init(app: &App) {
     {
@@ -142,6 +137,13 @@ pub fn init(app: &App) {
     });
 }
 
+/// Setting → Dữ liệu → "Xoá toàn bộ ảnh".
+pub fn clear_all(app: &App) {
+    *state().borrow_mut() = State::default();
+    app.global::<PhotosData>().set_viewing(false);
+    sync(app);
+}
+
 fn go(w: &slint::Weak<App>, delta: i32) {
     if let Some(app) = w.upgrade() {
         {
@@ -166,7 +168,7 @@ pub fn agent_sends(app: &App) {
         s.last_sent = keys.clone();
     }
     show_viewer(app, keys.clone(), true);
-    spawn(app);
+    super::spawn::from_orb(app, "photo");
     let w = app.as_weak();
     slint::Timer::single_shot(Duration::from_millis(1800), move || {
         let Some(app) = w.upgrade() else { return };
@@ -187,7 +189,7 @@ pub fn failed(app: &App) {
         s.all.insert(0, photo("bad", 0, "Ảnh lỗi", "example.com", "Vừa xong", PhotoState::Failed));
     }
     show_viewer(app, vec!["bad".into()], false);
-    spawn(app);
+    super::spawn::from_orb(app, "photo");
 }
 
 pub fn next(app: &App) {

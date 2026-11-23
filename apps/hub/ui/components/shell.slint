@@ -10,19 +10,20 @@ import { ResponseText } from "response-text.slint";
 import { ToolTrailView } from "tool-trail.slint";
 import { Ambient } from "../screens/ambient.slint";
 import { MenuScreen } from "../screens/menu.slint";
-import { Placeholder } from "../screens/placeholder.slint";
 import { Home } from "../screens/home.slint";
 import { Weather } from "../screens/weather.slint";
 import { FirstBoot } from "../screens/first-boot.slint";
 import { Settings } from "../screens/settings.slint";
 import { Calendar } from "../screens/calendar.slint";
 import { SettingsData } from "../contract/settings.slint";
-import { SpawnDemo, SpawnDemoScreen } from "../screens/spawn-demo.slint";
+import { SpawnDemo, SpawnDemoScreen } from "../demo/spawn-demo.slint";
 import { Photos } from "../screens/photos.slint";
 import { PhotosData } from "../contract/photos.slint";
 import { Countdowns } from "../screens/countdowns.slint";
 import { Reminders } from "../screens/reminders.slint";
 import { FloatingCardsView } from "floating-cards.slint";
+import { BackNav } from "back-nav.slint";
+import { SpawnClock } from "spawn.slint";
 import { CenterScreen } from "../screens/center.slint";
 import { Timers } from "../screens/timers.slint";
 
@@ -32,16 +33,11 @@ export component Shell inherits Rectangle {
     in property <length> dock-height: 240px;
     // Màn đang hiển thị: theo Nav.screen, nhưng chuyển ngay khi người dùng vuốt xong.
     private property <Screen> shown: Nav.screen;
-    private property <Screen> origin: Screen.center; // trung tâm hoặc menu, nơi quay về từ màn tính năng
-    // Màn tính năng có nhánh riêng bên dưới; thêm màn mới thì sửa cả `has-screen` lẫn nhánh `if`.
-    private property <bool> has-screen: shown == Screen.calendar || shown == Screen.countdowns || shown == Screen.home
-        || shown == Screen.photos || shown == Screen.reminders || shown == Screen.settings
-        || shown == Screen.timers || shown == Screen.weather;
     private property <bool> is-feature: shown != Screen.center && shown != Screen.menu;
     private property <length> w: swipe.width;
     private property <length> dx: swipe.current-position.x - swipe.pressed-position.x;
     private property <duration> t0;
-    private property <float> menu-target: (shown == Screen.menu || (is-feature && origin == Screen.menu)) ? 1 : 0;
+    private property <float> menu-target: (shown == Screen.menu || (is-feature && BackNav.origin == Screen.menu)) ? 1 : 0;
     private property <float> feat-target: is-feature ? 1 : 0;
     private property <float> menu-p: swipe.swiping && !is-feature ? clamp(menu-target - dx / w, 0, 1) : menu-target;
     private property <float> feat-p: swipe.swiping && is-feature ? clamp(1 - dx / w, 0, 1) : feat-target;
@@ -49,28 +45,23 @@ export component Shell inherits Rectangle {
     animate menu-p, feat-p { duration: swipe.swiping ? 0ms : Theme.anim-screen; easing: ease-out; }
 
     changed shown => {
-        if (!root.is-feature) { root.origin = root.shown; }
+        if (!root.is-feature) { BackNav.origin = root.shown; }
     }
     private property <Screen> nav-screen: Nav.screen;
     changed nav-screen => { root.shown = root.nav-screen; }
 
-    pure function title(s: Screen) -> string {
-        return s == Screen.weather ? "weather" : s == Screen.calendar ? "calendar" : s == Screen.home ? "home"
-            : s == Screen.timers ? "timers" : s == Screen.countdowns ? "countdowns" : s == Screen.reminders ? "reminders"
-            : s == Screen.photos ? "photos" : s == Screen.settings ? "settings" : s == Screen.ambient ? "ambient" : s == Screen.first-boot ? "first-boot" : "unknown";
-    }
 
     // Tầng nội dung (vuốt được). Hàng dock nằm ngoài vùng này.
     swipe := SwipeGestureHandler {
         y: 0;
         height: parent.height - root.dock-height;
         handle-swipe-left: root.shown == Screen.center;
-        handle-swipe-right: root.shown != Screen.center && !SettingsData.dragging && !(root.shown == Screen.photos && PhotosData.viewing);
+        handle-swipe-right: root.shown != Screen.center && root.shown != Screen.first-boot && !SettingsData.dragging && !(root.shown == Screen.photos && PhotosData.viewing);
         changed swiping => { if (self.swiping) { root.t0 = animation-tick(); } }
         swiped => {
             // Đủ xa (> 30% chiều rộng) hoặc vuốt nhanh thì hoàn tất.
             if (abs(root.dx) > root.w * 0.3 || (abs(root.dx) > 120px && animation-tick() - root.t0 < 250ms)) {
-                root.shown = root.shown == Screen.center ? Screen.menu : (root.shown == Screen.menu ? Screen.center : root.origin);
+                root.shown = root.shown == Screen.center ? Screen.menu : (root.shown == Screen.menu ? Screen.center : BackNav.origin);
                 Nav.navigate(root.shown);
             }
         }
@@ -95,7 +86,6 @@ export component Shell inherits Rectangle {
                 x: (1 - root.feat-p) * root.w;
                 opacity: root.feat-p;
                 background: Theme.background;
-                if !root.has-screen: Placeholder { title: root.title(root.shown); }
                 if root.shown == Screen.home: Home { }
                 if root.shown == Screen.weather: Weather { }
                 if root.shown == Screen.settings: Settings { }
@@ -104,6 +94,7 @@ export component Shell inherits Rectangle {
                 if root.shown == Screen.photos: Photos { }
                 if root.shown == Screen.calendar: Calendar { }
                 if root.shown == Screen.countdowns: Countdowns { }
+                if root.shown == Screen.first-boot: FirstBoot { }
             }
         }
     }
@@ -123,7 +114,16 @@ export component Shell inherits Rectangle {
     }
     VoiceSliderOverlay { }
     Alert { dock-height: root.dock-height; }
-    Orb { x: (parent.width - self.width) / 2; y: parent.height - root.dock-height / 2 - self.height / 2; }
+    // Orb neo góc phải dưới, đứng yên khi chuyển màn. Lần đầu khởi động: xám, không chạm được.
+    Orb {
+        x: parent.width - self.width - 88px;
+        y: parent.height - root.dock-height / 2 - self.height / 2;
+        disabled: root.shown == Screen.first-boot;
+        // Ambient: Orb thở nhỏ và mờ.
+        opacity: root.shown == Screen.ambient ? 0.35 : 1;
+        transform-scale: root.shown == Screen.ambient ? 0.6 : 1;
+        animate opacity, transform-scale { duration: Theme.anim-screen; easing: ease-out; }
+    }
     ToolTrailView {
         x: 120px;
         width: (parent.width - 88px * 2) / 2 - 24px - 120px;
@@ -137,5 +137,5 @@ export component Shell inherits Rectangle {
     }
     if SpawnDemo.show: SpawnDemoScreen { height: parent.height - root.dock-height; }
     FloatingCardsView { dock-height: root.dock-height; }
-    if root.shown == Screen.first-boot: FirstBoot { }
+    SpawnClock { }
 }

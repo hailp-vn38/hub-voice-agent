@@ -1,6 +1,6 @@
 # 19 — Lần đầu khởi động: hai QR
 
-Status: resolved
+Status: ready-for-human
 Blocked by: 03
 Spec: [../spec.md](../spec.md)
 Thiết kế: concept.md §6 "Setting" (Lần đầu khởi động), [ADR 0010](../../../docs/adr/0010-first-boot-access-point-two-qr.md)
@@ -39,3 +39,7 @@ Map: chưa có ticket hub-core (ADR 0010, port `System`)
 ## Answer
 
 Đã thêm `contract/first-boot.slint`, `screens/first-boot.slint` (hiện qua Shell khi `Nav.screen == first-boot`), fixture demo `fixtures/first_boot.rs` và hai kịch bản ("Lần đầu: 3 bước", "Lần đầu: sai mật khẩu"). QR demo sinh bằng `qrcode` (optional, bật bởi feature `demo`) trong `demo/qr.rs`, có unit test. Nghiệm thu quét QR từ 50 cm còn chờ thử trên Pi.
+
+## Comments
+
+- 2026-11-23 (review hub-ui): Màn lần đầu khởi động nằm trong tầng màn tính năng (trên Voice dock), không vuốt ra được; Orb xám, không chạm được. Demo: "Xong" về màn trung tâm. Còn lại cho người (ready-for-human): kiểm bằng mắt theo kịch bản demo, đo fps trên Pi, rồi tick nghiệm thu.

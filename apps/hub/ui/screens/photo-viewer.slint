@@ -3,6 +3,7 @@ import { PhotosData, PhotoState, Photo } from "../contract/photos.slint";
 import { SpawnIn } from "../components/spawn.slint";
 import { PendingState } from "../contract/spawn.slint";
 import { Icon } from "../components/icon.slint";
+import { Confirm } from "../overlays/confirm.slint";
 
 // Xem ảnh toàn màn: Ken Burns, crossfade, chạm mép đổi ảnh, vuốt trái → phải về lưới.
 export component PhotoViewer inherits Rectangle {
@@ -10,6 +11,7 @@ export component PhotoViewer inherits Rectangle {
     private property <Photo> cur: PhotosData.viewer[root.idx];
     private property <bool> ready: root.cur.state == PhotoState.ready;
     private property <bool> captions: true;
+    private property <bool> confirm-remove;
     private property <duration> now: animation-tick();
     private property <duration> t0: animation-tick();
     private property <duration> pin-t: -10000ms;
@@ -135,7 +137,7 @@ export component PhotoViewer inherits Rectangle {
             width: Theme.touch-min * 1.5;
             height: Theme.touch-min;
             Text { text: "Xoá"; color: Theme.error; font-size: Theme.font-body; horizontal-alignment: center; vertical-alignment: center; }
-            TouchArea { clicked => { PhotosData.remove(root.cur.key); } }
+            TouchArea { clicked => { root.confirm-remove = true; } }
         }
     }
 
@@ -143,5 +145,17 @@ export component PhotoViewer inherits Rectangle {
         interval: 6s;
         running: PhotosData.auto-advance && PhotosData.viewer.length > 1 && root.ready;
         triggered => { PhotosData.next(); }
+    }
+
+    // Xoá cần xác nhận (thẻ dùng chung, ticket 14).
+    if root.confirm-remove: Confirm {
+        title: "Xoá ảnh này?";
+        body: root.cur.caption;
+        action-text: "Xoá";
+        cancelled => { root.confirm-remove = false; }
+        confirmed => {
+            PhotosData.remove(root.cur.key);
+            root.confirm-remove = false;
+        }
     }
 }

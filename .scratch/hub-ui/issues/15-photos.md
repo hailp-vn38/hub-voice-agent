@@ -1,6 +1,6 @@
 # 15 — Màn Ảnh và xem ảnh
 
-Status: resolved
+Status: ready-for-human
 Blocked by: 06
 Spec: [../spec.md](../spec.md)
 Thiết kế: concept.md §6 "Màn Ảnh"
@@ -48,3 +48,7 @@ Map: chờ hub-core #12 (ảnh đã thu nhỏ → `image` ở bridge)
 ## Answer
 
 Implemented `contract/photos.slint`, `screens/photos.slint` (grid), `screens/photo-viewer.slint` (Ken Burns, crossfade, edge taps, auto-advance timer, swipe right to grid, pin bounce), demo adapter `src/ui/demo/photos.rs` with 10 generated images in `assets/demo/` and 6 scenarios. Deviations: Xoá calls `remove` directly (confirm card from ticket 14 not yet wired); Shell right-swipe is disabled while the viewer is open so the viewer handles it; pin icon added (`pin.svg`). fps on Pi not measured.
+
+## Comments
+
+- 2026-11-23 (review hub-ui): Nút Xoá trong trình xem ảnh mở thẻ xác nhận dùng chung (`overlays/confirm.slint`) trước khi gọi `remove`. Demo thêm `clear_all` cho Setting → Dữ liệu. Còn lại cho người (ready-for-human): kiểm bằng mắt theo kịch bản demo, đo fps trên Pi, rồi tick nghiệm thu.

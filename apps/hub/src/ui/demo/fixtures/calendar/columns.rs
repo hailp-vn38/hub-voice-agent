@@ -33,3 +33,7 @@ fn close(cluster: &mut Vec<usize>, ends: &mut Vec<i32>, out: &mut [(i32, i32)]) 
     cluster.clear();
     ends.clear();
 }
+
+#[cfg(test)]
+#[path = "columns_tests.rs"]
+mod tests;

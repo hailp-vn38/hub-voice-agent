@@ -1,5 +1,6 @@
 //! Fixture màn lần đầu khởi động: ba bước nối tiếp và lỗi sai mật khẩu.
-use crate::{App, BootStep, FirstBootData, Nav, Screen, ui::demo::qr};
+use crate::ui::demo::scenarios::show;
+use crate::{App, BootStep, FirstBootData, Screen, ui::demo::qr};
 use slint::{ComponentHandle, Timer, TimerMode};
 use std::{cell::RefCell, time::Duration};
 
@@ -17,13 +18,18 @@ fn setup(app: &App, step: BootStep, url: &str, home: &str, error: &str) {
 }
 
 pub fn init(app: &App) {
-    app.global::<FirstBootData>().on_done(|| {});
+    let weak = app.as_weak();
+    // Demo: "Xong" đưa về màn trung tâm (thật: hub-core quyết màn kế tiếp).
+    app.global::<FirstBootData>().on_done(move || {
+        if let Some(app) = weak.upgrade() {
+            show(&app, Screen::Center);
+        }
+    });
 }
 
 /// Chạy kịch bản: bước 1 → 2 → 3, hoặc sai mật khẩu rồi về bước 1 kèm lỗi.
 pub fn run(app: &App, wrong_password: bool) {
-    app.set_show_sample(false);
-    app.global::<Nav>().set_screen(Screen::FirstBoot);
+    show(app, Screen::FirstBoot);
     setup(app, BootStep::AccessPoint, "192.168.4.1", "", "");
     let weak = app.as_weak();
     let mut n = 0;

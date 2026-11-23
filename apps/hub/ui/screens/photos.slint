@@ -1,5 +1,6 @@
 import { Theme } from "../theme.slint";
-import { Nav, Screen } from "../contract/nav.slint";
+import { Nav } from "../contract/nav.slint";
+import { BackNav } from "../components/back-nav.slint";
 import { PhotosData, PhotoState } from "../contract/photos.slint";
 import { Icon } from "../components/icon.slint";
 import { PhotoViewer } from "photo-viewer.slint";
@@ -29,7 +30,7 @@ export component Photos inherits Rectangle {
                 horizontal-alignment: right;
                 vertical-alignment: center;
             }
-            TouchArea { width: 360px; x: 0; clicked => { Nav.navigate(Screen.menu); } }
+            TouchArea { width: 360px; x: 0; clicked => { Nav.navigate(BackNav.origin); } }
         }
         if PhotosData.photos.length == 0: Text {
             text: "Hey Jarvis, cho tôi xem ảnh vịnh Hạ Long";

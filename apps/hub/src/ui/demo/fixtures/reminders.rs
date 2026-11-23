@@ -1,5 +1,5 @@
 //! Fixture và kịch bản Reminder (ticket 13).
-use crate::{App, ReminderGroup, ReminderItem, ReminderNext, ReminderPast, RemindersData, Spawn};
+use crate::{App, ReminderGroup, ReminderItem, ReminderNext, ReminderPast, RemindersData};
 use slint::{ComponentHandle, Model, ModelRc, SharedString, VecModel};
 use std::{rc::Rc, time::Duration};
 
@@ -64,11 +64,6 @@ pub fn empty(app: &App) {
     d.set_title("0 sắp tới".into());
 }
 
-fn spawn(app: &App, key: &str) {
-    let s = app.global::<Spawn>();
-    s.set_key(key.into());
-    s.set_serial(s.get_serial() + 1);
-}
 
 /// "Nhắc uống thuốc 21:00": mục mới bay từ Orb vào dòng thời gian.
 pub fn add_medicine(app: &App) {
@@ -76,25 +71,26 @@ pub fn add_medicine(app: &App) {
     let d = app.global::<RemindersData>();
     let today = vec![item("r-med2", "21:00", "Uống thuốc", ""), item("r-call", "21:30", "Gọi điện cho mẹ", "")];
     d.set_groups(model(vec![group("Hôm nay", today), group("Ngày mai", vec![gym()])]));
-    spawn(app, "r-med2");
+    super::spawn::from_orb(app, "r-med2");
 }
 
 /// "Mỗi sáng 7 giờ tập thể dục": mục có icon lặp.
 pub fn add_gym(app: &App) {
     base(app);
-    spawn(app, "r-gym");
+    super::spawn::from_orb(app, "r-gym");
 }
 
-/// "Tối nay có nhắc gì?": sáng các mục của hôm nay.
+/// "Tối nay có nhắc gì?": sáng các mục của hôm nay (giữ nguyên dòng thời gian đang hiện).
 pub fn focus_tonight(app: &App) {
-    base(app);
     let d = app.global::<RemindersData>();
     let keys: Vec<SharedString> = vec!["r-med".into(), "r-call".into()];
     d.set_focus(model(keys));
     d.set_focus_serial(d.get_focus_serial() + 1);
 }
 
-fn update(app: &App, key: &str, f: impl Fn(&mut ReminderItem)) {
+/// Sửa mục `key` tại chỗ (không dựng lại model); trả về false nếu không có mục đó.
+fn update(app: &App, key: &str, f: impl Fn(&mut ReminderItem)) -> bool {
+    let mut found = false;
     let g = app.global::<RemindersData>().get_groups();
     for gi in 0..g.row_count() {
         let grp = g.row_data(gi).unwrap();
@@ -103,15 +99,20 @@ fn update(app: &App, key: &str, f: impl Fn(&mut ReminderItem)) {
             if it.key == key {
                 f(&mut it);
                 grp.items.set_row_data(ii, it);
+                found = true;
             }
         }
     }
+    found
 }
 
 /// "Huỷ nhắc uống thuốc": mờ dần rồi gỡ.
 pub fn cancel_medicine(app: &App) {
-    base(app);
-    update(app, "r-med", |i| i.fading = true);
+    // Sửa tại chỗ để dòng đang hiện mờ dần. Mục đã huỷ rồi: dựng lại fixture, bấm lần nữa để xem.
+    if !update(app, "r-med", |i| i.fading = true) {
+        base(app);
+        return;
+    }
     let weak = app.as_weak();
     slint::Timer::single_shot(Duration::from_millis(600), move || {
         if let Some(app) = weak.upgrade() {
@@ -124,10 +125,13 @@ pub fn cancel_medicine(app: &App) {
     });
 }
 
-/// "Hoãn 10 phút": mục đổi giờ.
+/// "Hoãn 10 phút": mục dời giờ tại chỗ (sửa trực tiếp để dòng hiện hiệu ứng dời).
 pub fn postpone(app: &App) {
-    base(app);
-    update(app, "r-med", |i| i.time = "21:10".into());
+    // Mục đã huỷ: dựng lại fixture, bấm lần nữa để xem.
+    if !update(app, "r-med", |i| i.time = "21:10".into()) {
+        base(app);
+        return;
+    }
     let d = app.global::<RemindersData>();
     let mut n = d.get_next();
     n.time = "21:10".into();

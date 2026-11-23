@@ -1,6 +1,6 @@
 # 16 — Màn Nhà
 
-Status: resolved
+Status: ready-for-human
 Blocked by: 03
 Spec: [../spec.md](../spec.md)
 Thiết kế: concept.md §5 "Home Assistant (demo)", §6 "Màn hình" (Nhà), "Phong cách" (màu ấm cho thiết bị đang bật)
@@ -39,3 +39,7 @@ Map: chờ hub-core #11
 ## Answer
 
 Done: contract/home.slint, components/home-tile.slint (HomeTileView), screens/home.slint wired in Shell for Screen.home, demo fixtures/home.rs and 3 scenarios. Pending tiles show "Đang chờ…", stale tiles dim with "cập nhật lúc HH:MM", disconnect banner and unconfigured empty state. No Rust logic to unit-test; verified by build only.
+
+## Comments
+
+- 2026-11-23 (review hub-ui): Còn lại cho người (ready-for-human): kiểm bằng mắt theo kịch bản demo, đo fps trên Pi, rồi tick nghiệm thu.

@@ -1,6 +1,6 @@
 # 03 — Khung app: tầng màn, vuốt, chấm trang, thanh trạng thái
 
-Status: resolved
+Status: ready-for-human
 Blocked by: 02
 Spec: [../spec.md](../spec.md)
 Thiết kế: concept.md §6 "Màn hình", "Điều hướng", "Hiệu ứng theo trạng thái" (chuyển màn)
@@ -50,3 +50,7 @@ Lệch/ghi chú:
 - Hàng dock 240 px dưới cùng (cả chiều ngang) bị loại khỏi vùng vuốt, không chỉ ô Orb; chưa có cơ chế khoá cử chỉ cho slider.
 - Shell chỉ dùng ở chế độ demo; nhánh không-demo giữ nguyên để app thật vẫn chạy.
 - Giờ/day-phase demo theo UTC. Đo fps trên Pi và thử cảm giác vuốt bằng tay chưa làm (ready-for-human).
+
+## Comments
+
+- 2026-11-23 (review hub-ui): Orb chuyển về góc phải dưới theo concept.md. Nút "‹" và vuốt về dùng `BackNav.origin` (`components/back-nav.slint`): về Menu, hoặc về trung tâm nếu đến bằng đường tắt. Bỏ `screens/placeholder.slint` (mọi màn đã có). App thật (không `demo`) cũng dùng Shell; `Nav.navigate` tạm đổi màn tại UI trong `bridge.rs` cho tới hub-core #05. Còn lại cho người (ready-for-human): kiểm bằng mắt theo kịch bản demo, đo fps trên Pi, rồi tick nghiệm thu.

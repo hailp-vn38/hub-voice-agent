@@ -1,4 +1,4 @@
-use super::data::{blocks, seed, upcoming};
+use super::{blocks, seed, upcoming};
 
 #[test]
 fn upcoming_groups_by_day_and_skips_selected_day() {

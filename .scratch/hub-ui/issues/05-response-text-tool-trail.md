@@ -1,6 +1,6 @@
 # 05 — Chữ phản hồi, dải bước tool, gợi ý câu nói
 
-Status: resolved
+Status: ready-for-human
 Blocked by: 04
 Spec: [../spec.md](../spec.md)
 Thiết kế: concept.md §6 "Concept voice-first" mục 2, 3, 5 (gợi ý câu nói); "Điều hướng" (gợi ý theo màn)
@@ -47,3 +47,7 @@ Map: chờ hub-core #03 (stt, tts text, fading), #05 (ServerTool)
 ## Answer
 
 Da lam: contract/response.slint, contract/tool-trail.slint, components/response-text.slint (chu dong, goi y theo Nav.screen, xoay 5 s), components/tool-trail.slint, gan vao shell.slint canh Orb. Demo: 5 kich ban (src/ui/demo/response.rs, co unit test split_words). Mep trai mo dung overlay gradient (Slint khong co mask). Chua do fps tren Pi (ready-for-human).
+
+## Comments
+
+- 2026-11-23 (review hub-ui): Còn lại cho người (ready-for-human): kiểm bằng mắt theo kịch bản demo, đo fps trên Pi, rồi tick nghiệm thu.

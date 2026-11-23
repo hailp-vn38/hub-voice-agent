@@ -1,34 +1,18 @@
-//! Fixture mỗi tính năng một file; ticket sau thêm `mod <feature>;` và gọi vào đây.
-pub mod calendar;
-mod first_boot;
-mod menu;
-pub use first_boot::run as run_first_boot;
-pub use menu::idle as menu_idle;
-use crate::App;
+//! Fixture và kịch bản demo, mỗi tính năng một module.
+pub(super) mod alerts;
+pub(super) mod calendar;
+pub(super) mod center;
+pub(super) mod countdowns;
+pub(super) mod first_boot;
+pub(super) mod home;
+pub(super) mod menu;
+pub(super) mod photos;
+pub(super) mod reminders;
+pub(super) mod response;
+pub(super) mod settings;
+pub(super) mod spawn;
+pub(super) mod timers;
+pub(super) mod weather;
+mod wiring;
 
-pub mod countdowns;
-pub mod home;
-pub mod weather;
-mod center;
-pub use center::{add_timer, countdown_today, end_timer, focus_weather, stale};
-
-pub fn init(app: &App) {
-    super::settings::init(app);
-    menu::init(app);
-    home::init(app);
-    weather::init(app);
-    first_boot::init(app);
-    super::photos::init(app);
-    center::init(app);
-    calendar::init(app);
-    super::reminders::init(app);
-    super::timers::init(app);
-    countdowns::init(app);
-}
-
-pub fn tick(app: &App) {
-    center::tick(app);
-    calendar::tick(app);
-    super::timers::tick(app);
-    countdowns::tick(app);
-}
+pub(super) use wiring::{init, tick};

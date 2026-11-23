@@ -1,6 +1,6 @@
 # 17 — Setting
 
-Status: resolved
+Status: ready-for-human
 Blocked by: 03
 Spec: [../spec.md](../spec.md)
 Thiết kế: concept.md §6 "Setting"
@@ -36,7 +36,7 @@ Kịch bản: đổi từng lựa chọn (demo áp lại vào fixture), "Đổi 
 
 ## Map với hub-core
 
-Map: chờ hub-core #02 (Kết nối voice), #13 (Setup web URL); các danh mục khác chưa có ticket hub-core
+Map: một phần (Kết nối voice, `bridge.rs`); còn chờ #13 (Setup web URL), các danh mục khác chưa có ticket hub-core
 
 | Hợp đồng | UiState / UserInput |
 |---|---|
@@ -44,14 +44,16 @@ Map: chờ hub-core #02 (Kết nối voice), #13 (Setup web URL); các danh mụ
 | `.audio` | |
 | `.voice` | |
 | `.home` | |
-| `.connection` | |
 | `.system` | |
 | `.setup-url` / `.setup-qr` | |
 | `.resolution-confirm` / `keep-resolution()` | |
 | `set-brightness` / `set-volume` | |
 | `choose` / `toggle` / `preview-sound` | |
-| `clear` / `system` | |
-| `connect-voice()` / `save-voice-url(url)` | |
+| `clear` / `system-action` | |
+| `connect-voice()` / `save-voice-url(url)` | `UserInput::VoiceConnect` / `UserInput::SaveVoiceUrl` |
+| `.ota-url` (in-out, tạm) | `UiState.voice_settings.ota_url` |
+| `.dragging` (in-out, UI ghi) | — |
+| `.connection.server-status` / `.device-id` / `.error` / `.enrolled` / `.enrollment-code` | `voice_settings.status_label` / `.device_id` / `.error` / `!enrolling` / `.activation` |
 
 ## Answer
 
@@ -62,3 +64,7 @@ Map: chờ hub-core #02 (Kết nối voice), #13 (Setup web URL); các danh mụ
 - Callback hệ thống tên `system-action` (tránh trùng property `system`).
 - OTA URL: `LineEdit` tạm trong Kết nối (`SettingsData.ota-url`); đường thật (VoiceSettings, non-demo) giữ nguyên, chưa nối `SettingsData` vào bridge.
 - Chưa có QR thật (`setup-qr` rỗng trong demo). Không có unit test (không có logic Rust ngoài demo).
+
+## Comments
+
+- 2026-11-23 (review hub-ui): Demo sinh QR Setup web. Các nút Dữ liệu (ảnh, hẹn giờ, đếm ngược, Reminder) xoá thật trong demo; thêm kịch bản "Setting: xoá toàn bộ ảnh (mở Dữ liệu)". Đổi `ConnectionSettings`: `server-status` (chuỗi đã định dạng) thay `server-connected` + `latency-ms`, thêm `device-id`, `error`. Map một phần trong `bridge.rs`: `.connection`, `.ota-url`, `connect-voice()`, `save-voice-url(url)`; bỏ màn `voice-settings.slint` cũ. Ghi vào bảng Map các khác biệt so với ticket: `ota-url` và `dragging` là `in-out` do UI ghi; callback `system(string)` đổi tên thành `system-action(string)` vì `system` trùng tên property. Còn lại cho người (ready-for-human): kiểm bằng mắt theo kịch bản demo, đo fps trên Pi, rồi tick nghiệm thu.

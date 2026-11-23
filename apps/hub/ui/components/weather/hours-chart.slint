@@ -6,7 +6,6 @@ export component HoursChart inherits Rectangle {
     in property <[WeatherHour]> hours;
     in property <float> lo;
     in property <float> hi;
-    in property <float> day-high; // nhiệt độ cao nhất của ngày đang xem
     in property <string> focus-key;
     in property <bool> lit;
     in-out property <int> picked: -1;
@@ -34,7 +33,7 @@ export component HoursChart inherits Rectangle {
     }
     for h[i] in hours: Rectangle {
         property <bool> on: i == root.picked || h.key == root.focus-key;
-        property <bool> peak: h.temp == root.day-high;
+        property <bool> peak: h.peak;
         x: (i + 0.5) * step - self.width / 2; y: py(h.temp) - self.height / 2;
         width: on ? 28px : (peak ? 20px : 10px); height: self.width; border-radius: self.width / 2;
         background: peak || on ? Theme.warm : Theme.text;

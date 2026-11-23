@@ -9,6 +9,8 @@ export global Dock {
 }
 
 export component Orb inherits Rectangle {
+    // Xám và không chạm được (vd. lần đầu khởi động, voice chưa cấu hình).
+    in property <bool> disabled;
     width: Theme.touch-min * 2;
     height: Theme.touch-min * 2;
     private property <duration> now: animation-tick();
@@ -22,7 +24,7 @@ export component Orb inherits Rectangle {
     changed tool => { root.tool-t = animation-tick(); }
     changed err => { root.err-t = animation-tick(); }
 
-    private property <bool> grey: Voice.state == VoiceState.offline || Voice.mic-muted;
+    private property <bool> grey: root.disabled || Voice.state == VoiceState.offline || Voice.mic-muted;
     private property <float> level: Voice.state == VoiceState.listening ? VoiceLevels.mic
         : Voice.state == VoiceState.speaking ? VoiceLevels.tts : 0;
     private property <bool> active: Voice.state != VoiceState.idle && Voice.state != VoiceState.offline;
@@ -92,6 +94,7 @@ export component Orb inherits Rectangle {
     }
 
     TouchArea {
+        enabled: !root.disabled;
         width: max(parent.width, Theme.touch-min);
         height: max(parent.height, Theme.touch-min);
         clicked => { Voice.orb-tapped(); }

@@ -1,5 +1,6 @@
 import { Theme } from "../theme.slint";
-import { Nav, Screen } from "../contract/nav.slint";
+import { Nav } from "../contract/nav.slint";
+import { BackNav } from "../components/back-nav.slint";
 import { CalendarData } from "../contract/calendar.slint";
 import { StatusBar } from "../contract/status.slint";
 import { WeekStrip } from "../components/calendar/week-strip.slint";
@@ -21,7 +22,7 @@ export component Calendar inherits Rectangle {
                 font-size: Theme.font-title;
                 vertical-alignment: center;
             }
-            TouchArea { width: 240px; x: 0; clicked => { Nav.navigate(Screen.menu); } }
+            TouchArea { width: 240px; x: 0; clicked => { Nav.navigate(BackNav.origin); } }
             // Chạm tên tháng → lưới tháng.
             TouchArea { x: 240px; width: 360px; clicked => { CalendarData.toggle-month(); } }
             Rectangle {

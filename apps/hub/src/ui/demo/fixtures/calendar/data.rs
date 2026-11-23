@@ -132,3 +132,7 @@ pub fn seed() -> Vec<Ev> {
     v[1].description = "Rà soát tiến độ tuần.".into();
     v
 }
+
+#[cfg(test)]
+#[path = "data_tests.rs"]
+mod tests;

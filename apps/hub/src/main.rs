@@ -7,7 +7,7 @@ compile_error!("enable exactly one backend feature: `desktop` (default) or `pi`"
 
 mod ui;
 #[cfg(not(feature = "demo"))]
-use hub_core::{ConfigStore, Io, Ports, SystemClock, UiState, UserInput};
+use hub_core::{ConfigStore, Io, Ports, SystemClock, UiState};
 use slint::ComponentHandle;
 #[cfg(not(feature = "demo"))]
 use std::{path::PathBuf, sync::Arc, thread};
@@ -54,20 +54,7 @@ fn main() -> anyhow::Result<()> {
             }
         })
     });
-    let save_tx = input_tx.clone();
-    app.on_save_voice_url(move |url| {
-        if save_tx
-            .try_send(UserInput::SaveVoiceUrl(url.to_string()))
-            .is_err()
-        {
-            eprintln!("hub-core không nhận được URL");
-        }
-    });
-    app.on_connect_voice(move || {
-        if input_tx.try_send(UserInput::VoiceConnect).is_err() {
-            eprintln!("hub-core không nhận được lệnh kết nối");
-        }
-    });
+    ui::connect_inputs(&app, input_tx);
     app.run()?;
     let _ = stop_tx.send(());
     core.join()

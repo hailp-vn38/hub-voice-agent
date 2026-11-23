@@ -1,6 +1,6 @@
 # 09 — Màn Thời tiết
 
-Status: resolved
+Status: ready-for-human
 Blocked by: 06
 Spec: [../spec.md](../spec.md)
 Thiết kế: concept.md §6 "Màn Thời tiết"
@@ -46,7 +46,12 @@ Map: chờ hub-core #09
 | `.days` / `.week-min` / `.week-max` | |
 | `.focus` / `.focus-serial` | |
 | `select-day(key)` | |
+| `WeatherHour.peak` | |
 
 ## Answer
 
 Implemented contract/weather.slint, screens/weather.slint, components/weather/{backdrop,current,hours-chart,days-column}.slint, Rust fixtures (fixtures/weather.rs + tests) and 11 demo scenarios. 24h chart y-scale uses week-min..week-max; peak marked via the selected day high. Pi fps per background not measured (ready-for-human). hub-core map left pending.
+
+## Comments
+
+- 2026-11-23 (review hub-ui): Điểm cao nhất do Rust chọn: thêm `WeatherHour.peak` (giờ sớm nhất nếu trùng), bỏ so sánh float `h.temp == day-high` trong `hours-chart.slint`. Có unit test. Còn lại cho người (ready-for-human): kiểm bằng mắt theo kịch bản demo, đo fps trên Pi, rồi tick nghiệm thu.

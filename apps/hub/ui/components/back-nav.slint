@@ -1,0 +1,7 @@
+import { Screen } from "../contract/nav.slint";
+
+// Nơi nút "‹" và vuốt về của màn tính năng quay lại: Menu, hoặc trung tâm nếu đến bằng đường tắt.
+// Trạng thái trình bày: Shell ghi, màn tính năng đọc; màn đích vẫn do Nav.screen quyết.
+export global BackNav {
+    in-out property <Screen> origin: Screen.center;
+}

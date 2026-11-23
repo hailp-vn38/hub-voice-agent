@@ -1,5 +1,6 @@
 import { Theme } from "../theme.slint";
-import { Nav, Screen } from "../contract/nav.slint";
+import { Nav } from "../contract/nav.slint";
+import { BackNav } from "../components/back-nav.slint";
 import { WeatherData } from "../contract/weather.slint";
 import { WeatherBackdrop } from "../components/weather/backdrop.slint";
 import { CurrentColumn } from "../components/weather/current.slint";
@@ -34,7 +35,7 @@ export component Weather inherits Rectangle {
                 }
                 Text { text: "Cập nhật " + WeatherData.updated; color: Theme.text-dim; font-size: Theme.font-small; vertical-alignment: center; }
             }
-            TouchArea { width: 420px; x: 0; clicked => { Nav.navigate(Screen.menu); } }
+            TouchArea { width: 420px; x: 0; clicked => { Nav.navigate(BackNav.origin); } }
         }
         HorizontalLayout {
             spacing: Theme.space-m;
@@ -46,7 +47,7 @@ export component Weather inherits Rectangle {
                 for d in WeatherData.days: Rectangle { if d.key == WeatherData.selected-day: HoursChart {
                     x: Theme.space-m; width: parent.width - 2 * Theme.space-m; height: parent.height;
                     hours: WeatherData.hours;
-                    lo: WeatherData.week-min; hi: WeatherData.week-max; day-high: d.high;
+                    lo: WeatherData.week-min; hi: WeatherData.week-max;
                     focus-key: WeatherData.focus;
                     lit: root.lit;
                 } }

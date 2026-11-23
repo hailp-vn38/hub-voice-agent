@@ -4,10 +4,19 @@ import { Dock } from "../components/orb.slint";
 import { Icon } from "../components/icon.slint";
 
 // Báo toàn màn (hết giờ / Reminder). Chạm bất kỳ đâu để tắt; chừa hàng dock cho Orb.
+// Khi đóng: hẹn giờ mờ đi; Reminder thu nhỏ về góc trái dưới ("Đã nhắc gần đây").
 export component Alert inherits Rectangle {
     in property <length> dock-height: 240px;
-    private property <bool> on: AlertData.kind != AlertKind.none;
-    private property <bool> is-timer: AlertData.kind == AlertKind.timer;
+    private property <AlertKind> kind: AlertData.kind;
+    private property <bool> on: root.kind != AlertKind.none;
+    // Loại báo đang (hoặc vừa) hiện, giữ lại để vẽ trong lúc mờ dần.
+    private property <AlertKind> last: AlertKind.timer;
+    changed kind => { if (root.kind != AlertKind.none) { root.last = root.kind; } }
+    private property <bool> is-timer: root.last == AlertKind.timer;
+    private property <float> vis: root.on ? 1 : 0;
+    animate vis { duration: root.on ? 300ms : 450ms; easing: ease-out; }
+    // 0 khi đang hiện, 1 khi Reminder đã thu hẳn về góc.
+    private property <float> shrink: !root.on && !root.is-timer ? 1 - root.vis : 0;
     private property <color> tone: root.is-timer ? Theme.warm : Theme.accent;
     private property <duration> now: animation-tick();
     private property <duration> t0: -10000ms;
@@ -17,15 +26,16 @@ export component Alert inherits Rectangle {
     private property <float> beat: Math.mod((root.now - root.t0) / 1200ms, 1);
     private property <float> enter: clamp((root.now - root.t0) / 500ms, 0, 1);
 
-    opacity: root.on ? 1 : 0;
-    animate opacity { duration: 300ms; easing: ease-out; }
-    background: root.on ? (root.is-timer ? #2a1d0c : #0c2230) : transparent;
+    opacity: root.vis;
+    background: root.vis > 0 ? (root.is-timer ? #2a1d0c : #0c2230) : transparent;
 
     if root.on: TouchArea { clicked => { AlertData.dismiss(); } }
 
-    if root.on: Rectangle {
-        y: 0;
+    if root.vis > 0: Rectangle {
+        x: -root.shrink * parent.width * 0.4;
+        y: root.shrink * (parent.height - root.dock-height) * 0.4;
         height: parent.height - root.dock-height;
+        transform-scale: 1 - 0.8 * root.shrink;
         // Vòng lan theo nhịp chuông.
         Rectangle {
             x: (parent.width - self.width) / 2;

@@ -1,13 +1,13 @@
 //! Kịch bản demo của màn Lịch.
 use super::data::{self, ev};
 use super::state::{refresh, state};
-use crate::{App, CalKind, CalendarData, Nav, PendingState, Screen, Spawn};
+use crate::ui::demo::scenarios::show;
+use crate::{App, CalKind, CalendarData, PendingState, Screen};
 use slint::{ComponentHandle, Model, Timer};
 use std::time::Duration;
 
 fn open(app: &App, sel: i32, focus: Option<String>) {
-    app.set_show_sample(false);
-    app.global::<Nav>().set_screen(Screen::Calendar);
+    show(app, Screen::Calendar);
     let c = app.global::<CalendarData>();
     c.set_stale(false);
     c.set_month_view(false);
@@ -77,23 +77,12 @@ fn create(app: &App, ok: bool) {
         st.events.push(e);
     }
     refresh(app);
-    let s = app.global::<Spawn>();
-    s.set_key("new".into());
-    s.set_serial(s.get_serial() + 1);
+    crate::ui::demo::fixtures::spawn::from_orb(app, "new");
     let weak = app.as_weak();
     Timer::single_shot(Duration::from_millis(1500), move || {
         let Some(app) = weak.upgrade() else { return };
         let p = if ok { PendingState::Saved } else { PendingState::Failed };
         set_pending(&app, p);
-        if ok {
-            let weak = app.as_weak();
-            // Sau khi bay xong, bỏ key để các lần dựng lại model không phát lại hiệu ứng.
-            Timer::single_shot(Duration::from_millis(1500), move || {
-                if let Some(app) = weak.upgrade() {
-                    app.global::<Spawn>().set_key("".into());
-                }
-            });
-        }
     });
 }
 

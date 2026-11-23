@@ -121,7 +121,7 @@ Mỗi ticket có mục **Map với hub-core**: bảng từng field và callback 
 | `AlertData`, `VoiceSlider` | 14 | 06, 08; `hub_set_brightness/volume` **chưa có ticket** | chưa |
 | `PhotosData` | 15 | 12 | chưa |
 | `HomeData` | 16 | 11 | chưa |
-| `SettingsData` | 17 | 02 (Kết nối voice), 13; các mục khác **chưa có ticket** | chưa |
+| `SettingsData` | 17 | 02 (Kết nối voice), 13; các mục khác **chưa có ticket** | một phần (Kết nối voice) |
 | `StatusBar` (Wi-Fi, offline, giờ) | 03 | 03, 06; Wi-Fi qua `System` **chưa có ticket** | chưa |
 | `AmbientData` | 18 | 05 | chưa |
 | `FirstBootData` | 19 | ADR 0010, **chưa có ticket** | chưa |

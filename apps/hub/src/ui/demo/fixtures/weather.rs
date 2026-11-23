@@ -1,5 +1,6 @@
 //! Fixture Thời tiết: Hà Nội (nhà) và Đà Nẵng (tạm xem).
-use crate::{App, WeatherBg, WeatherData, WeatherDay, WeatherHour, WeatherNow};
+use crate::ui::demo::scenarios::show;
+use crate::{App, Screen, WeatherBg, WeatherData, WeatherDay, WeatherHour, WeatherNow};
 use slint::{Color, ComponentHandle, ModelRc, SharedString, VecModel};
 use std::rc::Rc;
 
@@ -20,6 +21,11 @@ fn hour_temps(low: f32, high: f32) -> Vec<f32> {
 /// Khả năng mưa theo giờ (0..1), đỉnh buổi chiều, nhân với `chance`.
 fn hour_rain(chance: f32) -> Vec<f32> {
     (0..24).map(|h| (chance * (1.0 - ((h as f32 - 16.0) / 12.0).abs()).max(0.05)).clamp(0.0, 1.0)).collect()
+}
+
+/// Giờ nóng nhất (giờ sớm nhất nếu trùng), để UI đánh dấu đúng một điểm.
+fn peak_hour(temps: &[f32]) -> usize {
+    temps.iter().enumerate().fold(0, |best, (h, &t)| if t > temps[best] { h } else { best })
 }
 
 fn week_range(days: &[(f32, f32)]) -> (f32, f32) {
@@ -47,7 +53,9 @@ fn show_day(app: &App, p: &Place, i: usize) {
     let w = app.global::<WeatherData>();
     let (low, high) = p.days[i];
     let rain = hour_rain(p.rain[i]);
-    let hours: Vec<WeatherHour> = hour_temps(low, high)
+    let temps = hour_temps(low, high);
+    let peak = peak_hour(&temps);
+    let hours: Vec<WeatherHour> = temps
         .into_iter()
         .enumerate()
         .map(|(h, t)| WeatherHour {
@@ -55,6 +63,7 @@ fn show_day(app: &App, p: &Place, i: usize) {
             label: format!("{h:02}:00").into(),
             temp: t,
             rain: rain[h],
+            peak: h == peak,
             wind: format!("{} km/h", 8 + h % 5).into(),
             icon: "cloud".into(),
         })
@@ -98,10 +107,8 @@ fn load(app: &App, p: &'static Place) {
     });
     let weak = app.as_weak();
     w.on_select_day(move |k| {
-        if let Some(app) = weak.upgrade() {
-            if let Some(i) = DAY_KEYS.iter().position(|d| *d == k.as_str()) {
-                show_day(&app, p, i);
-            }
+        if let (Some(app), Some(i)) = (weak.upgrade(), DAY_KEYS.iter().position(|d| *d == k.as_str())) {
+            show_day(&app, p, i);
         }
     });
     show_day(app, p, 0);
@@ -121,10 +128,6 @@ fn focus(app: &App, key: &str) {
     w.set_focus_serial(w.get_focus_serial() + 1);
 }
 
-fn open(app: &App) {
-    app.set_show_sample(false);
-    app.global::<crate::Nav>().set_screen(crate::Screen::Weather);
-}
 
 pub fn background(app: &App, bg: WeatherBg, day: bool) {
     let w = app.global::<WeatherData>();
@@ -133,7 +136,7 @@ pub fn background(app: &App, bg: WeatherBg, day: bool) {
     w.set_stale(false);
     w.set_preview(false);
     load(app, &HANOI);
-    open(app);
+    show(app, Screen::Weather);
 }
 
 pub fn tomorrow_rain(app: &App) {
@@ -143,13 +146,13 @@ pub fn tomorrow_rain(app: &App) {
 }
 
 pub fn afternoon(app: &App) {
-    open(app);
+    show(app, Screen::Weather);
     show_day(app, &HANOI, 0);
     focus(app, "d0-h15");
 }
 
 pub fn air(app: &App) {
-    open(app);
+    show(app, Screen::Weather);
     focus(app, "aqi");
 }
 
@@ -157,14 +160,14 @@ pub fn danang(app: &App) {
     let w = app.global::<WeatherData>();
     w.set_preview(true);
     load(app, &DANANG);
-    open(app);
+    show(app, Screen::Weather);
 }
 
 pub fn offline(app: &App) {
     let w = app.global::<WeatherData>();
     w.set_stale(true);
     w.set_updated("09:10".into());
-    open(app);
+    show(app, Screen::Weather);
 }
 
 #[cfg(test)]

@@ -1,5 +1,6 @@
 import { Theme } from "../theme.slint";
-import { Nav, Screen } from "../contract/nav.slint";
+import { Nav } from "../contract/nav.slint";
+import { BackNav } from "../components/back-nav.slint";
 import { TimersData } from "../contract/timers.slint";
 import { SpawnIn } from "../components/spawn.slint";
 import { TimerCardView } from "../components/timer-card.slint";
@@ -26,7 +27,7 @@ export component Timers inherits Rectangle {
                 horizontal-alignment: left;
                 vertical-alignment: center;
             }
-            TouchArea { width: 480px; x: 0; clicked => { Nav.navigate(Screen.menu); } }
+            TouchArea { width: 480px; x: 0; clicked => { Nav.navigate(BackNav.origin); } }
         }
         area := Rectangle {
             vertical-stretch: 1;

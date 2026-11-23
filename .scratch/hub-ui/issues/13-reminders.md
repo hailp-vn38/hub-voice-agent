@@ -1,6 +1,6 @@
 # 13 — Màn Reminder
 
-Status: resolved
+Status: ready-for-human
 Blocked by: 06
 Spec: [../spec.md](../spec.md)
 Thiết kế: concept.md §6 "Màn Reminder" (trạng thái nhắc toàn màn ở ticket 14)
@@ -39,7 +39,12 @@ Map: chờ hub-core #08
 | `.groups` | |
 | `.recent` | |
 | `.focus` / `.focus-serial` | |
+| `ReminderItem.fading` | |
 
 ## Answer
 
 Đã làm `screens/reminders.slint`, `contract/reminders.slint` (thêm `fading: bool` vào `ReminderItem` để huỷ mờ dần), fixture và 7 kịch bản trong `demo/reminders.rs`. Mục mới dùng `SpawnIn`; focus viền sáng theo `RemindersData.focus` (không dùng `focus-serial`). Chưa có test Rust (không có logic thuần). Map hub-core chờ #08.
+
+## Comments
+
+- 2026-11-23 (review hub-ui): Focus giờ theo `focus-serial`: các mục trong `focus` sáng lên ~2 s rồi tắt dần. Hoãn: dòng trượt sang giờ mới (giờ đổi, cùng key); demo sửa mục tại chỗ thay vì dựng lại model. Huỷ cũng sửa tại chỗ để thấy mờ dần. Ghi `ReminderItem.fading` vào bảng Map. Còn lại cho người (ready-for-human): kiểm bằng mắt theo kịch bản demo, đo fps trên Pi, rồi tick nghiệm thu.

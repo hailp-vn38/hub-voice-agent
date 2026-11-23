@@ -18,3 +18,11 @@ fn week_range_covers_every_day() {
 fn rain_chance_is_a_fraction() {
     assert!(hour_rain(0.8).iter().all(|r| (0.0..=1.0).contains(r)));
 }
+
+#[test]
+fn peak_is_the_single_hottest_hour() {
+    // 13h và 15h làm tròn cũng bằng 31°: chỉ một điểm được chọn, là giờ sớm nhất.
+    let t = hour_temps(22.0, 31.0);
+    assert_eq!(t[peak_hour(&t)], 31.0);
+    assert_eq!(peak_hour(&[20.0, 25.0, 25.0, 21.0]), 1);
+}

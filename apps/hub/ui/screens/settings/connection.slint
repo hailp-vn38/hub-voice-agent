@@ -14,7 +14,12 @@ component Info inherits Text {
 export component ConnectionPanel inherits VerticalLayout {
     SettingRow {
         label: "vela-server";
-        Info { text: SettingsData.connection.server-connected ? "Đã kết nối · " + SettingsData.connection.latency-ms + " ms" : "Mất kết nối"; }
+        Info { text: SettingsData.connection.server-status; }
+    }
+    SettingRow { label: "Device ID"; Info { text: SettingsData.connection.device-id; } }
+    if SettingsData.connection.error != "": SettingRow {
+        label: "Lỗi";
+        Info { text: SettingsData.connection.error; color: Theme.error; }
     }
     if !SettingsData.connection.enrolled: SettingRow {
         label: "Mã Enrollment";

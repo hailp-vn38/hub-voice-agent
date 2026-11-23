@@ -1,7 +1,8 @@
 //! Fixture và kịch bản demo cho màn Đếm ngược (ticket 12).
-use crate::{App, Countdown, CountdownUnit, CountdownsData, Nav, Screen, Spawn};
-use slint::{ComponentHandle, Model, ModelRc, VecModel};
-use std::rc::Rc;
+use crate::ui::demo::scenarios::show;
+use crate::{App, Countdown, CountdownUnit, CountdownsData, Screen};
+use slint::{ComponentHandle, Model, ModelRc, Timer, VecModel};
+use std::{rc::Rc, time::Duration};
 
 thread_local! {
     static OTHERS: Rc<VecModel<Countdown>> = Rc::new(VecModel::default());
@@ -29,6 +30,7 @@ fn cd(key: &str, label: &str, value: &str, unit: CountdownUnit, target: &str, lu
         repeat_text: if repeat { "hằng năm" } else { "" }.into(),
         progress,
         progress_text: format!("{}% chặng đường", (progress * 100.0).round()).into(),
+        fading: false,
     }
 }
 
@@ -89,9 +91,30 @@ fn refresh_title(app: &App) {
     d.set_title(format!("Đếm ngược · {n} mốc").into());
 }
 
+/// Xoá: ô mờ dần, sau đó mới gỡ để các ô khác dồn lên.
 fn remove(app: &App, key: &str) {
     let d = app.global::<CountdownsData>();
     d.set_detail_open(false);
+    if d.get_has_main() && d.get_main().key == key {
+        d.set_main(Countdown { fading: true, ..d.get_main() });
+    } else {
+        OTHERS.with(|o| {
+            if let Some(i) = o.iter().position(|c| c.key == key) {
+                o.set_row_data(i, Countdown { fading: true, ..o.row_data(i).unwrap() });
+            }
+        });
+    }
+    let weak = app.as_weak();
+    let key = key.to_string();
+    Timer::single_shot(Duration::from_millis(400), move || {
+        if let Some(app) = weak.upgrade() {
+            drop_now(&app, &key);
+        }
+    });
+}
+
+fn drop_now(app: &App, key: &str) {
+    let d = app.global::<CountdownsData>();
     if d.get_has_main() && d.get_main().key == key {
         OTHERS.with(|o| {
             if o.row_count() > 0 {
@@ -110,6 +133,15 @@ fn remove(app: &App, key: &str) {
     refresh_title(app);
 }
 
+/// Setting → Dữ liệu → "Xoá đếm ngược".
+pub fn clear_all(app: &App) {
+    let d = app.global::<CountdownsData>();
+    d.set_detail_open(false);
+    d.set_has_main(false);
+    OTHERS.with(|o| o.set_vec(vec![]));
+    refresh_title(app);
+}
+
 /// Mỗi giây: mốc `live` đếm lùi.
 pub fn tick(app: &App) {
     let d = app.global::<CountdownsData>();
@@ -120,20 +152,11 @@ pub fn tick(app: &App) {
     }
 }
 
-fn open(app: &App) {
-    app.set_show_sample(false);
-    app.global::<Nav>().set_screen(Screen::Countdowns);
-}
 
-fn spawn(app: &App, key: &str) {
-    let s = app.global::<Spawn>();
-    s.set_key(key.into());
-    s.set_serial(s.get_serial() + 1);
-}
 
 /// "Đếm ngược đến Tết": thành mốc chính, mốc cũ trượt sang danh sách.
 pub fn add_tet(app: &App) {
-    open(app);
+    show(app, Screen::Countdowns);
     let d = app.global::<CountdownsData>();
     if d.get_has_main() && d.get_main().key == "tet" {
         return;
@@ -149,23 +172,23 @@ pub fn add_tet(app: &App) {
     d.set_main(tet());
     d.set_has_main(true);
     refresh_title(app);
-    spawn(app, "tet");
+    super::spawn::from_orb(app, "tet");
 }
 
 /// "Sinh nhật 12/3": vào danh sách.
 pub fn add_birthday(app: &App) {
-    open(app);
+    show(app, Screen::Countdowns);
     let has = OTHERS.with(|o| o.iter().any(|c| c.key == "bday"));
     if !has {
         OTHERS.with(|o| o.push(birthday()));
         refresh_title(app);
     }
-    spawn(app, "bday");
+    super::spawn::from_orb(app, "bday");
 }
 
 /// "Qua nửa đêm": số ngày giảm một, kích hoạt flip.
 pub fn midnight(app: &App) {
-    open(app);
+    show(app, Screen::Countdowns);
     let d = app.global::<CountdownsData>();
     let mut m = d.get_main();
     m.value = dec_days(&m.value).into();
@@ -174,7 +197,7 @@ pub fn midnight(app: &App) {
 
 /// "Còn < 24 giờ": HH:MM:SS chạy trực tiếp.
 pub fn live(app: &App) {
-    open(app);
+    show(app, Screen::Countdowns);
     let d = app.global::<CountdownsData>();
     let mut m = d.get_main();
     m.unit = CountdownUnit::Live;
@@ -184,7 +207,7 @@ pub fn live(app: &App) {
 
 /// "Hôm nay là Tết": pháo giấy từ Orb.
 pub fn today(app: &App) {
-    open(app);
+    show(app, Screen::Countdowns);
     let d = app.global::<CountdownsData>();
     let mut m = d.get_main();
     m.unit = CountdownUnit::Today;
@@ -196,7 +219,7 @@ pub fn today(app: &App) {
 
 /// "Chuyến đi đã qua".
 pub fn passed(app: &App) {
-    open(app);
+    show(app, Screen::Countdowns);
     let d = app.global::<CountdownsData>();
     let mut m = d.get_main();
     m.unit = CountdownUnit::Passed;
@@ -212,7 +235,7 @@ pub fn focus_tet(app: &App) {
 }
 
 pub fn remove_trip(app: &App) {
-    open(app);
+    show(app, Screen::Countdowns);
     remove(app, "trip");
 }
 
