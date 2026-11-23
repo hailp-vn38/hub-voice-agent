@@ -85,6 +85,13 @@ pub fn all() -> Vec<Scenario> {
         ("Lưu → lỗi", super::spawn::save_fail),
         ("Thẻ nổi", super::spawn::floating),
         ("Thẻ nổi mờ", super::spawn::floating_fade),
+        ("Reminder: nhắc uống thuốc 21:00", |app| { app.global::<Nav>().set_screen(Screen::Reminders); super::reminders::add_medicine(app) }),
+        ("Reminder: mỗi sáng 7 giờ", |app| { app.global::<Nav>().set_screen(Screen::Reminders); super::reminders::add_gym(app) }),
+        ("Reminder: tối nay có gì?", super::reminders::focus_tonight),
+        ("Reminder: huỷ uống thuốc", super::reminders::cancel_medicine),
+        ("Reminder: hoãn 10 phút", super::reminders::postpone),
+        ("Reminder: một mục đã lỡ", super::reminders::missed),
+        ("Reminder: trống", super::reminders::empty),
         ("Chữ lớn", |app| app.global::<Theme>().set_text_scale(1.25)),
     ]
 }
