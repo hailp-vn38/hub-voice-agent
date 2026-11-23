@@ -97,6 +97,14 @@ Field của `Ports` và `Io` được thêm dần theo từng ticket; mỗi tick
 | 11 | Home Assistant | 05 |
 | 12 | Ảnh | 05 |
 | 13 | Setup web | 02 |
+| 14 | Present: lớp trình bày cho hợp đồng UI, `now`, serial | 05 |
+| 15 | Voice, chữ phản hồi, ToolTrail, chạm Orb | 14 |
+| 16 | Hẹn giờ + lớp báo: dữ liệu hiển thị, thao tác chạm | 14 |
+| 17 | Đếm ngược + Reminder: dữ liệu hiển thị | 14 |
+| 18 | Thời tiết: WeatherView có kiểu | 14 |
+| 19 | Lịch: dữ liệu hiển thị | 14, 17 |
+| 20 | Nhà + Ảnh: dữ liệu hiển thị, thao tác chạm | 14 |
+| 21 | Màn trung tâm + Menu | 16–20 |
 
 Mỗi ticket là một lát đi xuyên interface `run()`, có test trong `crates/hub-core/tests/`. Phần Slint cho từng màn hình thuộc `apps/hub` và chỉ là bridge. Ticket 04 dựng `features/timers/` làm khuôn; các ticket 07–12 theo đúng khuôn đó.
 

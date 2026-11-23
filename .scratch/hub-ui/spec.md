@@ -107,26 +107,26 @@ Mỗi ticket có mục **Map với hub-core**: bảng từng field và callback 
 
 | Hợp đồng | Ticket UI | Ticket hub-core | Map |
 |---|---|---|---|
-| `Nav` | 03 | 05 (view); `hub_open_screen` **chưa có ticket** | chưa |
-| `Voice`, `VoiceLevels` | 04, 05 | 03 (conversation); levels từ audio ở `apps/hub` | chưa |
-| `ToolTrail` | 05 | 03, 05 (`ServerTool`) | chưa |
+| `Nav` | 03 | 05 (view), 14 (present, focus serial); `hub_open_screen` **chưa có ticket** | chưa |
+| `Voice`, `VoiceLevels` | 04, 05 | 03 (conversation), 15; levels từ audio ở `apps/hub` | chưa |
+| `ToolTrail` | 05 | 03, 05 (`ServerTool`), 15 | chưa |
 | `Spawn`, `FloatingCards` | 06 | 04 trở đi; `hub_show_card` **chưa có ticket** | chưa |
-| `Center` | 07 | 05, 06, 09, 10, 11 | chưa |
-| `Menu` | 08 | 05 | chưa |
-| `WeatherData` | 09 | 09 | chưa |
-| `CalendarData` | 10 | 10, 08 (Reminder trên dòng thời gian) | chưa |
-| `TimersData` | 11 | 04 | chưa |
-| `CountdownsData` | 12 | 07 | chưa |
-| `RemindersData` | 13 | 08 | chưa |
-| `AlertData`, `VoiceSlider` | 14 | 06, 08; `hub_set_brightness/volume` **chưa có ticket** | chưa |
-| `PhotosData` | 15 | 12 | chưa |
-| `HomeData` | 16 | 11 | chưa |
+| `Center` | 07 | 05, 06, 09, 10, 11, 21 | chưa |
+| `Menu` | 08 | 05, 21 | chưa |
+| `WeatherData` | 09 | 09, 18 | chưa |
+| `CalendarData` | 10 | 10, 08 (Reminder trên dòng thời gian), 19 | chưa |
+| `TimersData` | 11 | 04, 16 | chưa |
+| `CountdownsData` | 12 | 07, 17 | chưa |
+| `RemindersData` | 13 | 08, 17 | chưa |
+| `AlertData`, `VoiceSlider` | 14 | 06, 08, 16; `hub_set_brightness/volume` **chưa có ticket** | chưa |
+| `PhotosData` | 15 | 12, 20 | chưa |
+| `HomeData` | 16 | 11, 20 | chưa |
 | `SettingsData` | 17 | 02 (Kết nối voice), 13; các mục khác **chưa có ticket** | chưa |
-| `StatusBar` (Wi-Fi, offline, giờ) | 03 | 03, 06; Wi-Fi qua `System` **chưa có ticket** | chưa |
-| `AmbientData` | 18 | 05 | chưa |
+| `StatusBar` (Wi-Fi, offline, giờ) | 03 | 03, 06, 14; Wi-Fi qua `System` **chưa có ticket** | chưa |
+| `AmbientData` | 18 | 05, 14 | chưa |
 | `FirstBootData` | 19 | ADR 0010, **chưa có ticket** | chưa |
 
-Các dòng **chưa có ticket** là chỗ hub-core còn thiếu, liệt kê chi tiết (G1–G11) ở [hub-core-gaps.md](hub-core-gaps.md). UI vẫn làm được với demo; cần thêm ticket hub-core trước khi map.
+Ticket hub-core 14–21 thêm lớp `present` (hàm thuần `UiState` → `HubView`) để bridge chỉ copy field, không định dạng hay suy ra. Các dòng **chưa có ticket** là chỗ hub-core còn thiếu, liệt kê chi tiết (G1–G11) ở [hub-core-gaps.md](hub-core-gaps.md). UI vẫn làm được với demo; cần thêm ticket hub-core trước khi map.
 
 ## Ngoài phạm vi
 

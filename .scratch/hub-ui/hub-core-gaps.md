@@ -78,6 +78,10 @@ UI làm trước bằng dữ liệu demo theo các ticket trong `issues/`. Một
 
 - UI cần một số 0..1 theo giờ địa phương để đổi màu nền khi Idle, cập nhật mỗi phút. Nhỏ; có thể làm cùng #05 hoặc khi map `StatusBar`.
 
+## Đã có ticket (2026-11-23)
+
+Lớp trình bày và phần thiếu không thuộc G1–G11 đã thành ticket hub-core 14–21: `present` + `now` + serial (#14), chữ phản hồi / ToolTrail / chạm Orb (#15), thời lượng hẹn giờ + thao tác chạm hẹn giờ (#16), đếm ngược + Reminder (#17), WeatherView có kiểu (#18), lịch (#19), nhà + ảnh (#20), trung tâm + Menu (#21). G1–G11 vẫn chưa có ticket.
+
 ## Không phải phần thiếu
 
 Các mục sau có ticket hub-core, chỉ chờ ticket đó xong: điều hướng và Ambient (#05), voice và chữ phản hồi (#03), hẹn giờ (#04), báo (#06), mốc (#07), Reminder (#08), thời tiết (#09), lịch (#10), nhà (#11), ảnh (#12), Setup web URL (#13).
