@@ -58,7 +58,7 @@ async fn reply_from_disconnected_socket_is_not_written_after_reconnect() {
         device: DeviceIdentity::new("mcp-device", "mcp-client"),
         tools: Vec::new(),
     };
-    let (config_tx, config_rx) = watch::channel(initial);
+    let (config_tx, config_rx) = watch::channel(Some(initial));
     let (_commands, mut events) = crate::spawn(config_rx);
     ready(&mut events).await;
     let old_connection = server.connection().await;
@@ -71,7 +71,7 @@ async fn reply_from_disconnected_socket_is_not_written_after_reconnect() {
         panic!("expected tool call")
     };
     config_tx.send_modify(|config| {
-        config.tools.push(ToolDef {
+        config.as_mut().unwrap().tools.push(ToolDef {
             name: "changed".into(),
             description: "reconnect trigger".into(),
             input_schema: json!({ "type": "object" }),

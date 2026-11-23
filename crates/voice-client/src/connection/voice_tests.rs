@@ -1,5 +1,5 @@
 use serde_json::json;
-use tokio::sync::{mpsc, watch};
+use tokio::sync::mpsc;
 use url::Url;
 
 use crate::{
@@ -178,7 +178,7 @@ fn spawn_client(ota_url: &str) -> (mpsc::Sender<VoiceCommand>, mpsc::Receiver<Vo
         device: DeviceIdentity::new("device", "client"),
         tools: Vec::new(),
     };
-    crate::spawn(watch::channel(config).1)
+    crate::spawn(held_config(config))
 }
 
 async fn wait_ready(events: &mut mpsc::Receiver<VoiceEvent>) {
@@ -195,3 +195,11 @@ async fn wait_ready(events: &mut mpsc::Receiver<VoiceEvent>) {
 #[path = "voice_tests/support.rs"]
 mod support;
 use support::{DirectSpeechServer, Reply};
+
+fn held_config(config: VoiceConfig) -> tokio::sync::watch::Receiver<Option<VoiceConfig>> {
+    let (sender, receiver) = tokio::sync::watch::channel(Some(config));
+    tokio::spawn(async move {
+        sender.closed().await;
+    });
+    receiver
+}

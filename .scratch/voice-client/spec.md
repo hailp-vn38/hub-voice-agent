@@ -31,7 +31,7 @@ Xong spec này thì:
 ## Interface
 
 ```rust
-pub fn spawn(config: watch::Receiver<VoiceConfig>)
+pub fn spawn(config: watch::Receiver<Option<VoiceConfig>>)
     -> (mpsc::Sender<VoiceCommand>, mpsc::Receiver<VoiceEvent>);
 
 pub struct VoiceConfig {
@@ -50,7 +50,7 @@ pub enum VoiceCommand {
 }
 
 pub enum VoiceEvent {
-    Connection(ConnectionState),      // Connecting | Ready | Offline { retry_in } | Enrolling
+    Connection(ConnectionState),      // Unconfigured | Connecting | Ready | Offline { retry_in } | Enrolling
     Activation { code: String },      // từ OTA `activation.code`, khi Enrolling
     Stt { text: String },
     TtsStart { origin: TtsOrigin },   // Agent | ClientDirect { request_id }
@@ -76,6 +76,7 @@ Features trong ClientHello cố định bên trong crate: `mcp`, `tool_status`, 
 4. **Thứ tự sự kiện giữ đúng thứ tự frame server gửi.**
 5. **Channel có giới hạn.** `VoiceCommand` capacity 64. `VoiceEvent` capacity 256. Khi channel sự kiện đầy, `TtsAudio` bị drop trước để không chặn reader WS. Các sự kiện khác chờ chỗ trống.
 6. **Đổi `VoiceConfig` thì kết nối lại**, trừ khi giá trị mới bằng giá trị cũ.
+7. **Cấu hình optional:** `None` phát `Unconfigured`, không kết nối; `Some → None` đóng socket và ngắt lượt TTS trước khi phát trạng thái. Task chạy tới khi sender cấu hình đóng (hoặc event receiver bị drop).
 
 ## Giấu bên trong
 
@@ -135,3 +136,4 @@ Ticket cuối cập nhật docs/codebase.md theo bảng này.
 | 07 | [Direct Speech](issues/07-direct-speech.md) | 05 | ready-for-human |
 | 08 | [Đóng lượt TTS khi mất kết nối, cập nhật codebase.md](issues/08-invariants-and-docs.md) | 04, 05, 06, 07 | ready-for-human |
 | 13 | [Settings: Kết nối voice và mã kích hoạt](issues/13-settings-voice-connection.md) | 03 | ready-for-human |
+| 14 | [Cấu hình voice optional](issues/14-optional-config.md) | — | ready-for-human |

@@ -21,7 +21,7 @@ async fn equal_config_does_not_retry_early_but_different_ota_url_retries_immedia
         device: DeviceIdentity::new("config-device", "config-client"),
         tools: Vec::new(),
     };
-    let (config_tx, config_rx) = watch::channel(config.clone());
+    let (config_tx, config_rx) = watch::channel(Some(config.clone()));
     let (_commands, mut events) = spawn_with_jitter(config_rx, |nominal| nominal);
 
     assert!(matches!(
@@ -36,7 +36,7 @@ async fn equal_config_does_not_retry_early_but_different_ota_url_retries_immedia
         ))
     ));
 
-    config_tx.send(config).unwrap();
+    config_tx.send(Some(config)).unwrap();
     tokio::task::yield_now().await;
     assert!(events.try_recv().is_err());
     assert!(first_requests.try_recv().is_err());
@@ -59,10 +59,10 @@ async fn equal_config_does_not_retry_early_but_different_ota_url_retries_immedia
 
     let updated = VoiceConfig {
         ota_url: second_url,
-        device: config_tx.borrow().device.clone(),
+        device: config_tx.borrow().as_ref().unwrap().device.clone(),
         tools: Vec::new(),
     };
-    config_tx.send(updated).unwrap();
+    config_tx.send(Some(updated)).unwrap();
     assert!(matches!(
         events.recv().await,
         Some(VoiceEvent::Connection(crate::ConnectionState::Connecting))
@@ -92,7 +92,7 @@ async fn equal_config_during_ota_keeps_the_active_attempt() {
         device: DeviceIdentity::new("equal-ota-device", "equal-ota-client"),
         tools: Vec::new(),
     };
-    let (config_tx, config_rx) = watch::channel(config.clone());
+    let (config_tx, config_rx) = watch::channel(Some(config.clone()));
     let (commands, mut events) = crate::spawn(config_rx);
     assert!(matches!(
         events.recv().await,
@@ -111,7 +111,7 @@ async fn equal_config_during_ota_keeps_the_active_attempt() {
         matches!(events.recv().await, Some(VoiceEvent::DirectSpeechRejected { request_id, reason: DirectSpeechError::Offline }) if request_id == "offline-request")
     );
 
-    config_tx.send(config).unwrap();
+    config_tx.send(Some(config)).unwrap();
     tokio::task::yield_now().await;
     assert!(events.try_recv().is_err());
     release_tx.send(()).unwrap();
