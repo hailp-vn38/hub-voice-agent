@@ -20,7 +20,7 @@ pub struct SettingsState {
 impl SettingsState {
     pub fn status_label(&self) -> String {
         match &self.status {
-            None => "Chưa cấu hình".to_owned(),
+            None | Some(ConnectionState::Unconfigured) => "Chưa cấu hình".to_owned(),
             Some(ConnectionState::Connecting) => "Đang kết nối".to_owned(),
             Some(ConnectionState::Ready) => "Đã kết nối".to_owned(),
             Some(ConnectionState::Enrolling) => "Chờ kích hoạt".to_owned(),
@@ -64,14 +64,14 @@ pub fn start(
 
 /// Handles to a running voice-client.
 struct Voice {
-    config: watch::Sender<VoiceConfig>,
+    config: watch::Sender<Option<VoiceConfig>>,
     commands: mpsc::Sender<VoiceCommand>,
     events: mpsc::Receiver<VoiceEvent>,
 }
 
 impl Voice {
     fn spawn(config: VoiceConfig) -> Self {
-        let (config_tx, config_rx) = watch::channel(config);
+        let (config_tx, config_rx) = watch::channel(Some(config));
         let (commands, events) = voice_client::spawn(config_rx);
         Self {
             config: config_tx,
@@ -101,7 +101,7 @@ async fn run(
                         let shown = ota_url.to_string();
                         match &voice {
                             Some(voice) => {
-                                voice.config.send_replace(config(ota_url));
+                                voice.config.send_replace(Some(config(ota_url)));
                             }
                             None => voice = Some(Voice::spawn(config(ota_url))),
                         }
