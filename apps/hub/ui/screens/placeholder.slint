@@ -1,0 +1,13 @@
+import { Theme } from "../theme.slint";
+
+// Màn tạm cho tới khi ticket của màn đó xong.
+export component Placeholder inherits Rectangle {
+    in property <string> title;
+    Text {
+        text: root.title;
+        color: Theme.text;
+        font-size: 96px;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+}

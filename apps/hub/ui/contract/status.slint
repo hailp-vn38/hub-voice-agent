@@ -1,0 +1,8 @@
+// Hợp đồng StatusBar. Ticket UI: .scratch/hub-ui/issues/03-shell-navigation.md.
+export global StatusBar {
+    in property <string> time: "--:--";
+    in property <bool> offline;
+    in property <int> wifi-strength: 3; // 0..3
+    in property <bool> mic-muted;
+    in property <float> day-phase: 0.5; // 0 = nửa đêm, 0.5 = trưa
+}

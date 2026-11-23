@@ -3,6 +3,8 @@ import { Theme } from "theme.slint";
 import { VoiceSettings } from "screens/voice-settings.slint";
 import { Nav, Screen } from "contract/nav.slint";
 import { Sample } from "screens/sample.slint";
+import { Shell } from "components/shell.slint";
+export { StatusBar } from "contract/status.slint";
 import "../assets/fonts/BeVietnamPro-Regular.ttf";
 import "../assets/fonts/BeVietnamPro-SemiBold.ttf";
 export { Nav, Screen } from "contract/nav.slint";
@@ -28,16 +30,7 @@ export component App inherits Window {
     default-font-family: "Be Vietnam Pro";
 
     if root.demo-mode && root.show-sample: Sample { }
-    if root.demo-mode && !root.show-sample: Text {
-        text: Nav.screen == Screen.center ? "center" : Nav.screen == Screen.menu ? "menu" : Nav.screen == Screen.weather ? "weather"
-            : Nav.screen == Screen.calendar ? "calendar" : Nav.screen == Screen.home ? "home" : Nav.screen == Screen.timers ? "timers"
-            : Nav.screen == Screen.countdowns ? "countdowns" : Nav.screen == Screen.reminders ? "reminders" : Nav.screen == Screen.photos ? "photos"
-            : Nav.screen == Screen.settings ? "settings" : Nav.screen == Screen.ambient ? "ambient" : "first-boot";
-        color: Theme.text;
-        font-size: 96px;
-        horizontal-alignment: center;
-        vertical-alignment: center;
-    }
+    if root.demo-mode && !root.show-sample: Shell { }
     if !root.demo-mode && !root.settings-open: Rectangle {
         Text {
             text: root.clock;

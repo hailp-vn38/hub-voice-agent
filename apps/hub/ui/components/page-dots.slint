@@ -1,0 +1,15 @@
+import { Theme } from "../theme.slint";
+
+// Hai chấm trang: trung tâm / menu. `menu-progress` 0..1.
+export component PageDots inherits HorizontalLayout {
+    in property <float> menu-progress;
+    spacing: Theme.space-s;
+    alignment: center;
+    for i in 2: Rectangle {
+        width: 12px + 12px * (i == 0 ? 1 - root.menu-progress : root.menu-progress);
+        height: 12px;
+        border-radius: 6px;
+        background: Theme.text;
+        opacity: 0.3 + 0.7 * (i == 0 ? 1 - root.menu-progress : root.menu-progress);
+    }
+}

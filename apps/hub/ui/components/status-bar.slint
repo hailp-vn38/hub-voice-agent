@@ -1,0 +1,47 @@
+import { Theme } from "../theme.slint";
+import { StatusBar } from "../contract/status.slint";
+import { Icon } from "icon.slint";
+
+// Thanh trạng thái mép trên: giờ, Wi-Fi, mic tắt, badge offline.
+export component StatusBarView inherits Rectangle {
+    height: 64px;
+    Text {
+        x: Theme.space-m;
+        text: StatusBar.time;
+        color: Theme.text-dim;
+        font-size: Theme.font-small;
+        vertical-alignment: center;
+    }
+    HorizontalLayout {
+        x: parent.width - self.width - Theme.space-m;
+        spacing: Theme.space-m;
+        alignment: end;
+        if StatusBar.offline: Rectangle {
+            width: label.preferred-width + 24px;
+            height: 36px;
+            y: (parent.height - self.height) / 2;
+            border-radius: 18px;
+            background: Theme.warm;
+            label := Text {
+                text: "Offline";
+                color: Theme.background;
+                font-size: 20px;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+        }
+        if StatusBar.mic-muted: Icon { name: "microphone"; color: Theme.error; size: 32px; y: (parent.height - self.height) / 2; }
+        HorizontalLayout {
+            spacing: 4px;
+            alignment: end;
+            for i in 3: Rectangle {
+                width: 8px;
+                height: 10px + 8px * i;
+                y: (parent.height - self.height) / 2;
+                border-radius: 2px;
+                background: StatusBar.wifi-strength > i ? Theme.text : Theme.text-dim;
+                opacity: StatusBar.wifi-strength > i ? 1 : 0.3;
+            }
+        }
+    }
+}

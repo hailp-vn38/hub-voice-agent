@@ -3,7 +3,7 @@ mod clock;
 mod fixtures;
 mod scenarios;
 
-use crate::{App, DemoPanel, Nav};
+use crate::{App, DemoPanel, Nav, StatusBar};
 use slint::{ComponentHandle, ModelRc, SharedString, Timer, TimerMode, VecModel};
 use std::{rc::Rc, time::Duration};
 
@@ -28,6 +28,9 @@ pub fn start(app: &App) -> anyhow::Result<Demo> {
     tick.start(TimerMode::Repeated, Duration::from_secs(1), move || {
         if let Some(app) = weak.upgrade() {
             app.set_clock(clock::now_hms().into());
+            let bar = app.global::<StatusBar>();
+            bar.set_time(clock::now_hms()[..5].into());
+            bar.set_day_phase(clock::now_day_phase());
             fixtures::tick(&app);
         }
     });

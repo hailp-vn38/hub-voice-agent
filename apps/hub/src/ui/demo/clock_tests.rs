@@ -1,4 +1,11 @@
-use super::format_hms;
+use super::{day_phase, format_hms};
+
+#[test]
+fn day_phase_is_fraction_of_day() {
+    assert_eq!(day_phase(0), 0.0);
+    assert_eq!(day_phase(12 * 3600), 0.5);
+    assert_eq!(day_phase(86_400 + 18 * 3600), 0.75);
+}
 
 #[test]
 fn formats_hours_minutes_seconds() {

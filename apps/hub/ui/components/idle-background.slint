@@ -1,0 +1,7 @@
+import { StatusBar } from "../contract/status.slint";
+
+// Nền Idle đổi màu chậm theo giờ: tối lúc nửa đêm, sáng nhất lúc trưa.
+export component IdleBackground inherits Rectangle {
+    property <float> k: 1 - Math.abs(2 * StatusBar.day-phase - 1);
+    background: @linear-gradient(180deg, #05080e.mix(#1d3a56, k) 0%, #0b0f14.mix(#3a2f2a, k) 100%);
+}

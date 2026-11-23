@@ -1,6 +1,6 @@
 # 03 — Khung app: tầng màn, vuốt, chấm trang, thanh trạng thái
 
-Status: ready-for-agent
+Status: resolved
 Blocked by: 02
 Spec: [../spec.md](../spec.md)
 Thiết kế: concept.md §6 "Màn hình", "Điều hướng", "Hiệu ứng theo trạng thái" (chuyển màn)
@@ -41,3 +41,12 @@ Map: chờ hub-core #05 (view), #03/#06 (offline, giờ); Wi-Fi chưa có ticket
 | `StatusBar.wifi-strength` | |
 | `StatusBar.mic-muted` | |
 | `StatusBar.day-phase` | |
+
+## Answer
+
+Làm xong: components/shell.slint (tầng trung tâm/menu/tính năng, vuốt theo ngón tay, ngưỡng 30% hoặc >120px trong <250 ms), page-dots, status-bar, idle-background (gradient theo day-phase), contract/status.slint, screens/placeholder.slint. Demo thêm 3 kịch bản; day_phase có unit test.
+
+Lệch/ghi chú:
+- Hàng dock 240 px dưới cùng (cả chiều ngang) bị loại khỏi vùng vuốt, không chỉ ô Orb; chưa có cơ chế khoá cử chỉ cho slider.
+- Shell chỉ dùng ở chế độ demo; nhánh không-demo giữ nguyên để app thật vẫn chạy.
+- Giờ/day-phase demo theo UTC. Đo fps trên Pi và thử cảm giác vuốt bằng tay chưa làm (ready-for-human).
