@@ -38,17 +38,17 @@ Kịch bản: "Đếm ngược đến Tết" (âm lịch, spawn, thay mốc chí
 
 ## Map với hub-core
 
-Map: chờ hub-core #07
+Map: done — hub-mac #03 @ f2509e7
 
 | Hợp đồng | UiState / UserInput |
 |---|---|
-| `CountdownsData.title` | |
-| `.main` / `.has-main` / `.others` | |
-| `.detail-open` | |
-| `.confetti-serial` | |
-| `.focus` / `.focus-serial` | |
-| `select` / `open-detail` / `close-detail` / `remove` | |
-| `Countdown.fading` | |
+| `CountdownsData.title` | `HubView.countdowns.title` |
+| `.main` / `.has-main` / `.others` | `HubView.countdowns.main`, `.has_main`, `.others`; bridge đưa key được chọn lên `main`, mốc chính cũ vào danh sách |
+| `.detail-open` | Trạng thái bridge từ `open-detail` / `close-detail`, mặc định `false` |
+| `.confetti-serial` | `HubView.countdowns.confetti_serial` |
+| `.focus` / `.focus-serial` | `CountdownsView` chưa có; bridge giữ mặc định Slint |
+| `select` / `open-detail` / `close-detail` / `remove` | Callback chọn mốc và mở/đóng chi tiết cập nhật state bridge; `remove(key)` gửi `UserInput::RemoveCountdown(id)` |
+| `Countdown.fading` | Bridge giữ mốc đang xoá 400 ms để mờ dần; `CountdownItemView` chưa có trường fading |
 
 ## Answer
 
