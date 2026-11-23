@@ -56,6 +56,20 @@ fn stop_tts_discards_queued_audio() {
 }
 
 #[test]
+fn level_tracks_tts_energy_and_returns_to_zero_after_stop() {
+    let mut mixer = Mixer::new(Sounds::load(RATE).unwrap(), RATE);
+    mixer.apply(AudioCommand::PlayTts(opus_frame(0.6)));
+
+    let mut output = [0.0; 1024];
+    mixer.pull(&mut output);
+    assert!(mixer.level() > 0.0);
+    assert!(mixer.level() <= 1.0);
+
+    mixer.apply(AudioCommand::StopTts);
+    assert_eq!(mixer.level(), 0.0);
+}
+
+#[test]
 fn chime_is_quieter_while_tts_is_queued() {
     let mut without_tts = Mixer::new(Sounds::load(RATE).unwrap(), RATE);
     without_tts.apply(AudioCommand::Play(Sound::TimerChime));

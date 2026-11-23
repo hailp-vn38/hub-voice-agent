@@ -101,6 +101,17 @@ fn disabling_mic_stops_emitting_mic_frames() {
     );
 }
 
+#[test]
+fn level_tracks_normalized_input_energy_and_silence() {
+    let mut capture = Capture::new(None);
+
+    capture.push(&[i16::MAX; 8]);
+    assert_eq!(capture.level(), 1.0);
+
+    capture.push(&[0; 8]);
+    assert_eq!(capture.level(), 0.0);
+}
+
 fn decode_frame(packet: &[u8]) -> Vec<i16> {
     let mut decoder = Decoder::new(16_000, Channels::Mono).unwrap();
     let mut pcm = vec![0; 1_920];
