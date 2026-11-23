@@ -107,5 +107,6 @@ Mỗi ticket là một lát đi xuyên interface `run()`, có test trong `crates
 
 ## Quy ước
 
+- Quyết định 2026-11-23: tự vào Ambient sau 5 phút không tương tác; chưa áp dụng lịch ban đêm. Khi rời màn Thời tiết, kết thúc tạm xem và trở về vị trí nhà ngay; giữ cache vị trí đã xem 30 phút.
 - Tuân theo AGENTS.md: file < 300 dòng, test ở file riêng, không có `mod tests {}` inline.
 - Mỗi ticket cập nhật `docs/codebase.md` nếu interface thay đổi.
