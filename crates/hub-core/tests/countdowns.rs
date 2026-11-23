@@ -12,7 +12,6 @@ use tokio::{
     sync::{mpsc, watch},
 };
 use tokio_tungstenite::{accept_async, tungstenite::Message};
-use voice_client::{DeviceIdentity, VoiceConfig};
 
 #[tokio::test]
 async fn countdown_updates_at_midnight_through_run() {
@@ -33,11 +32,11 @@ async fn countdown_updates_at_midnight_through_run() {
             json!({"websocket":{"url":format!("ws://{ws_addr}"),"token":"token"}}).to_string();
         conn.write_all(format!("HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}", body.len()).as_bytes()).await.unwrap();
     });
-    let (config_tx, config_rx) = watch::channel(Some(VoiceConfig {
-        ota_url: format!("http://{ota_addr}/voice/ota/").parse().unwrap(),
-        device: DeviceIdentity::new("device", "client"),
-        tools: hub_core::tool_definitions(),
-    }));
+    let mut config = hub_core::ConfigStore::open(&dir).unwrap();
+    config
+        .update(|c| c.voice.ota_url = Some(format!("http://{ota_addr}/voice/ota/")))
+        .unwrap();
+    let (config_tx, config_rx) = watch::channel(None);
     let (voice_tx, voice_rx) = voice_client::spawn(config_rx);
     let (audio_tx, _audio_rx) = mpsc::channel(16);
     let (_audio_events, audio_rx) = mpsc::channel(16);
@@ -47,11 +46,13 @@ async fn countdown_updates_at_midnight_through_run() {
         .parse()
         .unwrap();
     let task = tokio::spawn(run(
+        config,
         Store::open(&dir).unwrap(),
         Ports {
             clock: Arc::new(TestClock::at(start.clone())),
         },
         Io {
+            voice_config_tx: config_tx.clone(),
             voice_tx,
             voice_rx,
             audio_tx,
@@ -81,6 +82,11 @@ async fn countdown_updates_at_midnight_through_run() {
         }
     }
     assert_eq!(ui_rx.borrow().countdowns[0].days, 2);
+    assert_eq!(ui_rx.borrow().view.screen, hub_core::Screen::Countdowns);
+    assert_eq!(
+        ui_rx.borrow().view.focus,
+        Some(hub_core::Focus::Countdown(ui_rx.borrow().countdowns[0].id))
+    );
     for (id, label) in [(2, "Trứng luộc"), (3, "Trứng chiên")] {
         let frame = json!({"type":"mcp","payload":{"jsonrpc":"2.0","id":id,"method":"tools/call","params":{"name":"hub_timer_start","arguments":{"label":label,"minutes":1}}}});
         socket
@@ -124,12 +130,15 @@ async fn countdown_updates_at_midnight_through_run() {
     let (_audio_events, audio_rx) = mpsc::channel(1);
     let (_input, input_rx) = mpsc::channel(1);
     let (ui_tx, mut ui_rx) = watch::channel(UiState::default());
+    let (voice_config_tx, _) = watch::channel(None);
     let task = tokio::spawn(run(
+        hub_core::ConfigStore::open(&dir).unwrap(),
         Store::open(&dir).unwrap(),
         Ports {
             clock: Arc::new(TestClock::at(start)),
         },
         Io {
+            voice_config_tx,
             voice_tx,
             voice_rx,
             audio_tx,

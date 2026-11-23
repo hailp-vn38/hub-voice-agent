@@ -40,11 +40,18 @@ impl Feature {
             true
         }))]
     }
-    pub fn on_tool(&mut self, call: ToolCall, today: Date) -> Vec<Effect> {
+    pub fn on_tool(
+        &mut self,
+        view: &mut crate::view::View,
+        call: ToolCall,
+        now: jiff::Zoned,
+    ) -> Vec<Effect> {
+        let today = now.date();
         let request = match tools::parse(&call.name, call.arguments.clone()) {
             Ok(v) => v,
             Err(e) => return vec![Effect::Reply(call, Err(e))],
         };
+        let is_create = matches!(request, tools::Request::Create(_));
         let result: Result<bool, String> = match request {
             tools::Request::Create(args) => {
                 if self.items.len() >= 8 {
@@ -125,6 +132,18 @@ impl Feature {
                     effects.push(Effect::PersistCountdowns(self.items.clone()));
                     effects.extend(self.snapshot(today));
                 }
+                let focus = if is_create {
+                    self.items
+                        .last()
+                        .map(|item| crate::Focus::Countdown(item.id))
+                } else {
+                    None
+                };
+                effects.extend(view.open(
+                    crate::Screen::Countdowns,
+                    focus,
+                    now.timestamp().as_second(),
+                ));
                 effects.push(Effect::Reply(
                     call,
                     Ok(serde_json::json!({"countdowns": self.views(today)})),

@@ -1716,10 +1716,13 @@ dependencies = [
  "schemars",
  "serde",
  "serde_json",
+ "tempfile",
  "tokio",
  "tokio-tungstenite",
+ "toml",
  "unicode-normalization",
  "url",
+ "uuid",
  "voice-client",
 ]
 

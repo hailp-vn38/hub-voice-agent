@@ -209,7 +209,7 @@ Integration test dùng server WebSocket giả tại `tests/`; test backoff dùng
 
 #### Interface bên ngoài
 
-Interface bên dưới là thiết kế đích. Hiện `run(store, ports, io)` nhận SQLite Store, `clock`, các channel voice, audio, input và UI. Runtime xử lý hội thoại và các tool hẹn giờ; input chưa có biến thể. Store được mở bằng `Store::open(dir)` hoặc `Store::in_memory()`; `tool_definitions()` cung cấp schema cho bốn tool hẹn giờ. Báo hết giờ thuộc ticket 06.
+Interface bên dưới là thiết kế đích. Hiện `run(config, store, ports, io)` xử lý voice settings, hội thoại và các tool hẹn giờ. `ConfigStore` giữ cấu hình voice; `Store::open(dir)` hoặc `Store::in_memory()` mở SQLite; `tool_definitions()` cung cấp schema cho bốn tool hẹn giờ. Báo hết giờ thuộc ticket 06.
 
 ```rust
 pub async fn run(config: ConfigStore, store: Store, ports: Ports, io: Io) -> anyhow::Result<()>;
@@ -233,7 +233,7 @@ pub struct Ports {
     pub system: Arc<dyn System>,
 }
 
-pub fn tool_definitions() -> Vec<ToolDef>;   // apps/hub đưa vào VoiceConfig
+pub fn tool_definitions() -> Vec<ToolDef>;   // hub-core đưa vào VoiceConfig
 ```
 
 Gần như mọi hành vi của sản phẩm — luồng voice, 21 tool `hub_*`, điều hướng, báo hết giờ, Reminder, cache offline, Setup web — test được qua đúng interface này: gửi `VoiceEvent`/`AudioEvent`/`UserInput`, tiến clock, rồi kiểm `VoiceCommand`/`AudioCommand` đã gửi và `UiState`.
@@ -405,3 +405,4 @@ Ví dụ test qua interface của hub-core: gửi `ToolCall("hub_timer_start", {
 ### Giao diện đếm ngược của hub-core
 
 `hub_countdown_create` nhận `label`, `date` (YYYY-MM-DD), `repeat` (`none`, `yearly`, `yearly_lunar`) và `lunar_leap` tùy chọn. Với `yearly_lunar`, `date` là ngày âm lịch Việt Nam UTC+7; ngày 30 trong tháng thiếu được chuyển thành ngày 29, còn tháng nhuận chỉ lặp vào lần có cùng tháng nhuận. Ngày 29/2 dương lịch lặp vào 28/2 trong năm không nhuận. `hub_countdown_remove` tìm nhãn không phân biệt dấu và trả các lựa chọn khi mơ hồ; `hub_countdown_list` trả cùng các mốc và số ngày như `UiState.countdowns`.
+**View hiện có:** `UiState.view` chứa `Screen` và `Focus`; `UserInput::Open`, `Back`, `Activity` điều hướng và đặt lại hạn 60 giây. Tool timer thành công mở màn Hẹn giờ và timer mới được focus theo ID. Chạm hoặc wake word thoát Ambient; tự vào Ambient cần setting thời gian và lịch ban đêm. Bảng ánh xạ tool server chưa được xác định. Vị trí thời tiết tạm xem và cache thuộc ticket 09.

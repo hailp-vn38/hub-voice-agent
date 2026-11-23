@@ -1,6 +1,7 @@
 //! Hub core: the actor that owns state and drives the UI snapshot. Depends on `voice-client`.
 
 mod audio;
+mod config;
 mod conversation;
 mod features;
 pub mod lunar;
@@ -10,24 +11,35 @@ mod ports;
 mod runtime;
 mod store;
 mod ui_state;
+mod view;
+mod voice_settings;
 
 use std::sync::Arc;
 
 pub use audio::{AudioCommand, AudioEvent, Sensitivity, Sound};
+pub use config::{Config, ConfigStore, VoiceSettings};
 pub use ports::{Clock, SystemClock};
 pub use runtime::run;
 use tokio::sync::{mpsc, watch};
-pub use ui_state::{UiState, VoiceState, VoiceUiState};
-use voice_client::{VoiceCommand, VoiceEvent};
+pub use ui_state::{UiState, VoiceSettingsState, VoiceState, VoiceUiState};
+pub use view::{Focus, Screen, ViewState};
+use voice_client::{VoiceCommand, VoiceConfig, VoiceEvent};
+pub use voice_settings::DEFAULT_OTA_URL;
 
 pub struct Ports {
     pub clock: Arc<dyn Clock>,
 }
 
-/// User inputs will be added with the corresponding behavior.
-pub enum UserInput {}
+pub enum UserInput {
+    Open(Screen),
+    Back,
+    Activity,
+    SaveVoiceUrl(String),
+    VoiceConnect,
+}
 
 pub struct Io {
+    pub voice_config_tx: watch::Sender<Option<VoiceConfig>>,
     pub voice_tx: mpsc::Sender<VoiceCommand>,
     pub voice_rx: mpsc::Receiver<VoiceEvent>,
     pub audio_tx: mpsc::Sender<AudioCommand>,
