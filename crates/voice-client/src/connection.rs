@@ -1,25 +1,75 @@
-use std::future::Future;
-use std::time::Duration;
+//! One WebSocket connection: request, hello exchange, then the Ready voice loop.
+
+use std::{fmt, future::Future, time::Duration};
 
 use futures_util::{SinkExt, StreamExt};
-use tokio::sync::mpsc;
-use tokio::sync::watch;
+use tokio::{
+    net::TcpStream,
+    sync::{mpsc, watch},
+    time::Instant,
+};
 use tokio_tungstenite::{
-    connect_async,
+    MaybeTlsStream, WebSocketStream, connect_async,
     tungstenite::{
-        Message, client::IntoClientRequest, http::HeaderValue, http::header::AUTHORIZATION,
+        Message,
+        client::IntoClientRequest,
+        handshake::client::Request,
+        http::{HeaderValue, header::AUTHORIZATION},
     },
 };
 use url::Url;
 
 use crate::{
-    DeviceIdentity, VoiceCommand, VoiceEvent,
+    DeviceIdentity, VoiceCommand, VoiceConfig, VoiceEvent,
     protocol::{ClientHello, ServerHello},
 };
 
+mod timeouts;
 mod voice;
 
+pub(crate) use timeouts::{Timeouts, bounded};
+
+#[cfg(test)]
+#[path = "connection_tests.rs"]
+pub(crate) mod tests;
+#[cfg(test)]
+#[path = "connection/timeout_tests.rs"]
+mod timeout_tests;
+
+pub(crate) type Socket = WebSocketStream<MaybeTlsStream<TcpStream>>;
+
 const WRITE_TIMEOUT: Duration = Duration::from_secs(10);
+
+/// Why a connection attempt, or a Ready connection, ended. The reconnect loop logs it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum Failure {
+    OtaRequest,
+    OtaResponse,
+    /// The URL or a header value from OTA or `DeviceIdentity` is unusable.
+    InvalidRequest,
+    Connect,
+    TimedOut,
+    Write,
+    BadHello,
+    Closed,
+    Idle,
+}
+
+impl fmt::Display for Failure {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str(match self {
+            Self::OtaRequest => "OTA request failed",
+            Self::OtaResponse => "OTA response has no usable websocket url and token",
+            Self::InvalidRequest => "websocket url or identity header is invalid",
+            Self::Connect => "websocket connect failed",
+            Self::TimedOut => "server did not answer in time",
+            Self::Write => "websocket write failed or timed out",
+            Self::BadHello => "server hello missing or invalid",
+            Self::Closed => "websocket closed",
+            Self::Idle => "no frame from server within the idle timeout",
+        })
+    }
+}
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ConnectionState {
@@ -29,219 +79,200 @@ pub enum ConnectionState {
     Enrolling,
 }
 
-pub(super) enum ConnectionEnd {
-    Failed { became_ready: bool },
-    Reconfigured(crate::VoiceConfig),
+pub(crate) enum ConnectionEnd {
+    Failed {
+        cause: Failure,
+        /// Whether the connection stayed Ready for `Timeouts::stable_after`.
+        was_stable: bool,
+    },
+    Reconfigured(Box<VoiceConfig>),
     Stopped,
 }
 
-pub(super) enum Operation<T> {
-    Complete(T),
-    Reconfigured(crate::VoiceConfig),
-    Stopped,
-    Failed,
+impl ConnectionEnd {
+    pub(crate) fn failed(cause: Failure) -> Self {
+        Self::Failed {
+            cause,
+            was_stable: false,
+        }
+    }
 }
 
-pub(crate) async fn send_with_timeout<S>(sink: &mut S, message: Message) -> Result<(), ()>
+pub(crate) async fn send_with_timeout<S>(sink: &mut S, message: Message) -> Result<(), Failure>
 where
     S: futures_util::Sink<Message, Error = tokio_tungstenite::tungstenite::Error> + Unpin,
 {
     tokio::time::timeout(WRITE_TIMEOUT, sink.send(message))
         .await
-        .map_err(|_| ())?
-        .map_err(|_| ())
+        .map_err(|_| Failure::Write)?
+        .map_err(|_| Failure::Write)
 }
 
-pub(super) struct ClientIo<'a> {
-    pub events: &'a mpsc::Sender<VoiceEvent>,
-    pub commands: &'a mut mpsc::Receiver<VoiceCommand>,
-    pub config: &'a mut watch::Receiver<crate::VoiceConfig>,
-    pub active_config: &'a mut crate::VoiceConfig,
+/// Everything the client task owns across reconnects.
+pub(crate) struct Client {
+    pub events: mpsc::Sender<VoiceEvent>,
+    pub commands: mpsc::Receiver<VoiceCommand>,
+    pub config: watch::Receiver<VoiceConfig>,
+    pub active_config: VoiceConfig,
+    pub timeouts: Timeouts,
 }
 
-impl ClientIo<'_> {
-    async fn operation<F, T>(&mut self, future: F) -> Operation<T>
-    where
-        F: Future<Output = Result<T, ()>>,
-    {
-        await_operation(
-            future,
-            self.config,
-            self.active_config,
-            self.commands,
-            self.events,
-        )
-        .await
+impl Client {
+    pub(crate) fn new(
+        mut config: watch::Receiver<VoiceConfig>,
+        commands: mpsc::Receiver<VoiceCommand>,
+        events: mpsc::Sender<VoiceEvent>,
+        timeouts: Timeouts,
+    ) -> Self {
+        let active_config = config.borrow_and_update().clone();
+        Self {
+            events,
+            commands,
+            config,
+            active_config,
+            timeouts,
+        }
     }
-}
 
-pub(super) async fn await_operation<F, T>(
-    future: F,
-    config: &mut watch::Receiver<crate::VoiceConfig>,
-    active_config: &crate::VoiceConfig,
-    commands: &mut mpsc::Receiver<VoiceCommand>,
-    events: &mpsc::Sender<VoiceEvent>,
-) -> Operation<T>
-where
-    F: Future<Output = Result<T, ()>>,
-{
-    tokio::pin!(future);
-    loop {
-        tokio::select! {
-            biased;
-            command = commands.recv() => match command {
-                Some(VoiceCommand::DirectSpeech { request_id, .. }) => {
-                    if events.send(VoiceEvent::DirectSpeechRejected {
-                        request_id,
-                        reason: crate::DirectSpeechError::Offline,
-                    }).await.is_err() {
-                        return Operation::Stopped;
+    pub(crate) async fn emit(&self, event: VoiceEvent) -> Result<(), ConnectionEnd> {
+        self.events
+            .send(event)
+            .await
+            .map_err(|_| ConnectionEnd::Stopped)
+    }
+
+    /// The watched config, if it now differs from the active one.
+    fn changed_config(&mut self) -> Option<VoiceConfig> {
+        let updated = self.config.borrow_and_update().clone();
+        (updated != self.active_config).then_some(updated)
+    }
+
+    /// Runs `future` while not Ready: commands that need a session are refused
+    /// or dropped, and a config change or shutdown ends the wait early.
+    pub(crate) async fn operation<F, T>(&mut self, future: F) -> Result<T, ConnectionEnd>
+    where
+        F: Future<Output = Result<T, Failure>>,
+    {
+        tokio::pin!(future);
+        loop {
+            tokio::select! {
+                biased;
+                command = self.commands.recv() => match command {
+                    Some(VoiceCommand::DirectSpeech { request_id, .. }) => {
+                        self.emit(VoiceEvent::DirectSpeechRejected {
+                            request_id,
+                            reason: crate::DirectSpeechError::Offline,
+                        })
+                        .await?;
+                    }
+                    Some(
+                        VoiceCommand::Audio(_)
+                        | VoiceCommand::ListenStart
+                        | VoiceCommand::ListenStop
+                        | VoiceCommand::Abort,
+                    ) => {}
+                    None => return Err(ConnectionEnd::Stopped),
+                },
+                _ = self.events.closed() => return Err(ConnectionEnd::Stopped),
+                changed = self.config.changed(), if self.config.has_changed().is_ok() => {
+                    if let Some(updated) = changed.ok().and_then(|()| self.changed_config()) {
+                        return Err(ConnectionEnd::Reconfigured(Box::new(updated)));
                     }
                 }
-                Some(VoiceCommand::Audio(_) | VoiceCommand::ListenStart | VoiceCommand::ListenStop | VoiceCommand::Abort) => {}
-                None => return Operation::Stopped,
-            },
-            _ = events.closed() => return Operation::Stopped,
-            changed = config.changed(), if config.has_changed().is_ok() => match changed {
-                Err(_) => continue,
-                Ok(()) => {
-                    let updated = config.borrow_and_update().clone();
-                    if updated != *active_config {
-                        return Operation::Reconfigured(updated);
-                    }
-                }
-            },
-            result = &mut future => return match result {
-                Ok(value) => Operation::Complete(value),
-                Err(()) => Operation::Failed,
-            },
+                result = &mut future => return result.map_err(ConnectionEnd::failed),
+            }
         }
     }
 }
 
-pub(super) async fn connect_and_wait(
+pub(crate) async fn connect_and_wait(
+    client: &mut Client,
     url: Url,
     token: String,
-    device: DeviceIdentity,
-    mut io: ClientIo<'_>,
 ) -> ConnectionEnd {
-    let Ok(mut request) = url.as_str().into_client_request() else {
-        return ConnectionEnd::Failed {
-            became_ready: false,
-        };
+    let request = match websocket_request(&url, &token, &client.active_config.device) {
+        Ok(request) => request,
+        Err(cause) => return ConnectionEnd::failed(cause),
     };
+    let connect = bounded(client.timeouts.handshake, async {
+        connect_async(request)
+            .await
+            .map(|(socket, _)| socket)
+            .map_err(|_| Failure::Connect)
+    });
+    let mut socket = match client.operation(connect).await {
+        Ok(socket) => socket,
+        Err(end) => return end,
+    };
+    let session_id = match exchange_hello(client, &mut socket).await {
+        Ok(session_id) => session_id,
+        Err(end) => return close_unless_failed(&mut socket, end).await,
+    };
+    if let Err(end) = client
+        .emit(VoiceEvent::Connection(ConnectionState::Ready))
+        .await
+    {
+        return close_unless_failed(&mut socket, end).await;
+    }
+
+    let ready_at = Instant::now();
+    match voice::run(socket, session_id, client).await {
+        ConnectionEnd::Failed { cause, .. } => ConnectionEnd::Failed {
+            cause,
+            was_stable: ready_at.elapsed() >= client.timeouts.stable_after,
+        },
+        end => end,
+    }
+}
+
+fn websocket_request(url: &Url, token: &str, device: &DeviceIdentity) -> Result<Request, Failure> {
+    let header = |value: &str| HeaderValue::from_str(value).map_err(|_| Failure::InvalidRequest);
+    let mut request = url
+        .as_str()
+        .into_client_request()
+        .map_err(|_| Failure::InvalidRequest)?;
     let headers = request.headers_mut();
-    headers.insert(
-        AUTHORIZATION,
-        match HeaderValue::from_str(&format!("Bearer {token}")) {
-            Ok(value) => value,
-            Err(_) => {
-                return ConnectionEnd::Failed {
-                    became_ready: false,
-                };
-            }
-        },
-    );
-    headers.insert(
-        "device-id",
-        match HeaderValue::from_str(&device.device_id) {
-            Ok(value) => value,
-            Err(_) => {
-                return ConnectionEnd::Failed {
-                    became_ready: false,
-                };
-            }
-        },
-    );
-    headers.insert(
-        "client-id",
-        match HeaderValue::from_str(&device.client_id) {
-            Ok(value) => value,
-            Err(_) => {
-                return ConnectionEnd::Failed {
-                    became_ready: false,
-                };
-            }
-        },
-    );
+    headers.insert(AUTHORIZATION, header(&format!("Bearer {token}"))?);
+    headers.insert("device-id", header(&device.device_id)?);
+    headers.insert("client-id", header(&device.client_id)?);
+    Ok(request)
+}
 
-    let (mut socket, _) = match io
-        .operation(async { connect_async(request).await.map_err(|_| ()) })
-        .await
-    {
-        Operation::Complete(connection) => connection,
-        Operation::Reconfigured(config) => return ConnectionEnd::Reconfigured(config),
-        Operation::Stopped => return ConnectionEnd::Stopped,
-        Operation::Failed => {
-            return ConnectionEnd::Failed {
-                became_ready: false,
-            };
-        }
+/// Sends the ClientHello and returns the session id from a valid ServerHello.
+async fn exchange_hello(client: &mut Client, socket: &mut Socket) -> Result<String, ConnectionEnd> {
+    let hello = serde_json::to_string(&ClientHello::v1()).expect("ClientHello always serializes");
+    client
+        .operation(send_with_timeout(socket, Message::Text(hello.into())))
+        .await?;
+    let limit = client.timeouts.handshake;
+    let reply = client
+        .operation(bounded(limit, next_data_frame(socket)))
+        .await?;
+    let Message::Text(text) = reply else {
+        return Err(ConnectionEnd::failed(Failure::BadHello));
     };
-    let Ok(hello) = serde_json::to_string(&ClientHello::v1()) else {
-        return ConnectionEnd::Failed {
-            became_ready: false,
-        };
-    };
-    match io
-        .operation(async { send_with_timeout(&mut socket, Message::Text(hello.into())).await })
-        .await
-    {
-        Operation::Complete(()) => {}
-        Operation::Reconfigured(config) => {
-            let _ = send_with_timeout(&mut socket, Message::Close(None)).await;
-            return ConnectionEnd::Reconfigured(config);
-        }
-        Operation::Stopped => {
-            let _ = send_with_timeout(&mut socket, Message::Close(None)).await;
-            return ConnectionEnd::Stopped;
-        }
-        Operation::Failed => {
-            return ConnectionEnd::Failed {
-                became_ready: false,
-            };
+    match serde_json::from_str::<ServerHello>(&text) {
+        Ok(hello) if hello.is_valid() => Ok(hello.session_id().to_owned()),
+        _ => Err(ConnectionEnd::failed(Failure::BadHello)),
+    }
+}
+
+/// The next frame that is not a ping or pong.
+async fn next_data_frame(socket: &mut Socket) -> Result<Message, Failure> {
+    loop {
+        match socket.next().await {
+            Some(Ok(Message::Ping(_) | Message::Pong(_))) => continue,
+            Some(Ok(message)) => return Ok(message),
+            Some(Err(_)) | None => return Err(Failure::Closed),
         }
     }
+}
 
-    let message = match io
-        .operation(async { socket.next().await.ok_or(())?.map_err(|_| ()) })
-        .await
-    {
-        Operation::Complete(Message::Text(message)) => message,
-        Operation::Complete(_) | Operation::Failed => {
-            return ConnectionEnd::Failed {
-                became_ready: false,
-            };
-        }
-        Operation::Reconfigured(config) => {
-            let _ = send_with_timeout(&mut socket, Message::Close(None)).await;
-            return ConnectionEnd::Reconfigured(config);
-        }
-        Operation::Stopped => {
-            let _ = send_with_timeout(&mut socket, Message::Close(None)).await;
-            return ConnectionEnd::Stopped;
-        }
-    };
-    let Ok(server_hello) = serde_json::from_str::<ServerHello>(&message) else {
-        return ConnectionEnd::Failed {
-            became_ready: false,
-        };
-    };
-    if !server_hello.is_valid() {
-        return ConnectionEnd::Failed {
-            became_ready: false,
-        };
+/// Closes the socket politely when the client leaves on purpose; a failed
+/// socket is just dropped.
+async fn close_unless_failed(socket: &mut Socket, end: ConnectionEnd) -> ConnectionEnd {
+    if !matches!(end, ConnectionEnd::Failed { .. }) {
+        let _ = send_with_timeout(socket, Message::Close(None)).await;
     }
-    let session_id = server_hello.session_id().to_owned();
-    if io
-        .events
-        .send(VoiceEvent::Connection(ConnectionState::Ready))
-        .await
-        .is_err()
-    {
-        let _ = send_with_timeout(&mut socket, Message::Close(None)).await;
-        return ConnectionEnd::Stopped;
-    }
-
-    voice::run(socket, session_id, io).await
+    end
 }

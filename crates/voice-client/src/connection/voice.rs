@@ -1,239 +1,196 @@
+//! The Ready loop: downlink frames, uplink commands and device tool replies on one socket.
+
+use std::time::Duration;
+
 use futures_util::StreamExt;
-use serde_json::{Value, json};
-use tokio_tungstenite::{MaybeTlsStream, WebSocketStream, tungstenite::Message};
+use serde_json::Value;
+use tokio::time::Instant;
+use tokio_tungstenite::tungstenite::{Error as WsError, Message};
 
 use crate::{
-    OpusFrame, VoiceCommand, VoiceEvent,
-    connection::{ClientIo, ConnectionEnd, send_with_timeout},
+    OpusFrame, ToolDef, TtsStopReason, VoiceCommand, VoiceEvent,
+    connection::{Client, ConnectionEnd, Failure, Socket, send_with_timeout},
+    mcp::{self, ToolCalls},
+    protocol,
 };
 
-pub(super) async fn run(
-    mut socket: WebSocketStream<MaybeTlsStream<tokio::net::TcpStream>>,
-    session_id: String,
-    io: ClientIo<'_>,
-) -> ConnectionEnd {
-    let tools = io.active_config.tools.clone();
-    let (reply_tx, mut reply_rx) = tokio::sync::mpsc::unbounded_channel();
-    let mut tts_active = false;
+#[cfg(test)]
+#[path = "voice_tests.rs"]
+mod tests;
+
+/// Placeholder period for a disabled limit; its branch is never polled.
+const DISABLED: Duration = Duration::from_secs(365 * 24 * 60 * 60);
+
+/// `Err` ends the Ready loop with that outcome.
+type Step = Result<(), ConnectionEnd>;
+
+pub(super) async fn run(socket: Socket, session_id: String, client: &mut Client) -> ConnectionEnd {
+    let mut session = Session {
+        socket,
+        session_id,
+        tts_active: false,
+    };
+    let tools = client.active_config.tools.clone();
+    let (tool_calls, mut replies) = ToolCalls::new();
+    let timeouts = client.timeouts;
+    let ping_every = timeouts.ping.unwrap_or(DISABLED);
+    let mut ping = tokio::time::interval_at(Instant::now() + ping_every, ping_every);
+    let idle = tokio::time::sleep(timeouts.idle.unwrap_or(DISABLED));
+    tokio::pin!(idle);
     loop {
-        tokio::select! {
-            frame = socket.next() => match frame {
-                Some(Ok(Message::Close(_))) | None | Some(Err(_)) => {
-                    interrupted_stop(io.events, &mut tts_active).await;
-                    return ConnectionEnd::Failed { became_ready: true };
+        // A disabled limit keeps its branch off via the `if` guards.
+        let step = tokio::select! {
+            () = &mut idle, if timeouts.idle.is_some() => Err(ConnectionEnd::failed(Failure::Idle)),
+            _ = ping.tick(), if timeouts.ping.is_some() => {
+                session.send(Message::Ping(Vec::new().into())).await
+            }
+            frame = session.socket.next() => {
+                if let Some(limit) = timeouts.idle {
+                    idle.as_mut().reset(Instant::now() + limit);
                 }
-                Some(Ok(Message::Text(text))) => {
-                    let value = serde_json::from_str::<Value>(&text).ok();
-                    if let Some(payload) = value.as_ref().and_then(crate::mcp::mcp_payload) {
-                        let response = crate::mcp::handle(payload, &tools, io.events, &reply_tx).await;
-                        let Some(response) = response else { continue };
-                        let frame = json!({
-                            "type": "mcp", "session_id": &session_id, "payload": response
-                        }).to_string();
-                        if send_with_timeout(&mut socket, Message::Text(frame.into())).await.is_err() {
-                            interrupted_stop(io.events, &mut tts_active).await;
-                            return ConnectionEnd::Failed { became_ready: true };
-                        }
-                    } else if let Some(event) = value.as_ref().and_then(crate::mcp::tool_status) {
-                        if io.events.send(event).await.is_err() {
-                            return ConnectionEnd::Stopped;
-                        }
-                    } else if let Some(event) = parse_text_event(&text) {
-                        match event {
-                            VoiceEvent::TtsAudio(_) => {
-                                let _ = io.events.try_send(event);
-                            }
-                            VoiceEvent::TtsStart { .. } => {
-                                interrupted_stop(io.events, &mut tts_active).await;
-                                tts_active = true;
-                                if io.events.send(event).await.is_err() {
-                                    return ConnectionEnd::Stopped;
-                                }
-                            }
-                            VoiceEvent::TtsStop { .. } if tts_active => {
-                                tts_active = false;
-                                if io.events.send(VoiceEvent::TtsStop {
-                                    reason: crate::TtsStopReason::Completed,
-                                }).await.is_err() {
-                                    return ConnectionEnd::Stopped;
-                                }
-                            }
-                            VoiceEvent::TtsStop { .. } => {}
-                            event => if io.events.send(event).await.is_err() {
-                                return ConnectionEnd::Stopped;
-                            },
-                        }
-                    } else {
-                        log::debug!("ignoring unknown or malformed voice downlink text");
-                    }
+                session.on_frame(frame, client, &tools, &tool_calls).await
+            }
+            Some(reply) = replies.recv() => {
+                let frame = protocol::mcp(&session.session_id, reply);
+                session.send_text(frame).await
+            }
+            command = client.commands.recv() => session.on_command(command, client).await,
+            _ = client.events.closed() => Err(ConnectionEnd::Stopped),
+            changed = client.config.changed(), if client.config.has_changed().is_ok() => {
+                match changed.ok().and_then(|()| client.changed_config()) {
+                    Some(updated) => Err(ConnectionEnd::Reconfigured(Box::new(updated))),
+                    None => Ok(()),
                 }
-                Some(Ok(Message::Binary(data))) => {
-                    let _ = io.events.try_send(VoiceEvent::TtsAudio(OpusFrame(data.to_vec())));
-                }
-                Some(Ok(_)) => {}
-            },
-            reply = reply_rx.recv() => if let Some((_id, response)) = reply {
-                let frame = json!({
-                    "type": "mcp", "session_id": &session_id, "payload": response
-                }).to_string();
-                if send_with_timeout(&mut socket, Message::Text(frame.into())).await.is_err() {
-                    interrupted_stop(io.events, &mut tts_active).await;
-                    return ConnectionEnd::Failed { became_ready: true };
-                }
-            },
-            command = io.commands.recv() => match command {
-                Some(VoiceCommand::ListenStart) => {
-                    let text = json!({
-                        "type": "listen", "state": "start", "mode": "realtime", "session_id": session_id
-                    }).to_string();
-                    if send_with_timeout(&mut socket, Message::Text(text.into())).await.is_err() {
-                        interrupted_stop(io.events, &mut tts_active).await;
-                        return ConnectionEnd::Failed { became_ready: true };
-                    }
-                }
-                Some(VoiceCommand::ListenStop) => {
-                    let text = json!({"type": "listen", "state": "stop", "session_id": session_id}).to_string();
-                    if send_with_timeout(&mut socket, Message::Text(text.into())).await.is_err() {
-                        interrupted_stop(io.events, &mut tts_active).await;
-                        return ConnectionEnd::Failed { became_ready: true };
-                    }
-                }
-                Some(VoiceCommand::Abort) => {
-                    let text = json!({"type": "abort", "session_id": session_id}).to_string();
-                    if send_with_timeout(&mut socket, Message::Text(text.into())).await.is_err() {
-                        interrupted_stop(io.events, &mut tts_active).await;
-                        return ConnectionEnd::Failed { became_ready: true };
-                    }
-                }
-                Some(VoiceCommand::Audio(OpusFrame(data))) => {
-                    if send_with_timeout(&mut socket, Message::Binary(data.into())).await.is_err() {
-                        interrupted_stop(io.events, &mut tts_active).await;
-                        return ConnectionEnd::Failed { became_ready: true };
-                    }
-                }
-                Some(VoiceCommand::DirectSpeech { request_id, text }) => {
-                    if let Err(reason) = validate_direct_speech(&request_id, &text) {
-                        if io.events.send(VoiceEvent::DirectSpeechRejected { request_id, reason }).await.is_err() {
-                            return ConnectionEnd::Stopped;
-                        }
-                        continue;
-                    }
-                    let frame = json!({
-                        "type": "direct_speech", "session_id": session_id,
-                        "request_id": request_id, "text": text
-                    }).to_string();
-                    if send_with_timeout(&mut socket, Message::Text(frame.into())).await.is_err() {
-                        interrupted_stop(io.events, &mut tts_active).await;
-                        return ConnectionEnd::Failed { became_ready: true };
-                    }
-                }
-                None => {
-                    let _ = send_with_timeout(&mut socket, Message::Close(None)).await;
-                    interrupted_stop(io.events, &mut tts_active).await;
-                    return ConnectionEnd::Stopped;
-                }
-            },
-            _ = io.events.closed() => {
-                let _ = send_with_timeout(&mut socket, Message::Close(None)).await;
-                return ConnectionEnd::Stopped;
-            },
-            changed = io.config.changed(), if io.config.has_changed().is_ok() => match changed {
-                Err(_) => continue,
-                Ok(()) => {
-                    let updated = io.config.borrow_and_update().clone();
-                    if updated != *io.active_config {
-                        let _ = send_with_timeout(&mut socket, Message::Close(None)).await;
-                        interrupted_stop(io.events, &mut tts_active).await;
-                        return ConnectionEnd::Reconfigured(updated);
-                    }
-                }
-            },
+            }
+        };
+        if let Err(end) = step {
+            return session.finish(end, client).await;
         }
     }
 }
 
-async fn interrupted_stop(events: &tokio::sync::mpsc::Sender<VoiceEvent>, tts_active: &mut bool) {
-    if *tts_active {
-        *tts_active = false;
-        let _ = events
-            .send(VoiceEvent::TtsStop {
-                reason: crate::TtsStopReason::Interrupted,
-            })
-            .await;
-    }
+struct Session {
+    socket: Socket,
+    session_id: String,
+    /// A `TtsStart` was emitted without its `TtsStop` yet.
+    tts_active: bool,
 }
 
-fn parse_text_event(text: &str) -> Option<VoiceEvent> {
-    let value: Value = serde_json::from_str(text).ok()?;
-    match value.get("type")?.as_str()? {
-        "stt" => Some(VoiceEvent::Stt {
-            text: value.get("text")?.as_str()?.to_owned(),
-        }),
-        "tts" => match value.get("state")?.as_str()? {
-            "start" => {
-                let origin = match (
-                    value.get("source").and_then(Value::as_str),
-                    value.get("request_id").and_then(Value::as_str),
-                ) {
-                    (Some("client_direct"), Some(request_id)) => crate::TtsOrigin::ClientDirect {
-                        request_id: request_id.to_owned(),
-                    },
-                    _ => crate::TtsOrigin::Agent,
-                };
-                Some(VoiceEvent::TtsStart { origin })
-            }
-            "sentence_start" => Some(VoiceEvent::TtsText {
-                text: value.get("text")?.as_str()?.to_owned(),
-            }),
-            "stop" => Some(VoiceEvent::TtsStop {
-                reason: crate::TtsStopReason::Completed,
-            }),
-            "result"
-                if value.get("source")?.as_str()? == "client_direct"
-                    && value.get("outcome")?.as_str()? == "rejected" =>
-            {
-                Some(VoiceEvent::DirectSpeechRejected {
-                    request_id: value.get("request_id")?.as_str()?.to_owned(),
-                    reason: direct_speech_error(value.get("reason")?.as_str()?),
+impl Session {
+    async fn send(&mut self, message: Message) -> Step {
+        send_with_timeout(&mut self.socket, message)
+            .await
+            .map_err(ConnectionEnd::failed)
+    }
+
+    async fn send_text(&mut self, frame: Value) -> Step {
+        self.send(Message::Text(frame.to_string().into())).await
+    }
+
+    /// Closes the TTS turn the caller saw start, so every `TtsStart` gets a `TtsStop`.
+    async fn interrupt(&mut self, client: &Client) {
+        if std::mem::take(&mut self.tts_active) {
+            let _ = client
+                .emit(VoiceEvent::TtsStop {
+                    reason: TtsStopReason::Interrupted,
                 })
+                .await;
+        }
+    }
+
+    /// Leaves the loop: a deliberate exit closes the socket, and any open TTS
+    /// turn is interrupted before the caller sees the connection change.
+    async fn finish(mut self, end: ConnectionEnd, client: &Client) -> ConnectionEnd {
+        if !matches!(end, ConnectionEnd::Failed { .. }) {
+            let _ = self.send(Message::Close(None)).await;
+        }
+        self.interrupt(client).await;
+        end
+    }
+
+    async fn on_frame(
+        &mut self,
+        frame: Option<Result<Message, WsError>>,
+        client: &Client,
+        tools: &[ToolDef],
+        tool_calls: &ToolCalls,
+    ) -> Step {
+        match frame {
+            Some(Ok(Message::Text(text))) => self.on_text(&text, client, tools, tool_calls).await,
+            Some(Ok(Message::Binary(data))) => {
+                // Audio is dropped rather than stalling the socket when the caller lags.
+                let _ = client
+                    .events
+                    .try_send(VoiceEvent::TtsAudio(OpusFrame(data.to_vec())));
+                Ok(())
             }
-            _ => None,
-        },
-        _ => None,
+            Some(Ok(Message::Close(_))) | Some(Err(_)) | None => {
+                Err(ConnectionEnd::failed(Failure::Closed))
+            }
+            Some(Ok(_)) => Ok(()),
+        }
     }
-}
 
-fn validate_direct_speech(request_id: &str, text: &str) -> Result<(), crate::DirectSpeechError> {
-    if request_id.is_empty()
-        || request_id.len() > 128
-        || !request_id
-            .bytes()
-            .all(|byte| byte.is_ascii_alphanumeric() || b"_.:-".contains(&byte))
-    {
-        return Err(crate::DirectSpeechError::InvalidRequestId);
+    async fn on_text(
+        &mut self,
+        text: &str,
+        client: &Client,
+        tools: &[ToolDef],
+        tool_calls: &ToolCalls,
+    ) -> Step {
+        let Ok(value) = serde_json::from_str::<Value>(text) else {
+            log::debug!("ignoring malformed voice downlink text");
+            return Ok(());
+        };
+        if let Some(payload) = mcp::mcp_payload(&value) {
+            return match mcp::handle(payload, tools, &client.events, tool_calls).await {
+                Some(response) => {
+                    let frame = protocol::mcp(&self.session_id, response);
+                    self.send_text(frame).await
+                }
+                None => Ok(()),
+            };
+        }
+        let Some(event) = protocol::downlink_event(&value) else {
+            log::debug!("ignoring unknown voice downlink text");
+            return Ok(());
+        };
+        match event {
+            VoiceEvent::TtsStart { .. } => {
+                self.interrupt(client).await;
+                self.tts_active = true;
+                client.emit(event).await
+            }
+            VoiceEvent::TtsStop { .. } if self.tts_active => {
+                self.tts_active = false;
+                client.emit(event).await
+            }
+            VoiceEvent::TtsStop { .. } => Ok(()),
+            event => client.emit(event).await,
+        }
     }
-    if text.trim().is_empty()
-        || text.chars().count() > 1_024
-        || text.len() > 4_096
-        || text
-            .chars()
-            .any(|character| character.is_control() && character != '\n' && character != '\t')
-    {
-        return Err(crate::DirectSpeechError::InvalidText);
-    }
-    Ok(())
-}
 
-fn direct_speech_error(reason: &str) -> crate::DirectSpeechError {
-    match reason {
-        "unsupported_feature" => crate::DirectSpeechError::UnsupportedFeature,
-        "invalid_text" => crate::DirectSpeechError::InvalidText,
-        "invalid_request_id" => crate::DirectSpeechError::InvalidRequestId,
-        "session_busy" => crate::DirectSpeechError::SessionBusy,
-        "rate_limited" => crate::DirectSpeechError::RateLimited,
-        "tts_unavailable" => crate::DirectSpeechError::TtsUnavailable,
-        "capacity_reached" => crate::DirectSpeechError::CapacityReached,
-        "shutting_down" => crate::DirectSpeechError::ShuttingDown,
-        other => crate::DirectSpeechError::Other(other.to_owned()),
+    async fn on_command(&mut self, command: Option<VoiceCommand>, client: &Client) -> Step {
+        let Some(command) = command else {
+            return Err(ConnectionEnd::Stopped);
+        };
+        let id = &self.session_id;
+        let frame = match command {
+            VoiceCommand::ListenStart => protocol::listen_start(id),
+            VoiceCommand::ListenStop => protocol::listen_stop(id),
+            VoiceCommand::Abort => protocol::abort(id),
+            VoiceCommand::Audio(OpusFrame(data)) => {
+                return self.send(Message::Binary(data.into())).await;
+            }
+            VoiceCommand::DirectSpeech { request_id, text } => {
+                if let Err(reason) = protocol::validate_direct_speech(&request_id, &text) {
+                    return client
+                        .emit(VoiceEvent::DirectSpeechRejected { request_id, reason })
+                        .await;
+                }
+                protocol::direct_speech(id, &request_id, &text)
+            }
+        };
+        self.send_text(frame).await
     }
 }

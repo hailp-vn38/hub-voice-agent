@@ -49,3 +49,23 @@ pub(super) async fn failing_ota() -> (Url, mpsc::UnboundedReceiver<()>) {
         requests_rx,
     )
 }
+
+/// OTA that answers every request with the same WebSocket URL.
+pub(super) async fn ota_for_every(websocket_url: &str) -> Url {
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let address = listener.local_addr().unwrap();
+    let body =
+        serde_json::json!({ "websocket": { "url": websocket_url, "token": "token" } }).to_string();
+    tokio::spawn(async move {
+        while let Ok((mut stream, _)) = listener.accept().await {
+            let mut request = vec![0; 2048];
+            let _ = stream.read(&mut request).await;
+            let response = format!(
+                "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+                body.len()
+            );
+            let _ = stream.write_all(response.as_bytes()).await;
+        }
+    });
+    Url::parse(&format!("http://{address}/voice/ota/")).unwrap()
+}

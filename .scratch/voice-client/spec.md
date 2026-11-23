@@ -107,7 +107,7 @@ Ticket cuối cập nhật docs/codebase.md theo bảng này.
 ## Quyết định
 
 - **Async:** tokio. WS: `tokio-tungstenite` + rustls. HTTP OTA: `reqwest` + rustls. JSON: `serde`/`serde_json`. Khai báo trong `[workspace.dependencies]`.
-- **Backoff:** 1 s nhân đôi tới tối đa 60 s, jitter ±20 %, reset sau khi `Ready`. Đóng `1000` sau Enrollment thì kết nối lại ngay, không backoff.
+- **Backoff:** 1 s nhân đôi, jitter ±20 %, rồi chặn trần 60 s (trần áp sau jitter). Chỉ reset về 1 s khi kết nối đã `Ready` liên tục ≥ 30 s; đứt sớm hơn thì tiếp tục tăng. Đóng `1000` sau Enrollment thì kết nối lại ngay, không backoff.
 - **Mode listen:** luôn `realtime` (ADR 0004 của ai-hub).
 - **Không retry `tools/call`.** Mỗi request trả lời đúng một lần.
 - **Test:** server WS giả + OTA HTTP giả chạy trên `127.0.0.1:0`; backoff test bằng `tokio::time::pause`. Kịch bản theo tài liệu server ở trên.

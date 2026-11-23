@@ -1,12 +1,41 @@
+//! Device MCP: JSON-RPC requests the server sends to the device's own tools.
+
 use serde_json::{Value, json};
-use tokio::sync::{mpsc, oneshot};
+use std::sync::Arc;
+
+use tokio::sync::{Semaphore, mpsc, oneshot};
 
 use crate::{ToolCall, ToolDef, ToolError, VoiceEvent};
 
 const TOOLS_PAGE_SIZE: usize = 100;
+/// Device tool calls the server may have waiting on a reply at once.
+pub(crate) const MAX_IN_FLIGHT_TOOL_CALLS: usize = 16;
 
-pub(super) fn discovery_response(payload: &Value, tools: &[ToolDef]) -> Option<Value> {
-    let id = payload.get("id")?.as_u64()?;
+/// Replies from device tool calls, bounded by [`MAX_IN_FLIGHT_TOOL_CALLS`].
+pub(crate) struct ToolCalls {
+    replies: mpsc::Sender<Value>,
+    slots: Arc<Semaphore>,
+}
+
+impl ToolCalls {
+    pub(crate) fn new() -> (Self, mpsc::Receiver<Value>) {
+        let (replies, replies_rx) = mpsc::channel(MAX_IN_FLIGHT_TOOL_CALLS);
+        let slots = Arc::new(Semaphore::new(MAX_IN_FLIGHT_TOOL_CALLS));
+        (Self { replies, slots }, replies_rx)
+    }
+}
+
+/// A JSON-RPC request id: a number or a string. `None` means a notification,
+/// which never gets a reply.
+fn request_id(payload: &Value) -> Option<Value> {
+    payload
+        .get("id")
+        .filter(|id| id.is_number() || id.is_string())
+        .cloned()
+}
+
+pub(crate) fn discovery_response(payload: &Value, tools: &[ToolDef]) -> Option<Value> {
+    let id = request_id(payload)?;
     match payload.get("method")?.as_str()? {
         "initialize" => Some(json!({
             "jsonrpc": "2.0", "id": id,
@@ -53,33 +82,44 @@ pub(super) fn discovery_response(payload: &Value, tools: &[ToolDef]) -> Option<V
     }
 }
 
-pub(super) fn mcp_payload(value: &Value) -> Option<&Value> {
+pub(crate) fn mcp_payload(value: &Value) -> Option<&Value> {
     (value.get("type")?.as_str()? == "mcp")
         .then(|| value.get("payload"))
         .flatten()
 }
 
-pub(super) async fn handle(
+pub(crate) async fn handle(
     payload: &Value,
     tools: &[ToolDef],
     events: &mpsc::Sender<VoiceEvent>,
-    replies: &mpsc::UnboundedSender<(u64, Value)>,
+    calls: &ToolCalls,
 ) -> Option<Value> {
     if let Some(response) = discovery_response(payload, tools) {
         return Some(response);
     }
-    let id = payload.get("id")?.as_u64()?;
-    match payload.get("method")?.as_str()? {
+    let id = request_id(payload)?;
+    let Some(method) = payload.get("method").and_then(Value::as_str) else {
+        return Some(error(&id, -32600, "Invalid Request"));
+    };
+    match method {
         "tools/call" => {
             let params = payload.get("params").unwrap_or(&Value::Null);
-            let name = params.get("name")?.as_str()?.to_owned();
+            let Some(name) = params.get("name").and_then(Value::as_str) else {
+                return Some(error(&id, -32602, "tools/call requires a string name"));
+            };
+            let name = name.to_owned();
+            let Ok(slot) = calls.slots.clone().try_acquire_owned() else {
+                return Some(error(&id, -32000, "Too many tool calls in flight"));
+            };
             let arguments = params
                 .get("arguments")
                 .cloned()
                 .unwrap_or_else(|| json!({}));
             let (reply_tx, reply_rx) = oneshot::channel::<Result<Value, ToolError>>();
-            let replies = replies.clone();
+            let replies = calls.replies.clone();
             tokio::spawn(async move {
+                // Held until the reply is queued, so in-flight plus queued stays bounded.
+                let _slot = slot;
                 let response = match reply_rx.await {
                     Ok(Ok(result)) => json!({ "jsonrpc": "2.0", "id": id, "result": result }),
                     Ok(Err(tool_error)) => {
@@ -90,9 +130,9 @@ pub(super) async fn handle(
                         }
                         json!({ "jsonrpc": "2.0", "id": id, "error": error })
                     }
-                    Err(_) => error(id, -32603, "Tool call was dropped before a reply"),
+                    Err(_) => error(&id, -32603, "Tool call was dropped before a reply"),
                 };
-                let _ = replies.send((id, response));
+                let _ = replies.send(response).await;
             });
             if events
                 .send(VoiceEvent::ToolCall(ToolCall {
@@ -107,24 +147,14 @@ pub(super) async fn handle(
             }
             None
         }
-        _ => Some(error(id, -32601, "Method not found")),
+        _ => Some(error(&id, -32601, "Method not found")),
     }
 }
 
-fn error(id: u64, code: i32, message: &str) -> Value {
+fn error(id: &Value, code: i32, message: &str) -> Value {
     json!({ "jsonrpc": "2.0", "id": id, "error": { "code": code, "message": message } })
 }
 
-pub(super) fn tool_status(value: &Value) -> Option<VoiceEvent> {
-    if value.get("type")?.as_str()? != "tool" {
-        return None;
-    }
-    let name = value.get("name")?.as_str()?.to_owned();
-    let state = match value.get("state")?.as_str()? {
-        "started" => crate::ToolState::Started,
-        "completed" => crate::ToolState::Completed,
-        "failed" => crate::ToolState::Failed,
-        _ => return None,
-    };
-    Some(VoiceEvent::ServerTool { name, state })
-}
+#[cfg(test)]
+#[path = "mcp_tests/mod.rs"]
+mod tests;

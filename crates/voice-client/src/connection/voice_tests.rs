@@ -192,6 +192,6 @@ async fn wait_ready(events: &mut mpsc::Receiver<VoiceEvent>) {
     ));
 }
 
-#[path = "direct_speech_tests/support.rs"]
+#[path = "voice_tests/support.rs"]
 mod support;
 use support::{DirectSpeechServer, Reply};

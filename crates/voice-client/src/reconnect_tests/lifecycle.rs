@@ -3,7 +3,7 @@ use std::time::Duration;
 use tokio::{sync::watch, time::timeout};
 
 use super::support::ota_for;
-use crate::connection_tests::fake_server;
+use crate::connection::tests::fake_server;
 use crate::{DeviceIdentity, VoiceConfig, VoiceEvent, spawn_with_jitter};
 
 #[tokio::test]
