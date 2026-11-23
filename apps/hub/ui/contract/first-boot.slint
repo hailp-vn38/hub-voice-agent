@@ -1,0 +1,13 @@
+// Hợp đồng FirstBootData. Ticket UI: .scratch/hub-ui/issues/19-first-boot.md.
+export enum BootStep { access-point, joining, joined }
+
+export global FirstBootData {
+    in property <BootStep> step;
+    in property <string> ap-name;
+    in property <image> ap-qr;
+    in property <string> setup-url;
+    in property <image> setup-qr;
+    in property <string> home-network;
+    in property <string> error;
+    callback done();
+}

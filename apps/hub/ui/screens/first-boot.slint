@@ -1,0 +1,104 @@
+import { Theme } from "../theme.slint";
+import { BootStep, FirstBootData } from "../contract/first-boot.slint";
+
+component QrCard inherits Rectangle {
+    in property <string> step;
+    in property <string> caption;
+    in property <string> detail;
+    in property <image> qr;
+    background: Theme.card;
+    border-radius: Theme.radius;
+    VerticalLayout {
+        padding: Theme.space-m;
+        spacing: Theme.space-s;
+        alignment: center;
+        if root.step != "": Text { text: root.step; color: Theme.accent; font-size: Theme.font-small; horizontal-alignment: center; }
+        Text { text: root.caption; color: Theme.text; font-size: Theme.font-body; horizontal-alignment: center; wrap: word-wrap; }
+        Rectangle {
+            height: 340px;
+            background: white;
+            border-radius: 12px;
+            Image { source: root.qr; width: 320px; height: 320px; image-fit: contain; }
+        }
+        Text { text: root.detail; color: Theme.text; font-size: Theme.font-title; font-weight: 600; horizontal-alignment: center; }
+    }
+}
+
+// Màn lần đầu khởi động: chưa có Wi-Fi/Ethernet. Không có Voice dock tương tác.
+export component FirstBoot inherits Rectangle {
+    background: Theme.background;
+    VerticalLayout {
+        padding: Theme.space-l;
+        spacing: Theme.space-m;
+        Text {
+            text: FirstBootData.step == BootStep.access-point ? "Cài đặt lần đầu"
+                : FirstBootData.step == BootStep.joining ? "Đang kết nối Wi-Fi nhà" : "Đã kết nối";
+            color: Theme.text;
+            font-size: Theme.font-title;
+            horizontal-alignment: center;
+        }
+        if FirstBootData.step == BootStep.access-point: VerticalLayout {
+            spacing: Theme.space-m;
+            if FirstBootData.error != "": Text {
+                text: FirstBootData.error;
+                color: Theme.error;
+                font-size: Theme.font-body;
+                horizontal-alignment: center;
+            }
+            HorizontalLayout {
+                spacing: Theme.space-l;
+                QrCard {
+                    step: "Bước 1";
+                    caption: "Quét để vào mạng Wi-Fi của thiết bị";
+                    qr: FirstBootData.ap-qr;
+                    detail: FirstBootData.ap-name;
+                }
+                QrCard {
+                    step: "Bước 2";
+                    caption: "Quét để mở trang cài đặt, chọn Wi-Fi nhà";
+                    qr: FirstBootData.setup-qr;
+                    detail: FirstBootData.setup-url;
+                }
+            }
+        }
+        if FirstBootData.step == BootStep.joining: Text {
+            text: "Đang chuyển sang \{FirstBootData.home-network}…\nGiữ nguyên, thiết bị sẽ tự kết nối.";
+            color: Theme.text-dim;
+            font-size: Theme.font-body;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+            wrap: word-wrap;
+        }
+        if FirstBootData.step == BootStep.joined: VerticalLayout {
+            spacing: Theme.space-m;
+            alignment: center;
+            Text {
+                text: "Đã vào mạng \{FirstBootData.home-network}. Mở lại trang cài đặt ở địa chỉ mới:";
+                color: Theme.text;
+                font-size: Theme.font-body;
+                horizontal-alignment: center;
+                wrap: word-wrap;
+            }
+            HorizontalLayout {
+                alignment: center;
+                QrCard {
+                    width: 520px;
+                    caption: "Trang cài đặt mới";
+                    qr: FirstBootData.setup-qr;
+                    detail: FirstBootData.setup-url;
+                }
+            }
+            HorizontalLayout {
+                alignment: center;
+                Rectangle {
+                    width: 320px;
+                    height: Theme.touch-min;
+                    background: Theme.accent;
+                    border-radius: Theme.radius;
+                    Text { text: "Xong"; color: Theme.background; font-size: Theme.font-body; font-weight: 600; }
+                    TouchArea { clicked => { FirstBootData.done(); } }
+                }
+            }
+        }
+    }
+}

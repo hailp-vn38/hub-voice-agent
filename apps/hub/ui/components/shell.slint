@@ -4,6 +4,7 @@ import { PageDots } from "page-dots.slint";
 import { StatusBarView } from "status-bar.slint";
 import { IdleBackground } from "idle-background.slint";
 import { Placeholder } from "../screens/placeholder.slint";
+import { FirstBoot } from "../screens/first-boot.slint";
 
 // Khung app: tầng trung tâm ⇄ menu (vuốt theo ngón tay), tầng màn tính năng,
 // hàng dưới cùng dành cho Voice dock (ngoài vùng vuốt), lớp phủ ở trên cùng.
@@ -83,5 +84,6 @@ export component Shell inherits Rectangle {
         menu-progress: root.menu-p;
         opacity: 1 - root.feat-p;
     }
+    if root.shown == Screen.first-boot: FirstBoot { }
     // Voice dock (ticket 04) và lớp phủ (ticket 14) gắn vào đây.
 }
