@@ -1,0 +1,40 @@
+import { Theme } from "../theme.slint";
+import { Icon } from "../components/icon.slint";
+import { StatusBar } from "../contract/status.slint";
+import { AmbientData } from "../contract/ambient.slint";
+
+// Màn chờ: đồng hồ lớn, tông tối, tương phản thấp. Orb thật (Shell) nằm trên màn này.
+// Độ sáng đèn nền do hub-core lo.
+export component Ambient inherits Rectangle {
+    private property <float> dim: AmbientData.night ? 0.45 : 0.75;
+    // Dịch chậm theo giờ (chống lưu ảnh): một vòng mỗi giờ.
+    private property <float> drift: StatusBar.day-phase * 24;
+    background: #05080b;
+
+    TouchArea { clicked => { AmbientData.wake(); } }
+
+    Rectangle {
+        x: (parent.width - self.width) / 2 + 60px * sin(root.drift * 360deg);
+        y: (parent.height - self.height) / 2 + 40px * cos(root.drift * 360deg);
+        width: min(900px, root.width * 0.8);
+        height: min(460px, root.height * 0.6);
+        opacity: root.dim;
+        VerticalLayout {
+            alignment: center;
+            spacing: Theme.space-m;
+            Text {
+                text: AmbientData.time;
+                color: Theme.text-dim;
+                font-size: min(260px, root.height * 0.24);
+                font-weight: 600;
+                horizontal-alignment: center;
+            }
+            HorizontalLayout {
+                alignment: center;
+                spacing: Theme.space-m;
+                Icon { name: AmbientData.icon; color: Theme.text-dim; size: 56px; }
+                Text { text: AmbientData.temp; color: Theme.text-dim; font-size: Theme.font-title; vertical-alignment: center; }
+            }
+        }
+    }
+}

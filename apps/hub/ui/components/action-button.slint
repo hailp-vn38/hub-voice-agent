@@ -1,0 +1,24 @@
+import { Theme } from "../theme.slint";
+
+// Nút kính (Aurora); `danger` viền và chữ đỏ.
+export component ActionButton inherits Rectangle {
+    in property <string> text;
+    in property <bool> danger;
+    callback clicked();
+    private property <length> u: Theme.unit;
+    min-width: max(140 * root.u, label.preferred-width + 32 * root.u);
+    height: 44 * root.u;
+    border-radius: Theme.radius-s;
+    background: touch.pressed ? Theme.card : Theme.card.with-alpha(0.6);
+    border-width: 1 * root.u;
+    border-color: root.danger ? Theme.error.with-alpha(0.6) : Theme.border;
+    transform-scale: touch.pressed ? 0.97 : 1.0;
+    animate transform-scale { duration: Theme.anim-tap; easing: ease-out; }
+    label := Text {
+        text: root.text;
+        color: root.danger ? Theme.error : Theme.text;
+        font-size: Theme.type-body;
+        font-weight: 600;
+    }
+    touch := TouchArea { clicked => { root.clicked(); } }
+}

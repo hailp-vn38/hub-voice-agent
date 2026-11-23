@@ -1,0 +1,92 @@
+import { Theme } from "../theme.slint";
+import { Nav, Screen } from "../contract/nav.slint";
+import { Voice, VoiceState } from "../contract/voice.slint";
+import { Response, Speaker } from "../contract/response.slint";
+
+component WordView inherits Rectangle {
+    in property <string> text;
+    in property <bool> emphasis;
+    in property <bool> user;
+    in property <bool> fresh; // chỉ vài từ mới nhất mới animate
+    in property <length> font-size;
+    in property <bool> revealed: true; // chưa tới lượt: rộng 0, ẩn
+    private property <duration> t0: animation-tick();
+    changed revealed => { root.t0 = animation-tick(); }
+    private property <float> p: root.fresh ? clamp((animation-tick() - root.t0) / 550ms, 0, 1) : 1;
+    // Overshoot rồi rung tắt.
+    private property <float> k: 1 - root.p;
+    min-width: root.revealed ? label.preferred-width : 0px;
+    max-width: self.min-width;
+    visible: root.revealed;
+    label := Text {
+        y: (parent.height - self.height) / 2;
+        text: root.text + " ";
+        font-size: root.font-size;
+        font-weight: root.emphasis ? 600 : 400;
+        color: root.emphasis ? Theme.warm : (root.user ? Theme.text-dim : Theme.text);
+        x: root.k * 80px;
+        transform-rotation: root.k * sin(root.p * 3turn) * 14deg;
+        transform-scale: 1 + root.k * 0.4 * sin(root.p * 1.5turn);
+        opacity: min(1, root.p * 4);
+    }
+}
+
+// Dòng chữ phản hồi trong thanh Voice: chạy từ trái sang phải sau nút mic, không xuống dòng;
+// khi tràn, cả hàng trượt sang trái, từ cũ mờ ở mép trái. Idle thì xoay vòng gợi ý câu nói theo màn.
+export component ResponseText inherits Rectangle {
+    in property <length> font-size: Theme.font-title;
+    clip: true;
+    private property <duration> line-t: animation-tick();
+    private property <int> serial: Response.line-serial;
+    changed serial => { root.line-t = animation-tick(); }
+    // Nhịp hiện từ cố định: 170 ms/từ.
+    private property <int> shown: min(Response.words.length, floor((animation-tick() - root.line-t) / 170ms) + 1);
+    private property <bool> has-text: Response.words.length > 0;
+
+    private property <[string]> hints-center: ["Bạn cần gì hôm nay?", "Hey, bật đèn phòng khách", "Hey, mấy giờ rồi?", "Hey, mở menu", "Hey, thời tiết hôm nay thế nào?"];
+    private property <[string]> hints-timers: ["Hey, hẹn giờ 10 phút", "Hey, đặt báo thức 6 giờ sáng", "Hey, huỷ hẹn giờ"];
+    private property <[string]> hints-weather: ["Hey, mai có mưa không?", "Hey, thời tiết cuối tuần", "Hey, hôm nay bao nhiêu độ?"];
+    private property <[string]> hints-home: ["Hey, tắt hết đèn", "Hey, bật quạt phòng ngủ", "Hey, đèn phòng khách đang bật không?"];
+    private property <[string]> hints-other: ["Hey, quay về trung tâm", "Hey, mở menu"];
+    private property <[string]> hints: Nav.screen == Screen.center || Nav.screen == Screen.menu ? root.hints-center
+        : Nav.screen == Screen.timers || Nav.screen == Screen.countdowns || Nav.screen == Screen.reminders ? root.hints-timers
+        : Nav.screen == Screen.weather ? root.hints-weather
+        : Nav.screen == Screen.home ? root.hints-home : root.hints-other;
+    private property <int> hint-index: floor(animation-tick() / 5000ms);
+    private property <float> hint-phase: mod(animation-tick() / 5000ms, 1);
+    private property <bool> show-hint: !root.has-text && Voice.state == VoiceState.idle;
+
+    // Gợi ý: mờ vào/ra mỗi 5 s.
+    Text {
+        width: parent.width;
+        horizontal-alignment: left;
+        vertical-alignment: center;
+        text: root.hints[mod(root.hint-index, root.hints.length)];
+        font-size: root.font-size;
+        color: Theme.text-dim;
+        opacity: root.show-hint ? min(1, min(root.hint-phase, 1 - root.hint-phase) * 6) * 0.8 : 0;
+        animate opacity { duration: 200ms; }
+    }
+
+    // Hàng chữ: bắt đầu ở mép trái; tràn thì trượt trái để từ mới nhất luôn thấy.
+    Rectangle {
+        opacity: Response.fading ? 0 : 1;
+        animate opacity { duration: 1500ms; easing: ease-in; }
+        row := HorizontalLayout {
+            x: min(0px, parent.width - self.preferred-width);
+            height: parent.height;
+            alignment: start;
+            animate x { duration: 200ms; easing: ease-out; }
+            for w[i] in Response.words: WordView {
+                // Mép trái mờ dần: từ trôi ra gần mép thì nhạt đi (nền trong suốt, không phủ gradient).
+                opacity: row.x < 0 ? clamp((row.x + self.x) / 160px, 0, 1) : 1;
+                revealed: i < root.shown;
+                text: w.text;
+                emphasis: w.emphasis;
+                user: Response.speaker == Speaker.user;
+                fresh: i >= root.shown - 3;
+                font-size: root.font-size;
+            }
+        }
+    }
+}

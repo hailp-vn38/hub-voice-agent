@@ -1,0 +1,81 @@
+import { Theme } from "../theme.slint";
+import { AlertData, AlertKind } from "../contract/alert.slint";
+import { Dock } from "../components/orb.slint";
+import { Icon } from "../components/icon.slint";
+
+// Báo toàn màn (hết giờ / Reminder). Chạm bất kỳ đâu để tắt; chừa hàng dock cho Orb.
+// Khi đóng: hẹn giờ mờ đi; Reminder thu nhỏ về góc trái dưới ("Đã nhắc gần đây").
+export component Alert inherits Rectangle {
+    in property <length> dock-height: 240px;
+    private property <AlertKind> kind: AlertData.kind;
+    private property <bool> on: root.kind != AlertKind.none;
+    // Loại báo đang (hoặc vừa) hiện, giữ lại để vẽ trong lúc mờ dần.
+    private property <AlertKind> last: AlertKind.timer;
+    changed kind => { if (root.kind != AlertKind.none) { root.last = root.kind; } }
+    private property <bool> is-timer: root.last == AlertKind.timer;
+    private property <float> vis: root.on ? 1 : 0;
+    animate vis { duration: root.on ? 300ms : 450ms; easing: ease-out; }
+    // 0 khi đang hiện, 1 khi Reminder đã thu hẳn về góc.
+    private property <float> shrink: !root.on && !root.is-timer ? 1 - root.vis : 0;
+    private property <color> tone: root.is-timer ? Theme.warm : Theme.accent;
+    private property <duration> now: animation-tick();
+    private property <duration> t0: -10000ms;
+    private property <int> serial: AlertData.serial;
+    changed serial => { root.t0 = animation-tick(); }
+    // Nhịp chuông 1,2 s; 0..1 trong mỗi nhịp.
+    private property <float> beat: Math.mod((root.now - root.t0) / 1200ms, 1);
+    private property <float> enter: clamp((root.now - root.t0) / 500ms, 0, 1);
+
+    opacity: root.vis;
+    background: root.vis > 0 ? (root.is-timer ? #2a1d0c : #0c2230) : transparent;
+
+    if root.on: TouchArea { clicked => { AlertData.dismiss(); } }
+
+    if root.vis > 0: Rectangle {
+        x: -root.shrink * parent.width * 0.4;
+        y: root.shrink * (parent.height - root.dock-height) * 0.4;
+        height: parent.height - root.dock-height;
+        transform-scale: 1 - 0.8 * root.shrink;
+        // Vòng lan theo nhịp chuông.
+        Rectangle {
+            x: (parent.width - self.width) / 2;
+            y: parent.height / 2 - 200px;
+            width: 200px;
+            height: 200px;
+            border-radius: 100px;
+            border-width: 6px;
+            border-color: root.tone;
+            opacity: 1 - root.beat;
+            transform-scale: 1 + root.beat * 1.2;
+        }
+        Icon {
+            x: (parent.width - self.width) / 2 - sin(root.beat * 2turn) * 6px;
+            y: parent.height / 2 - 200px + 76px;
+            name: "bell";
+            size: 48px;
+            color: root.tone;
+            transform-scale: 2;
+        }
+        Text {
+            x: 0;
+            width: parent.width;
+            y: parent.height / 2 + 40px;
+            text: root.is-timer ? AlertData.title + " · hết giờ" : AlertData.time;
+            color: Theme.text;
+            font-size: root.is-timer ? Theme.font-title : Theme.font-hero * 0.5;
+            horizontal-alignment: center;
+        }
+        // Nội dung Reminder chạy ra từ Orb.
+        Text {
+            x: 0;
+            width: parent.width;
+            y: parent.height / 2 + 160px + (1 - root.enter) * (Dock.orb-y - parent.height / 2);
+            text: AlertData.body;
+            visible: !root.is-timer;
+            opacity: root.enter;
+            color: Theme.text-dim;
+            font-size: Theme.font-title;
+            horizontal-alignment: center;
+        }
+    }
+}

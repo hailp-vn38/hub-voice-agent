@@ -1,0 +1,117 @@
+import { Theme } from "../theme.slint";
+import { TimerCard, TimerPhase } from "../contract/timers.slint";
+import { TimerRing } from "timer-ring.slint";
+
+// Nút kính nhỏ trong thẻ hẹn giờ.
+component PillButton inherits Rectangle {
+    in property <string> label;
+    in property <color> tone: Theme.text;
+    callback clicked();
+    private property <length> u: Theme.unit;
+    height: 40 * root.u;
+    min-width: txt.preferred-width + 28 * root.u;
+    border-radius: self.height / 2;
+    background: touch.pressed ? Theme.card : Theme.card.with-alpha(0.6);
+    border-width: 1 * root.u;
+    border-color: Theme.border.with-alpha(0.6);
+    transform-scale: touch.pressed ? 0.96 : 1.0;
+    animate transform-scale { duration: Theme.anim-tap; easing: ease-out; }
+    txt := Text { text: root.label; color: root.tone; font-size: Theme.type-body; font-weight: 600; }
+    touch := TouchArea { clicked => { root.clicked(); } }
+}
+
+// Thẻ một hẹn giờ (Aurora GlassCard): vòng tiến độ cyan, cam ấm khi sắp/đã hết giờ.
+// Huỷ: co về tâm 300 ms rồi mới gọi cancel.
+export component TimerCardView inherits Rectangle {
+    in property <TimerCard> timer;
+    in property <bool> focused;
+    in property <int> focus-serial;
+    callback toggle-pause();
+    callback add-minute();
+    callback cancel();
+    private property <length> u: Theme.unit;
+    private property <bool> closing: false;
+    private property <duration> now: animation-tick();
+    private property <duration> glow-t0: -10000ms;
+    private property <bool> final: root.timer.phase == TimerPhase.final-seconds;
+    private property <bool> paused: root.timer.phase == TimerPhase.paused;
+    private property <bool> finished: root.timer.phase == TimerPhase.finished;
+    private property <bool> hot: root.final || root.finished;
+    private property <color> tone: root.hot ? Theme.warm : Theme.accent-cyan;
+    private property <float> sec: (root.now / 1s) - floor(root.now / 1s);
+    private property <float> glow: 1 - clamp((root.now - root.glow-t0) / 1500ms, 0, 1);
+    private property <length> ring: min(root.height - 40 * root.u, root.width * 0.42);
+    changed focus-serial => { if (root.focused) { root.glow-t0 = animation-tick(); } }
+
+    Timer {
+        interval: 300ms;
+        running: root.closing;
+        triggered => { root.closing = false; root.cancel(); }
+    }
+
+    Rectangle {
+        border-radius: Theme.radius-panel;
+        background: root.finished ? Theme.warm.with-alpha(0.2) : Theme.glass;
+        border-width: 1 * root.u;
+        border-color: root.hot ? Theme.warm : Theme.border;
+        drop-shadow-blur: root.hot ? 16 * root.u : 0;
+        drop-shadow-color: Theme.warm.with-alpha(0.38);
+        transform-scale: root.closing ? 0 : 1;
+        opacity: root.closing ? 0 : 1;
+        animate transform-scale, opacity { duration: 300ms; easing: ease-in; }
+        // Focus giọng nói: viền xanh sáng rồi tắt dần.
+        Rectangle {
+            border-radius: parent.border-radius;
+            border-width: 2 * root.u;
+            border-color: Theme.accent.with-alpha(root.glow);
+            background: Theme.accent.with-alpha(0.15 * root.glow);
+        }
+
+        Rectangle {
+            x: 20 * root.u;
+            y: (parent.height - self.height) / 2;
+            width: root.ring;
+            height: root.ring;
+            TimerRing {
+                progress: root.timer.progress;
+                tone: root.tone;
+                stroke: (root.final ? 7 + 5 * (1 - root.sec) : 7) * root.u;
+                opacity: root.paused ? 0.45 : 1;
+                animate opacity { duration: 300ms; }
+            }
+            Text {
+                text: root.timer.remaining;
+                color: root.hot ? Theme.warm : Theme.text;
+                font-size: min(Theme.type-clock * 0.7, root.ring * 0.24);
+                font-weight: 300;
+                opacity: root.paused ? 0.55 + 0.45 * abs(sin(root.now / 1s * 180deg)) : 1;
+            }
+        }
+        VerticalLayout {
+            x: root.ring + 40 * root.u;
+            width: parent.width - self.x - 20 * root.u;
+            spacing: 6 * root.u;
+            alignment: center;
+            Text { text: root.timer.label; color: Theme.text; font-size: Theme.type-section; font-weight: 600; overflow: elide; }
+            Text { text: root.paused ? "Đang tạm dừng" : root.timer.detail; color: root.paused ? Theme.warm : Theme.text-dim; font-size: Theme.type-body; overflow: elide; }
+            Rectangle { height: 8 * root.u; }
+            HorizontalLayout {
+                spacing: 8 * root.u;
+                alignment: start;
+                if !root.finished: PillButton {
+                    label: root.paused ? "Tiếp tục" : "Tạm dừng";
+                    clicked => { root.toggle-pause(); }
+                }
+                if !root.finished: PillButton {
+                    label: "+1 phút";
+                    clicked => { root.add-minute(); }
+                }
+                PillButton {
+                    label: root.finished ? "Xoá" : "Huỷ";
+                    tone: Theme.error;
+                    clicked => { root.closing = true; }
+                }
+            }
+        }
+    }
+}

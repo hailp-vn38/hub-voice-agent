@@ -1,0 +1,112 @@
+import { Theme } from "../theme.slint";
+import { Screen } from "../contract/nav.slint";
+import { HomeData } from "../contract/home.slint";
+import { Backdrop } from "../components/home/backdrop.slint";
+import { NavRail } from "../components/home/nav-rail.slint";
+import { DeviceTile } from "../components/home/quick-tile.slint";
+
+// Màn Nhà (Aurora): Thanh điều hướng trái; đầu màn có trạng thái Home Assistant;
+// lưới ô thiết bị giống hàng ô ở Home (cam ấm khi bật, cyan cho cảm biến).
+// Toạ độ theo canvas 1280×600 nhân Theme.unit.
+export component Home inherits Rectangle {
+    private property <length> u: Theme.unit;
+    private property <float> cw: self.width / root.u;
+    private property <float> ch: self.height / root.u;
+    private property <float> left: 130;
+    private property <float> right: root.cw - 30;
+    private property <float> top: 96;
+    private property <float> bottom: root.ch - 92;
+    private property <float> gap: 12;
+    private property <int> cols: max(1, floor((root.right - root.left + root.gap) / (170 + root.gap)));
+    private property <float> tw: (root.right - root.left - (root.cols - 1) * root.gap) / root.cols;
+    private property <float> th: 130;
+    private property <bool> offline: HomeData.configured && !HomeData.connected;
+
+    Backdrop { dim: 0.25; }
+    NavRail {
+        x: 14 * root.u;
+        y: 42 * root.u;
+        height: (root.ch - 152) * root.u;
+        u: root.u;
+        current: Screen.home;
+    }
+
+    // Đầu màn.
+    HorizontalLayout {
+        x: root.left * root.u;
+        y: 42 * root.u;
+        width: (root.right - root.left) * root.u;
+        height: 40 * root.u;
+        spacing: 16 * root.u;
+        Text { text: "Nhà của bạn"; color: Theme.text; font-size: Theme.type-page-title; font-weight: 600; vertical-alignment: center; }
+        Rectangle { horizontal-stretch: 1; }
+        if HomeData.configured: Rectangle {
+            width: st.preferred-width + 44 * root.u;
+            border-radius: self.height / 2;
+            background: root.offline ? Theme.warm.with-alpha(0.18) : Theme.glass;
+            border-width: 1 * root.u;
+            border-color: root.offline ? Theme.warm : Theme.border;
+            Rectangle {
+                x: 16 * root.u;
+                width: 8 * root.u;
+                height: self.width;
+                border-radius: self.width / 2;
+                background: root.offline ? Theme.warm : Theme.done;
+            }
+            st := Text {
+                x: 32 * root.u;
+                text: root.offline ? "Mất kết nối Home Assistant · cập nhật lúc " + HomeData.updated : "Home Assistant · " + HomeData.updated;
+                color: root.offline ? Theme.warm : Theme.text-dim;
+                font-size: Theme.type-caption;
+                vertical-alignment: center;
+            }
+        }
+    }
+
+    // Chưa cấu hình: ảnh nhà + hướng dẫn.
+    if !HomeData.configured: Rectangle {
+        x: root.left * root.u;
+        y: root.top * root.u;
+        width: (root.right - root.left) * root.u;
+        height: (root.bottom - root.top) * root.u;
+        border-radius: Theme.radius-panel;
+        background: Theme.glass;
+        border-width: 1 * root.u;
+        border-color: Theme.border;
+        clip: true;
+        Image {
+            y: parent.height * 0.45;
+            width: parent.width;
+            height: parent.height * 0.55;
+            source: @image-url("../../assets/home/backgrounds/security-house.jpg");
+            image-fit: cover;
+            opacity: 0.45;
+        }
+        VerticalLayout {
+            alignment: center;
+            spacing: 10 * root.u;
+            padding-bottom: parent.height * 0.3;
+            Text { text: "Chưa kết nối Home Assistant"; color: Theme.text; font-size: Theme.type-section; font-weight: 600; horizontal-alignment: center; }
+            Text { text: "Mở Setup web trên điện thoại để kết nối"; color: Theme.text-dim; font-size: Theme.type-body; horizontal-alignment: center; }
+        }
+    }
+
+    // Lưới thiết bị (cuộn khi nhiều).
+    if HomeData.configured: Flickable {
+        x: root.left * root.u;
+        y: root.top * root.u;
+        width: (root.right - root.left) * root.u;
+        height: (root.bottom - root.top) * root.u;
+        content-height: (ceil(HomeData.tiles.length / root.cols) * (root.th + root.gap)) * root.u;
+        for t[i] in HomeData.tiles: DeviceTile {
+            x: mod(i, root.cols) * (root.tw + root.gap) * root.u;
+            y: floor(i / root.cols) * (root.th + root.gap) * root.u;
+            width: root.tw * root.u;
+            height: root.th * root.u;
+            u: root.u;
+            tile: t;
+            updated: HomeData.updated;
+            toggle(k) => { HomeData.toggle(k); }
+        }
+    }
+}

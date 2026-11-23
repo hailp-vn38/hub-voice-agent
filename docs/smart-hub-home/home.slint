@@ -1,0 +1,668 @@
+// HOME UI — responsive Smart Home Hub (Slint 1.x)
+// Assets are resolved relative to this file. Keep the assets/ directory beside home.slint.
+// Landscape: >= 1.4 aspect ratio. Compact/square: < 1.4 aspect ratio.
+// Display data is intentionally demo content; backend can update all in-out properties.
+
+component NavButton inherits Rectangle {
+    in property <image> icon;
+    in property <string> label;
+    in property <bool> active: false;
+    in property <bool> horizontal: false;
+    in property <float> scale-factor: 1.0;
+    callback activated();
+
+    border-radius: 17px * scale-factor;
+    background: active ? @linear-gradient(135deg, #164bbaed 0%, #123675cc 100%) : #0b1b32c0;
+    border-color: active ? #398fff : #5273a22c;
+    border-width: 1px * scale-factor;
+
+    Image {
+        x: root.horizontal ? 23px * root.scale-factor : (parent.width - 30px * root.scale-factor) / 2;
+        y: root.horizontal ? (parent.height - 25px * root.scale-factor) / 2 : 14px * root.scale-factor;
+        width: root.horizontal ? 24px * root.scale-factor : 30px * root.scale-factor;
+        height: root.horizontal ? 24px * root.scale-factor : 30px * root.scale-factor;
+        source: root.icon;
+        colorize: root.active ? #f4f9ff : #93abc7;
+        image-fit: contain;
+    }
+    Text {
+        x: root.horizontal ? 59px * root.scale-factor : 2px * root.scale-factor;
+        y: root.horizontal ? 0px : 55px * root.scale-factor;
+        width: root.horizontal ? parent.width - 61px * root.scale-factor : parent.width - 4px * root.scale-factor;
+        height: root.horizontal ? parent.height : 24px * root.scale-factor;
+        text: root.label;
+        color: root.active ? #ffffff : #b6c4dc;
+        font-size: root.horizontal ? 12px * root.scale-factor : 11px * root.scale-factor;
+        font-weight: root.active ? 700 : 500;
+        horizontal-alignment: root.horizontal ? left : center;
+        vertical-alignment: center;
+        overflow: elide;
+    }
+    TouchArea { clicked => { root.activated(); } }
+}
+
+component QuickTile inherits Rectangle {
+    in property <image> icon;
+    in property <string> title;
+    in property <string> detail;
+    in property <bool> is-on: false;
+    in property <bool> switchable: false;
+    in property <bool> dense: false;
+    in property <bool> highlight: false;
+    in property <float> scale-factor: 1.0;
+    callback activated(bool);
+
+    border-radius: 19px * scale-factor;
+    background: highlight ? @linear-gradient(135deg, #925012 0%, #ff9d16 76%, #ffae3c 100%)
+                          : @linear-gradient(140deg, #233c62e8 0%, #111f38f0 100%);
+    border-width: highlight ? 1.6px * scale-factor : 1px * scale-factor;
+    border-color: highlight ? #ffd48d : #92b5ea40;
+    drop-shadow-blur: highlight ? 13px * scale-factor : 0px;
+    drop-shadow-color: #f59d4960;
+
+    Rectangle {
+        x: 13px * root.scale-factor;
+        y: root.dense ? 12px * root.scale-factor : 13px * root.scale-factor;
+        width: root.dense ? 34px * root.scale-factor : 41px * root.scale-factor;
+        height: root.dense ? 34px * root.scale-factor : 41px * root.scale-factor;
+        border-radius: 12px * root.scale-factor;
+        background: root.highlight ? #ffe6ac32 : #2269c852;
+        Image {
+            x: 7px * root.scale-factor; y: 7px * root.scale-factor;
+            width: parent.width - 14px * root.scale-factor;
+            height: parent.height - 14px * root.scale-factor;
+            source: root.icon;
+            colorize: root.highlight ? #ffffff : #b7ddff;
+        }
+    }
+    Text {
+        x: root.dense ? 55px * root.scale-factor : 14px * root.scale-factor;
+        y: root.dense ? 16px * root.scale-factor : 75px * root.scale-factor;
+        width: root.dense ? parent.width - 63px * root.scale-factor : parent.width - 23px * root.scale-factor;
+        height: 24px * root.scale-factor;
+        text: root.title;
+        color: #ffffff;
+        font-size: root.dense ? 14px * root.scale-factor : 13px * root.scale-factor;
+        font-weight: 700;
+        overflow: elide;
+        vertical-alignment: center;
+    }
+    Text {
+        x: root.dense ? 55px * root.scale-factor : 14px * root.scale-factor;
+        y: root.dense ? 43px * root.scale-factor : 104px * root.scale-factor;
+        width: root.dense ? parent.width - 60px * root.scale-factor : parent.width - 23px * root.scale-factor;
+        height: 20px * root.scale-factor;
+        text: root.detail;
+        color: root.highlight ? #fff1cd : #b1c5dc;
+        font-size: 11px * root.scale-factor;
+        overflow: elide;
+    }
+    if switchable : Rectangle {
+        x: parent.width - 49px * root.scale-factor;
+        y: parent.height - 31px * root.scale-factor;
+        width: 38px * root.scale-factor;
+        height: 21px * root.scale-factor;
+        border-radius: 12px * root.scale-factor;
+        background: root.is-on ? #ffebbd : #4b607c;
+        Rectangle {
+            x: root.is-on ? 20px * root.scale-factor : 3px * root.scale-factor;
+            y: 3px * root.scale-factor;
+            width: 15px * root.scale-factor;
+            height: 15px * root.scale-factor;
+            border-radius: 8px * root.scale-factor;
+            background: root.is-on ? #e88b0b : #e3efff;
+            animate x { duration: 160ms; }
+        }
+    }
+    TouchArea {
+        clicked => { root.activated(root.switchable ? !root.is-on : root.is-on); }
+    }
+}
+
+component AgendaLine inherits Rectangle {
+    in property <string> hour;
+    in property <string> summary;
+    in property <bool> important: false;
+    in property <float> scale-factor: 1.0;
+    background: transparent;
+    Text {
+        x: 0px; y: 0px;
+        width: 63px * root.scale-factor;
+        height: parent.height;
+        color: root.important ? #ffb43f : #b7c9e4;
+        text: root.hour;
+        font-size: 13px * root.scale-factor;
+        font-weight: root.important ? 700 : 500;
+        vertical-alignment: center;
+    }
+    Text {
+        x: 68px * root.scale-factor;
+        y: 0px;
+        width: parent.width - 70px * root.scale-factor;
+        height: parent.height;
+        text: root.summary;
+        color: root.important ? #ffb43f : #edf4ff;
+        font-size: 13px * root.scale-factor;
+        font-weight: root.important ? 700 : 400;
+        overflow: elide;
+        vertical-alignment: center;
+    }
+}
+
+export component Home inherits Window {
+    title: "Smart Home Hub";
+    width: 1280px;
+    height: 600px;
+    background: #08172b;
+    default-font-family: "Noto Sans";
+
+    // Bind these properties to data from Rust / C++ / Python.
+    in-out property <string> clock-text: "06:27";
+    in-out property <string> date-text: "Thứ Hai, 23/11";
+    in-out property <string> temperature-text: "27°C";
+    in-out property <string> weather-text: "Nắng nhẹ";
+    in-out property <string> greeting-text: "Chào buổi sáng!";
+    in-out property <string> greeting-detail: "Chúc bạn một ngày thật tuyệt vời!";
+    in-out property <string> event-one: "Họp nhóm";
+    in-out property <string> event-two: "Đón con";
+    in-out property <string> event-three: "Ăn tối";
+    in-out property <string> event-four: "Uống thuốc";
+    in-out property <string> event-five: "Mua rau";
+    in-out property <string> timer-text: "04:30";
+    in-out property <string> holiday-countdown: "12 ngày";
+    in-out property <bool> living-room-light: false;
+    in-out property <bool> bedroom-light: true;
+    in-out property <bool> fan-on: false;
+    in-out property <bool> home-safe: true;
+    in-out property <string> selected-page: "Home";
+
+    callback device-changed(string, bool);
+    callback navigation-requested(string);
+    callback voice-requested();
+    callback agenda-requested();
+    callback quick-action(string);
+
+    // Layout breakpoint based on aspect ratio; no non-uniform stretching of icons/text.
+    private property <bool> is-wide: self.width >= self.height * 1.4;
+    private property <float> wide-scale: min(self.width / 1280px, self.height / 600px);
+    private property <length> wide-left: (self.width - 1280px * self.wide-scale) / 2;
+    private property <length> wide-top: (self.height - 600px * self.wide-scale) / 2;
+    private property <float> compact-scale: min(self.width / 720px, self.height / 720px);
+    private property <length> compact-left: (self.width - 720px * self.compact-scale) / 2;
+    private property <length> compact-top: (self.height - 720px * self.compact-scale) / 2;
+
+    // Background remains full bleed as device aspect ratio changes.
+    Image {
+        x: 0px; y: 0px; width: parent.width; height: parent.height;
+        source: @image-url("assets/backgrounds/home-night.jpg");
+        image-fit: cover;
+    }
+    Rectangle {
+        width: parent.width; height: parent.height;
+        background: @linear-gradient(90deg, #051329d9 0%, #0b1e3ca0 40%, #09182b75 68%, #061123c0 100%);
+    }
+    Rectangle {
+        width: parent.width; height: parent.height;
+        background: @linear-gradient(180deg, #06172b63 0%, #08142626 54%, #061022e6 100%);
+    }
+
+    // ========================================================================
+    // LANDSCAPE / WIDE: 1280x600 virtual design coordinates
+    // ========================================================================
+    if is-wide : Rectangle {
+        x: root.wide-left;
+        y: root.wide-top;
+        width: 1280px * root.wide-scale;
+        height: 600px * root.wide-scale;
+        background: transparent;
+
+        // Status indicators
+        Text { x: 15px * root.wide-scale; y: 4px * root.wide-scale;
+            width: 90px * root.wide-scale; height: 23px * root.wide-scale;
+            text: root.clock-text; font-size: 11px * root.wide-scale; color: #d7e7ff; }
+        Image { x: 1214px * root.wide-scale; y: 9px * root.wide-scale;
+            width: 20px * root.wide-scale; height: 15px * root.wide-scale;
+            source: @image-url("assets/icons/wifi.png"); colorize: #ddecff; }
+        Image { x: 1242px * root.wide-scale; y: 9px * root.wide-scale;
+            width: 14px * root.wide-scale; height: 15px * root.wide-scale;
+            source: @image-url("assets/icons/phone.png"); colorize: #ddecff; }
+
+        // Sidebar
+        Rectangle { x: 0px; y: 32px * root.wide-scale;
+            width: 100px * root.wide-scale; height: 548px * root.wide-scale;
+            background: #06172cbd;
+            border-color: #6386c02d; border-width: 1px * root.wide-scale;
+            border-radius: 24px * root.wide-scale;
+        }
+        NavButton {
+            x: 17px * root.wide-scale; y: 59px * root.wide-scale;
+            width: 66px * root.wide-scale; height: 98px * root.wide-scale;
+            scale-factor: root.wide-scale; icon: @image-url("assets/icons/home.png");
+            label: "Home"; active: root.selected-page == "Home";
+            activated => { root.selected-page = "Home"; root.navigation-requested("Home"); }
+        }
+        NavButton {
+            x: 17px * root.wide-scale; y: 173px * root.wide-scale;
+            width: 66px * root.wide-scale; height: 87px * root.wide-scale;
+            scale-factor: root.wide-scale; icon: @image-url("assets/icons/devices.png");
+            label: "Thiết bị"; active: root.selected-page == "Thiết bị";
+            activated => { root.selected-page = "Thiết bị"; root.navigation-requested("Thiết bị"); }
+        }
+        NavButton {
+            x: 17px * root.wide-scale; y: 277px * root.wide-scale;
+            width: 66px * root.wide-scale; height: 87px * root.wide-scale;
+            scale-factor: root.wide-scale; icon: @image-url("assets/icons/chart.png");
+            label: "Thống kê"; active: root.selected-page == "Thống kê";
+            activated => { root.selected-page = "Thống kê"; root.navigation-requested("Thống kê"); }
+        }
+        NavButton {
+            x: 17px * root.wide-scale; y: 381px * root.wide-scale;
+            width: 66px * root.wide-scale; height: 87px * root.wide-scale;
+            scale-factor: root.wide-scale; icon: @image-url("assets/icons/settings.png");
+            label: "Cài đặt"; active: root.selected-page == "Cài đặt";
+            activated => { root.selected-page = "Cài đặt"; root.navigation-requested("Cài đặt"); }
+        }
+
+        // Main hero: time, weather, welcome and mascot
+        Text { x: 150px * root.wide-scale; y: 52px * root.wide-scale;
+            width: 330px * root.wide-scale; height: 112px * root.wide-scale;
+            text: root.clock-text; font-size: 99px * root.wide-scale; font-weight: 600;
+            color: #f4f9ff; vertical-alignment: center; }
+        Text { x: 154px * root.wide-scale; y: 162px * root.wide-scale;
+            width: 290px * root.wide-scale; height: 27px * root.wide-scale;
+            text: root.date-text; font-size: 15px * root.wide-scale; color: #b4c9e8; }
+        Rectangle { x: 493px * root.wide-scale; y: 68px * root.wide-scale;
+            width: 1px * root.wide-scale; height: 72px * root.wide-scale;
+            background: #b0c5e5a9; }
+        Image { x: 520px * root.wide-scale; y: 70px * root.wide-scale;
+            width: 47px * root.wide-scale; height: 47px * root.wide-scale;
+            source: @image-url("assets/icons/sun.png"); colorize: #ffb42a; }
+        Text { x: 577px * root.wide-scale; y: 62px * root.wide-scale;
+            width: 220px * root.wide-scale; height: 73px * root.wide-scale;
+            text: root.temperature-text; font-size: 58px * root.wide-scale;
+            color: #f2f8ff; }
+        Text { x: 581px * root.wide-scale; y: 137px * root.wide-scale;
+            width: 140px * root.wide-scale; height: 25px * root.wide-scale;
+            text: root.weather-text; font-size: 16px * root.wide-scale; color: #c4d5ec; }
+
+        Text { x: 150px * root.wide-scale; y: 238px * root.wide-scale;
+            width: 455px * root.wide-scale; height: 55px * root.wide-scale;
+            text: root.greeting-text; font-size: 34px * root.wide-scale; font-weight: 700;
+            color: #ffffff; }
+        Text { x: 152px * root.wide-scale; y: 296px * root.wide-scale;
+            width: 460px * root.wide-scale; height: 33px * root.wide-scale;
+            text: root.greeting-detail; font-size: 16px * root.wide-scale;
+            color: #b8cbe5; overflow: elide; }
+        Image { x: 512px * root.wide-scale; y: 202px * root.wide-scale;
+            width: 222px * root.wide-scale; height: 179px * root.wide-scale;
+            source: @image-url("assets/mascot/assistant.png"); image-fit: contain; }
+
+        // Calendar card
+        Rectangle { x: 820px * root.wide-scale; y: 42px * root.wide-scale;
+            width: 430px * root.wide-scale; height: 182px * root.wide-scale;
+            border-radius: 24px * root.wide-scale;
+            background: @linear-gradient(135deg, #1c3158ed 0%, #15243ce9 100%);
+            border-width: 1px * root.wide-scale; border-color: #a6c3ff70;
+        }
+        Image { x: 841px * root.wide-scale; y: 62px * root.wide-scale;
+            width: 31px * root.wide-scale; height: 31px * root.wide-scale;
+            source: @image-url("assets/icons/calendar.png"); colorize: #9fc6ff; }
+        Text { x: 881px * root.wide-scale; y: 65px * root.wide-scale;
+            width: 187px * root.wide-scale; height: 29px * root.wide-scale;
+            text: "Lịch hôm nay"; font-size: 18px * root.wide-scale;
+            font-weight: 700; color: #f5f8ff; }
+        Text { x: 1133px * root.wide-scale; y: 69px * root.wide-scale;
+            width: 103px * root.wide-scale; height: 24px * root.wide-scale;
+            text: "Xem thêm  →"; font-size: 12px * root.wide-scale;
+            color: #bdcfe8; horizontal-alignment: right; }
+        TouchArea { x: 1127px * root.wide-scale; y: 59px * root.wide-scale;
+            width: 119px * root.wide-scale; height: 42px * root.wide-scale;
+            clicked => { root.agenda-requested(); } }
+        Rectangle { x: 846px * root.wide-scale; y: 117px * root.wide-scale;
+            width: 2px * root.wide-scale; height: 87px * root.wide-scale;
+            background: #476494; }
+        Rectangle { x: 841px * root.wide-scale; y: 120px * root.wide-scale;
+            width: 12px * root.wide-scale; height: 12px * root.wide-scale;
+            border-radius: 6px * root.wide-scale; background: #72a8ff; }
+        Rectangle { x: 843px * root.wide-scale; y: 172px * root.wide-scale;
+            width: 8px * root.wide-scale; height: 8px * root.wide-scale;
+            border-radius: 4px * root.wide-scale; background: #c4d8f8; }
+        AgendaLine { x: 866px * root.wide-scale; y: 109px * root.wide-scale;
+            width: 350px * root.wide-scale; height: 28px * root.wide-scale;
+            scale-factor: root.wide-scale; hour: "09:00"; summary: root.event-one; }
+        AgendaLine { x: 866px * root.wide-scale; y: 145px * root.wide-scale;
+            width: 350px * root.wide-scale; height: 28px * root.wide-scale;
+            scale-factor: root.wide-scale; hour: "14:30"; summary: root.event-two; important: true; }
+        AgendaLine { x: 866px * root.wide-scale; y: 181px * root.wide-scale;
+            width: 350px * root.wide-scale; height: 28px * root.wide-scale;
+            scale-factor: root.wide-scale; hour: "19:00"; summary: root.event-three; }
+        Rectangle { x: 820px * root.wide-scale; y: 238px * root.wide-scale;
+            width: 430px * root.wide-scale; height: 119px * root.wide-scale;
+            border-radius: 23px * root.wide-scale;
+            background: #122238ee; border-color: #6e90c256;
+            border-width: 1px * root.wide-scale; }
+        Image { x: 842px * root.wide-scale; y: 261px * root.wide-scale;
+            width: 30px * root.wide-scale; height: 30px * root.wide-scale;
+            source: @image-url("assets/icons/sparkle.png"); colorize: #72aeff; }
+        Text { x: 883px * root.wide-scale; y: 265px * root.wide-scale;
+            width: 92px * root.wide-scale; height: 23px * root.wide-scale;
+            text: "Tiếp theo"; font-size: 15px * root.wide-scale; font-weight: 700; color: #ffffff; }
+        Image { x: 997px * root.wide-scale; y: 262px * root.wide-scale;
+            width: 22px * root.wide-scale; height: 22px * root.wide-scale;
+            source: @image-url("assets/icons/pill.png"); colorize: #a3d4ff; }
+        Text { x: 1027px * root.wide-scale; y: 261px * root.wide-scale;
+            width: 192px * root.wide-scale; height: 25px * root.wide-scale;
+            text: "16:00  " + root.event-four; font-size: 14px * root.wide-scale; color: #e3edfc; }
+        Image { x: 997px * root.wide-scale; y: 300px * root.wide-scale;
+            width: 22px * root.wide-scale; height: 22px * root.wide-scale;
+            source: @image-url("assets/icons/cart.png"); colorize: #a3d4ff; }
+        Text { x: 1027px * root.wide-scale; y: 300px * root.wide-scale;
+            width: 192px * root.wide-scale; height: 25px * root.wide-scale;
+            text: "18:30  " + root.event-five; font-size: 14px * root.wide-scale; color: #e3edfc; }
+
+        // Dashboard quick actions (intentionally native, not part of wallpaper)
+        QuickTile { x: 130px * root.wide-scale; y: 373px * root.wide-scale;
+            width: 139px * root.wide-scale; height: 139px * root.wide-scale;
+            scale-factor: root.wide-scale; icon: @image-url("assets/icons/timer.png");
+            title: root.timer-text; detail: "Luộc trứng";
+            activated(v) => { root.quick-action("timer"); }
+        }
+        QuickTile { x: 281px * root.wide-scale; y: 373px * root.wide-scale;
+            width: 139px * root.wide-scale; height: 139px * root.wide-scale;
+            scale-factor: root.wide-scale; icon: @image-url("assets/icons/lantern.png");
+            title: root.holiday-countdown; detail: "Đến Tết";
+            activated(v) => { root.quick-action("holiday"); }
+        }
+        QuickTile { x: 432px * root.wide-scale; y: 373px * root.wide-scale;
+            width: 139px * root.wide-scale; height: 139px * root.wide-scale;
+            scale-factor: root.wide-scale; icon: @image-url("assets/icons/light.png");
+            title: "Đèn phòng khách"; detail: root.living-room-light ? "Bật" : "Tắt";
+            switchable: true; is-on: root.living-room-light; highlight: root.living-room-light;
+            activated(v) => { root.living-room-light = v; root.device-changed("living-room-light", v); }
+        }
+        QuickTile { x: 583px * root.wide-scale; y: 373px * root.wide-scale;
+            width: 139px * root.wide-scale; height: 139px * root.wide-scale;
+            scale-factor: root.wide-scale; icon: @image-url("assets/icons/light.png");
+            title: "Đèn phòng ngủ"; detail: root.bedroom-light ? "Bật" : "Tắt";
+            switchable: true; is-on: root.bedroom-light; highlight: root.bedroom-light;
+            activated(v) => { root.bedroom-light = v; root.device-changed("bedroom-light", v); }
+        }
+        QuickTile { x: 734px * root.wide-scale; y: 373px * root.wide-scale;
+            width: 139px * root.wide-scale; height: 139px * root.wide-scale;
+            scale-factor: root.wide-scale; icon: @image-url("assets/icons/fan.png");
+            title: "Quạt"; detail: root.fan-on ? "Bật" : "Tắt";
+            switchable: true; is-on: root.fan-on; highlight: root.fan-on;
+            activated(v) => { root.fan-on = v; root.device-changed("fan", v); }
+        }
+        QuickTile { x: 885px * root.wide-scale; y: 373px * root.wide-scale;
+            width: 139px * root.wide-scale; height: 139px * root.wide-scale;
+            scale-factor: root.wide-scale; icon: @image-url("assets/icons/snowflake.png");
+            title: "Nhiệt độ"; detail: root.temperature-text;
+            activated(v) => { root.quick-action("temperature"); }
+        }
+        Rectangle { x: 1036px * root.wide-scale; y: 373px * root.wide-scale;
+            width: 213px * root.wide-scale; height: 139px * root.wide-scale;
+            border-radius: 20px * root.wide-scale;
+            background: @linear-gradient(125deg, #2a3d64eb 0%, #1b2845d9 100%);
+            border-width: 1px * root.wide-scale; border-color: #97b3e872;
+            clip: true;
+            Image {
+                x: 0px; y: 56px * root.wide-scale;
+                width: parent.width; height: 83px * root.wide-scale;
+                source: @image-url("assets/backgrounds/security-house.jpg");
+                image-fit: cover;
+                opacity: 0.58;
+            }
+        }
+        Image { x: 1061px * root.wide-scale; y: 440px * root.wide-scale;
+            width: 54px * root.wide-scale; height: 49px * root.wide-scale;
+            source: @image-url("assets/icons/home.png"); colorize: #8a9eba9f; }
+        Text { x: 1053px * root.wide-scale; y: 392px * root.wide-scale;
+            width: 182px * root.wide-scale; height: 25px * root.wide-scale;
+            text: "Nhà của bạn"; font-size: 16px * root.wide-scale; font-weight: 700; color: #ffffff; }
+        Image { x: 1054px * root.wide-scale; y: 425px * root.wide-scale;
+            width: 19px * root.wide-scale; height: 19px * root.wide-scale;
+            source: @image-url("assets/icons/shield.png");
+            colorize: root.home-safe ? #32ef91 : #fdae4b; }
+        Text { x: 1080px * root.wide-scale; y: 425px * root.wide-scale;
+            width: 156px * root.wide-scale; height: 21px * root.wide-scale;
+            text: root.home-safe ? "An toàn" : "Cần kiểm tra";
+            color: root.home-safe ? #32ef91 : #ffd071; font-size: 13px * root.wide-scale; }
+
+        // Bottom assistant bar
+        Rectangle { x: 125px * root.wide-scale; y: 533px * root.wide-scale;
+            width: 1126px * root.wide-scale; height: 54px * root.wide-scale;
+            border-radius: 22px * root.wide-scale; background: #09172ac9;
+            border-color: #6183c42a; border-width: 1px * root.wide-scale; }
+        Rectangle { x: 145px * root.wide-scale; y: 538px * root.wide-scale;
+            width: 60px * root.wide-scale; height: 44px * root.wide-scale;
+            border-radius: 17px * root.wide-scale;
+            background: @linear-gradient(125deg, #006bc9 0%, #6033dd 100%);
+            border-width: 1px * root.wide-scale; border-color: #8c82ff;
+        }
+        Image { x: 160px * root.wide-scale; y: 547px * root.wide-scale;
+            width: 26px * root.wide-scale; height: 26px * root.wide-scale;
+            source: @image-url("assets/icons/mic.png"); colorize: #ffffff; }
+        TouchArea { x: 145px * root.wide-scale; y: 538px * root.wide-scale;
+            width: 60px * root.wide-scale; height: 44px * root.wide-scale;
+            clicked => { root.voice-requested(); } }
+        Text { x: 224px * root.wide-scale; y: 548px * root.wide-scale;
+            width: 480px * root.wide-scale; height: 29px * root.wide-scale;
+            text: "Bạn cần gì hôm nay?"; color: #a9bdd9; font-size: 17px * root.wide-scale; }
+        Image { x: 1118px * root.wide-scale; y: 552px * root.wide-scale;
+            width: 25px * root.wide-scale; height: 25px * root.wide-scale;
+            source: @image-url("assets/icons/wifi.png"); colorize: #a6b9d2; }
+        Image { x: 1167px * root.wide-scale; y: 552px * root.wide-scale;
+            width: 25px * root.wide-scale; height: 25px * root.wide-scale;
+            source: @image-url("assets/icons/bluetooth.png"); colorize: #a6b9d2; }
+        Image { x: 1213px * root.wide-scale; y: 552px * root.wide-scale;
+            width: 20px * root.wide-scale; height: 25px * root.wide-scale;
+            source: @image-url("assets/icons/phone.png"); colorize: #a6b9d2; }
+    }
+
+    // ========================================================================
+    // SQUARE / PORTRAIT: 720x720 virtual design coordinates
+    // ========================================================================
+    if !is-wide : Rectangle {
+        x: root.compact-left;
+        y: root.compact-top;
+        width: 720px * root.compact-scale;
+        height: 720px * root.compact-scale;
+        background: transparent;
+
+        Text { x: 22px * root.compact-scale; y: 7px * root.compact-scale;
+            width: 100px * root.compact-scale; height: 24px * root.compact-scale;
+            text: root.clock-text; font-size: 12px * root.compact-scale; color: #dcecff; }
+        Image { x: 662px * root.compact-scale; y: 8px * root.compact-scale;
+            width: 18px * root.compact-scale; height: 18px * root.compact-scale;
+            source: @image-url("assets/icons/wifi.png"); colorize: #dcecff; }
+        Image { x: 688px * root.compact-scale; y: 8px * root.compact-scale;
+            width: 14px * root.compact-scale; height: 18px * root.compact-scale;
+            source: @image-url("assets/icons/phone.png"); colorize: #dcecff; }
+
+        // Header overview card
+        Rectangle { x: 18px * root.compact-scale; y: 42px * root.compact-scale;
+            width: 684px * root.compact-scale; height: 192px * root.compact-scale;
+            border-radius: 24px * root.compact-scale;
+            background: @linear-gradient(120deg, #142b4df0 0%, #142644ce 68%, #1d3154ba 100%);
+            border-color: #81a9df66; border-width: 1px * root.compact-scale; }
+        Text { x: 40px * root.compact-scale; y: 51px * root.compact-scale;
+            width: 310px * root.compact-scale; height: 92px * root.compact-scale;
+            text: root.clock-text; font-size: 81px * root.compact-scale; font-weight: 600; color: #ffffff; }
+        Text { x: 43px * root.compact-scale; y: 140px * root.compact-scale;
+            width: 280px * root.compact-scale; height: 24px * root.compact-scale;
+            text: root.date-text; font-size: 14px * root.compact-scale; color: #b9d0ec; }
+        Image { x: 492px * root.compact-scale; y: 68px * root.compact-scale;
+            width: 34px * root.compact-scale; height: 34px * root.compact-scale;
+            source: @image-url("assets/icons/sun.png"); colorize: #ffb83f; }
+        Text { x: 532px * root.compact-scale; y: 59px * root.compact-scale;
+            width: 156px * root.compact-scale; height: 57px * root.compact-scale;
+            text: root.temperature-text; font-size: 43px * root.compact-scale; color: #ffffff; }
+        Text { x: 534px * root.compact-scale; y: 110px * root.compact-scale;
+            width: 145px * root.compact-scale; height: 24px * root.compact-scale;
+            text: root.weather-text; font-size: 14px * root.compact-scale; color: #c4d5ef; }
+        Image { x: 319px * root.compact-scale; y: 91px * root.compact-scale;
+            width: 160px * root.compact-scale; height: 145px * root.compact-scale;
+            source: @image-url("assets/mascot/assistant.png"); image-fit: contain; }
+        Text { x: 42px * root.compact-scale; y: 173px * root.compact-scale;
+            width: 285px * root.compact-scale; height: 29px * root.compact-scale;
+            text: root.greeting-text; font-size: 22px * root.compact-scale;
+            font-weight: 700; color: #ffffff; overflow: elide; }
+        Text { x: 42px * root.compact-scale; y: 205px * root.compact-scale;
+            width: 300px * root.compact-scale; height: 21px * root.compact-scale;
+            text: root.greeting-detail; font-size: 11px * root.compact-scale;
+            color: #b7cbe5; overflow: elide; }
+
+        // Agenda, two compact rows
+        Rectangle { x: 18px * root.compact-scale; y: 247px * root.compact-scale;
+            width: 684px * root.compact-scale; height: 130px * root.compact-scale;
+            border-radius: 21px * root.compact-scale; background: #13253fe8;
+            border-color: #86a6d55d; border-width: 1px * root.compact-scale; }
+        Image { x: 37px * root.compact-scale; y: 264px * root.compact-scale;
+            width: 25px * root.compact-scale; height: 25px * root.compact-scale;
+            source: @image-url("assets/icons/calendar.png"); colorize: #a7cbff; }
+        Text { x: 70px * root.compact-scale; y: 264px * root.compact-scale;
+            width: 200px * root.compact-scale; height: 27px * root.compact-scale;
+            text: "Lịch hôm nay"; font-size: 16px * root.compact-scale;
+            font-weight: 700; color: #ffffff; }
+        Image { x: 530px * root.compact-scale; y: 269px * root.compact-scale;
+            width: 17px * root.compact-scale; height: 17px * root.compact-scale;
+            source: @image-url("assets/icons/shield.png");
+            colorize: root.home-safe ? #38ec93 : #ffae44; }
+        Text { x: 553px * root.compact-scale; y: 266px * root.compact-scale;
+            width: 130px * root.compact-scale; height: 24px * root.compact-scale;
+            text: root.home-safe ? "Nhà an toàn" : "Cần kiểm tra";
+            color: root.home-safe ? #5af3a6 : #ffcf78;
+            font-size: 12px * root.compact-scale; }
+        AgendaLine { x: 40px * root.compact-scale; y: 300px * root.compact-scale;
+            width: 210px * root.compact-scale; height: 26px * root.compact-scale;
+            scale-factor: root.compact-scale; hour: "09:00"; summary: root.event-one; }
+        AgendaLine { x: 264px * root.compact-scale; y: 300px * root.compact-scale;
+            width: 210px * root.compact-scale; height: 26px * root.compact-scale;
+            scale-factor: root.compact-scale; hour: "14:30"; summary: root.event-two; important: true; }
+        AgendaLine { x: 488px * root.compact-scale; y: 300px * root.compact-scale;
+            width: 197px * root.compact-scale; height: 26px * root.compact-scale;
+            scale-factor: root.compact-scale; hour: "19:00"; summary: root.event-three; }
+        AgendaLine { x: 40px * root.compact-scale; y: 337px * root.compact-scale;
+            width: 210px * root.compact-scale; height: 26px * root.compact-scale;
+            scale-factor: root.compact-scale; hour: "16:00"; summary: root.event-four; }
+        AgendaLine { x: 264px * root.compact-scale; y: 337px * root.compact-scale;
+            width: 210px * root.compact-scale; height: 26px * root.compact-scale;
+            scale-factor: root.compact-scale; hour: "18:30"; summary: root.event-five; }
+        Text { x: 560px * root.compact-scale; y: 338px * root.compact-scale;
+            width: 120px * root.compact-scale; height: 25px * root.compact-scale;
+            text: "Xem thêm  →"; color: #c4d8f2;
+            font-size: 12px * root.compact-scale; horizontal-alignment: right; }
+        TouchArea { x: 544px * root.compact-scale; y: 327px * root.compact-scale;
+            width: 143px * root.compact-scale; height: 44px * root.compact-scale;
+            clicked => { root.agenda-requested(); } }
+
+        Text { x: 24px * root.compact-scale; y: 384px * root.compact-scale;
+            width: 270px * root.compact-scale; height: 24px * root.compact-scale;
+            text: "Điều khiển nhanh"; color: #f4f8ff; font-weight: 700;
+            font-size: 16px * root.compact-scale; }
+        Text { x: 538px * root.compact-scale; y: 387px * root.compact-scale;
+            width: 160px * root.compact-scale; height: 22px * root.compact-scale;
+            text: "6 tiện ích"; color: #8faed4; font-size: 12px * root.compact-scale;
+            horizontal-alignment: right; }
+
+        // Two rows of three quick actions; touch-sized at 720x720.
+        QuickTile { x: 18px * root.compact-scale; y: 414px * root.compact-scale;
+            width: 216px * root.compact-scale; height: 99px * root.compact-scale;
+            scale-factor: root.compact-scale; dense: true;
+            icon: @image-url("assets/icons/timer.png"); title: root.timer-text; detail: "Luộc trứng";
+            activated(v) => { root.quick-action("timer"); }
+        }
+        QuickTile { x: 252px * root.compact-scale; y: 414px * root.compact-scale;
+            width: 216px * root.compact-scale; height: 99px * root.compact-scale;
+            scale-factor: root.compact-scale; dense: true;
+            icon: @image-url("assets/icons/lantern.png"); title: root.holiday-countdown; detail: "Đến Tết";
+            activated(v) => { root.quick-action("holiday"); }
+        }
+        QuickTile { x: 486px * root.compact-scale; y: 414px * root.compact-scale;
+            width: 216px * root.compact-scale; height: 99px * root.compact-scale;
+            scale-factor: root.compact-scale; dense: true;
+            icon: @image-url("assets/icons/light.png"); title: "Đèn phòng khách";
+            detail: root.living-room-light ? "Bật" : "Tắt";
+            switchable: true; is-on: root.living-room-light; highlight: root.living-room-light;
+            activated(v) => { root.living-room-light = v; root.device-changed("living-room-light", v); }
+        }
+        QuickTile { x: 18px * root.compact-scale; y: 523px * root.compact-scale;
+            width: 216px * root.compact-scale; height: 99px * root.compact-scale;
+            scale-factor: root.compact-scale; dense: true;
+            icon: @image-url("assets/icons/light.png"); title: "Đèn phòng ngủ";
+            detail: root.bedroom-light ? "Bật" : "Tắt";
+            switchable: true; is-on: root.bedroom-light; highlight: root.bedroom-light;
+            activated(v) => { root.bedroom-light = v; root.device-changed("bedroom-light", v); }
+        }
+        QuickTile { x: 252px * root.compact-scale; y: 523px * root.compact-scale;
+            width: 216px * root.compact-scale; height: 99px * root.compact-scale;
+            scale-factor: root.compact-scale; dense: true;
+            icon: @image-url("assets/icons/fan.png"); title: "Quạt";
+            detail: root.fan-on ? "Bật" : "Tắt";
+            switchable: true; is-on: root.fan-on; highlight: root.fan-on;
+            activated(v) => { root.fan-on = v; root.device-changed("fan", v); }
+        }
+        QuickTile { x: 486px * root.compact-scale; y: 523px * root.compact-scale;
+            width: 216px * root.compact-scale; height: 99px * root.compact-scale;
+            scale-factor: root.compact-scale; dense: true;
+            icon: @image-url("assets/icons/snowflake.png");
+            title: "Nhiệt độ"; detail: root.temperature-text;
+            activated(v) => { root.quick-action("temperature"); }
+        }
+
+        Rectangle { x: 18px * root.compact-scale; y: 631px * root.compact-scale;
+            width: 684px * root.compact-scale; height: 43px * root.compact-scale;
+            border-radius: 15px * root.compact-scale; background: #071a33e8;
+            border-width: 1px * root.compact-scale; border-color: #8f9ed345; }
+        Rectangle { x: 27px * root.compact-scale; y: 636px * root.compact-scale;
+            width: 56px * root.compact-scale; height: 33px * root.compact-scale;
+            border-radius: 13px * root.compact-scale;
+            background: @linear-gradient(110deg, #057bd8 0%, #6335e8 100%); }
+        Image { x: 44px * root.compact-scale; y: 642px * root.compact-scale;
+            width: 22px * root.compact-scale; height: 22px * root.compact-scale;
+            source: @image-url("assets/icons/mic.png"); colorize: #ffffff; }
+        TouchArea { x: 27px * root.compact-scale; y: 635px * root.compact-scale;
+            width: 56px * root.compact-scale; height: 34px * root.compact-scale;
+            clicked => { root.voice-requested(); } }
+        Text { x: 97px * root.compact-scale; y: 642px * root.compact-scale;
+            width: 360px * root.compact-scale; height: 22px * root.compact-scale;
+            text: "Bạn cần gì hôm nay?"; font-size: 14px * root.compact-scale; color: #b4c7e5; }
+        Image { x: 642px * root.compact-scale; y: 645px * root.compact-scale;
+            width: 22px * root.compact-scale; height: 20px * root.compact-scale;
+            source: @image-url("assets/icons/wifi.png"); colorize: #9db9dc; }
+        Image { x: 673px * root.compact-scale; y: 645px * root.compact-scale;
+            width: 15px * root.compact-scale; height: 20px * root.compact-scale;
+            source: @image-url("assets/icons/bluetooth.png"); colorize: #9db9dc; }
+
+        // Bottom navigation replaces the desktop sidebar.
+        NavButton { x: 18px * root.compact-scale; y: 683px * root.compact-scale;
+            width: 158px * root.compact-scale; height: 34px * root.compact-scale;
+            scale-factor: root.compact-scale; horizontal: true;
+            label: "Home"; icon: @image-url("assets/icons/home.png");
+            active: root.selected-page == "Home";
+            activated => { root.selected-page = "Home"; root.navigation-requested("Home"); }
+        }
+        NavButton { x: 193px * root.compact-scale; y: 683px * root.compact-scale;
+            width: 158px * root.compact-scale; height: 34px * root.compact-scale;
+            scale-factor: root.compact-scale; horizontal: true;
+            label: "Thiết bị"; icon: @image-url("assets/icons/devices.png");
+            active: root.selected-page == "Thiết bị";
+            activated => { root.selected-page = "Thiết bị"; root.navigation-requested("Thiết bị"); }
+        }
+        NavButton { x: 368px * root.compact-scale; y: 683px * root.compact-scale;
+            width: 158px * root.compact-scale; height: 34px * root.compact-scale;
+            scale-factor: root.compact-scale; horizontal: true;
+            label: "Thống kê"; icon: @image-url("assets/icons/chart.png");
+            active: root.selected-page == "Thống kê";
+            activated => { root.selected-page = "Thống kê"; root.navigation-requested("Thống kê"); }
+        }
+        NavButton { x: 543px * root.compact-scale; y: 683px * root.compact-scale;
+            width: 158px * root.compact-scale; height: 34px * root.compact-scale;
+            scale-factor: root.compact-scale; horizontal: true;
+            label: "Cài đặt"; icon: @image-url("assets/icons/settings.png");
+            active: root.selected-page == "Cài đặt";
+            activated => { root.selected-page = "Cài đặt"; root.navigation-requested("Cài đặt"); }
+        }
+    }
+}

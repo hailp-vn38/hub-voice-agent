@@ -1,0 +1,199 @@
+import { Theme } from "../theme.slint";
+import { Screen } from "../contract/nav.slint";
+import { SettingsData } from "../contract/settings.slint";
+import { Confirm } from "../overlays/confirm.slint";
+import { ActionButton } from "../components/action-button.slint";
+import { Backdrop } from "../components/home/backdrop.slint";
+import { NavRail } from "../components/home/nav-rail.slint";
+import { DisplayPanel } from "settings/display.slint";
+import { AudioPanel } from "settings/audio.slint";
+import { VoicePanel } from "settings/voice.slint";
+import { HomePanel } from "settings/home.slint";
+import { ConnectionPanel } from "settings/connection.slint";
+import { DataPanel } from "settings/data.slint";
+import { SystemPanel } from "settings/system.slint";
+
+// Mục danh mục: kính, đang chọn = xanh accent có quầng sáng (giống NavRail).
+component CategoryItem inherits Rectangle {
+    in property <string> label;
+    in property <bool> active;
+    callback activated();
+    private property <length> u: Theme.unit;
+    border-radius: Theme.radius-s;
+    background: root.active ? Theme.accent.with-alpha(0.55) : touch.pressed ? Theme.card : transparent;
+    border-width: 1 * root.u;
+    border-color: root.active ? Theme.accent : transparent;
+    drop-shadow-blur: root.active ? 12 * root.u : 0;
+    drop-shadow-color: Theme.accent.with-alpha(0.38);
+    animate background { duration: Theme.anim-state; }
+    Text {
+        x: 16 * root.u;
+        text: root.label;
+        color: root.active ? Theme.text : Theme.text-dim;
+        font-size: Theme.type-body;
+        font-weight: root.active ? 600 : 400;
+        vertical-alignment: center;
+    }
+    touch := TouchArea { clicked => { root.activated(); } }
+}
+
+// Cài đặt (Aurora): Thanh điều hướng trái; thẻ kính danh mục, thẻ kính bảng (cuộn), thẻ QR Setup web.
+// Áp dụng ngay, không nút Lưu. Toạ độ theo canvas 1280×600 nhân Theme.unit.
+export component Settings inherits Rectangle {
+    private property <length> u: Theme.unit;
+    private property <float> cw: self.width / root.u;
+    private property <float> ch: self.height / root.u;
+    private property <float> left: 130;
+    private property <float> right: root.cw - 30;
+    private property <float> top: 96;
+    private property <float> bottom: root.ch - 92;
+    private property <float> cat-w: 190;
+    private property <float> qr-w: 230;
+    private property <[string]> categories: ["Hiển thị", "Âm thanh", "Giọng nói", "Nhà", "Kết nối", "Dữ liệu", "Hệ thống"];
+    private property <int> cat: 0;
+    private property <string> pending-kind; // "clear" | "system"
+    private property <string> pending-key;
+    private property <string> pending-title;
+
+    Backdrop { dim: 0.35; }
+    NavRail {
+        x: 14 * root.u;
+        y: 42 * root.u;
+        height: (root.ch - 152) * root.u;
+        u: root.u;
+        current: Screen.settings;
+    }
+
+    Text {
+        x: root.left * root.u;
+        y: 42 * root.u;
+        height: 40 * root.u;
+        text: "Cài đặt";
+        color: Theme.text;
+        font-size: Theme.type-page-title;
+        font-weight: 600;
+        vertical-alignment: center;
+    }
+
+    // Danh mục.
+    Rectangle {
+        x: root.left * root.u;
+        y: root.top * root.u;
+        width: root.cat-w * root.u;
+        height: (root.bottom - root.top) * root.u;
+        border-radius: Theme.radius-panel;
+        background: Theme.glass;
+        border-width: 1 * root.u;
+        border-color: Theme.border;
+        VerticalLayout {
+            padding: 12 * root.u;
+            spacing: 6 * root.u;
+            alignment: start;
+            for name[i] in root.categories: CategoryItem {
+                height: 44 * root.u;
+                label: name;
+                active: i == root.cat;
+                activated => { root.cat = i; }
+            }
+        }
+    }
+
+    // Bảng của danh mục đang chọn.
+    Rectangle {
+        x: (root.left + root.cat-w + 16) * root.u;
+        y: root.top * root.u;
+        width: (root.right - root.left - root.cat-w - root.qr-w - 32) * root.u;
+        height: (root.bottom - root.top) * root.u;
+        border-radius: Theme.radius-panel;
+        background: Theme.glass;
+        border-width: 1 * root.u;
+        border-color: Theme.border;
+        clip: true;
+        Text {
+            x: 22 * root.u;
+            y: 16 * root.u;
+            height: 28 * root.u;
+            text: root.categories[root.cat];
+            color: Theme.text;
+            font-size: Theme.type-section;
+            font-weight: 600;
+            vertical-alignment: center;
+        }
+        Flickable {
+            x: 22 * root.u;
+            y: 54 * root.u;
+            width: parent.width - 44 * root.u;
+            height: parent.height - 66 * root.u;
+            content-height: panel.preferred-height;
+            panel := VerticalLayout {
+                if root.cat == 0: DisplayPanel { }
+                if root.cat == 1: AudioPanel { }
+                if root.cat == 2: VoicePanel { }
+                if root.cat == 3: HomePanel { }
+                if root.cat == 4: ConnectionPanel { }
+                if root.cat == 5: DataPanel {
+                    ask(key, title) => { root.pending-kind = "clear"; root.pending-key = key; root.pending-title = title; }
+                }
+                if root.cat == 6: SystemPanel {
+                    ask(key, title) => { root.pending-kind = "system"; root.pending-key = key; root.pending-title = title; }
+                }
+            }
+        }
+    }
+
+    // Setup web: QR trên nền sáng để dễ quét.
+    Rectangle {
+        x: (root.right - root.qr-w) * root.u;
+        y: root.top * root.u;
+        width: root.qr-w * root.u;
+        height: (root.bottom - root.top) * root.u;
+        border-radius: Theme.radius-panel;
+        background: Theme.glass;
+        border-width: 1 * root.u;
+        border-color: Theme.border;
+        VerticalLayout {
+            padding: 18 * root.u;
+            spacing: 12 * root.u;
+            alignment: center;
+            Text { text: "Setup web"; color: Theme.text; font-size: Theme.type-card-title; font-weight: 600; horizontal-alignment: center; }
+            Rectangle {
+                height: min(170 * root.u, (root.qr-w - 36) * root.u);
+                border-radius: Theme.radius-s;
+                background: Theme.text;
+                Image { width: parent.width - 20 * root.u; height: parent.height - 20 * root.u; source: SettingsData.setup-qr; image-fit: contain; }
+            }
+            Text { text: SettingsData.setup-url; color: Theme.accent-cyan; font-size: Theme.type-caption; horizontal-alignment: center; wrap: word-wrap; }
+            Text { text: "Server, lịch, nhà, vị trí"; color: Theme.text-dim; font-size: Theme.type-caption; horizontal-alignment: center; wrap: word-wrap; }
+        }
+    }
+
+    // Thẻ đếm ngược đổi độ phân giải.
+    if SettingsData.resolution-confirm > 0: Rectangle {
+        background: Theme.background.with-alpha(0.7);
+        TouchArea { }
+        Rectangle {
+            width: min(460 * root.u, root.width - 64 * root.u);
+            height: 170 * root.u;
+            border-radius: Theme.radius-panel;
+            background: Theme.card;
+            border-width: 1 * root.u;
+            border-color: Theme.border;
+            VerticalLayout {
+                padding: 28 * root.u;
+                spacing: 16 * root.u;
+                Text { text: "Giữ độ phân giải này? " + SettingsData.resolution-confirm; color: Theme.text; font-size: Theme.type-section; font-weight: 600; horizontal-alignment: center; }
+                ActionButton { text: "Giữ"; clicked => { SettingsData.keep-resolution(); } }
+            }
+        }
+    }
+
+    // Thẻ xác nhận xoá / khởi động lại / tắt máy.
+    if root.pending-key != "": Confirm {
+        title: root.pending-title;
+        cancelled => { root.pending-key = ""; }
+        confirmed => {
+            if (root.pending-kind == "clear") { SettingsData.clear(root.pending-key); } else { SettingsData.system-action(root.pending-key); }
+            root.pending-key = "";
+        }
+    }
+}

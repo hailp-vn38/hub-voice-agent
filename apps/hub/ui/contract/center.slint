@@ -1,0 +1,28 @@
+// Hợp đồng màn trung tâm. Ticket UI: .scratch/hub-ui/issues/07-center.md.
+import { Screen } from "nav.slint";
+import { HomeTile } from "home.slint";
+
+export enum CenterCard { none, weather, calendar, reminders, countdown, home, timer }
+
+export struct CenterWeather { icon: string, temp: string, summary: string, updated: string, stale: bool }
+export struct CenterEvent { key: string, time: string, title: string, now: bool }
+export struct CenterReminder { key: string, time: string, text: string }
+// progress: phần thời gian còn lại, 1 → 0.
+export struct CenterTimer { visible: bool, key: string, label: string, remaining: string, progress: float }
+export struct CenterCountdown { visible: bool, key: string, label: string, value: string, today: bool }
+
+export global Center {
+    in property <string> time;
+    in property <string> date;
+    in property <CenterWeather> weather;
+    in property <[CenterEvent]> today;
+    in property <[CenterReminder]> reminders;
+    in property <CenterTimer> timer;
+    in property <CenterCountdown> countdown;
+    in property <[HomeTile]> home;
+    in property <bool> home-safe: true; // thẻ "Nhà của bạn": An toàn / Cần kiểm tra
+    in property <CenterCard> focus;
+    in property <int> focus-serial;
+    callback open(Screen);
+    callback toggle-home(string);
+}

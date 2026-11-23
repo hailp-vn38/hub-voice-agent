@@ -1,0 +1,85 @@
+import { Theme } from "../../theme.slint";
+import { Icon } from "../icon.slint";
+import { WeatherNow } from "../../contract/weather.slint";
+
+// Ô chỉ số nhỏ: nền kính tối, nhãn mờ trên, giá trị dưới.
+component Stat inherits Rectangle {
+    in property <string> label;
+    in property <string> value;
+    private property <length> u: Theme.unit;
+    border-radius: Theme.radius-s;
+    background: Theme.card.with-alpha(0.55);
+    border-width: 1 * root.u;
+    border-color: Theme.border.with-alpha(0.5);
+    VerticalLayout {
+        padding-left: 12 * root.u;
+        padding-right: 8 * root.u;
+        alignment: center;
+        spacing: 2 * root.u;
+        Text { text: root.label; color: Theme.text-dim; font-size: Theme.type-caption; overflow: elide; }
+        Text { text: root.value; color: Theme.text; font-size: Theme.type-body; font-weight: 600; overflow: elide; }
+    }
+}
+
+// Thẻ kính trái: thời tiết hiện tại.
+export component CurrentColumn inherits Rectangle {
+    in property <WeatherNow> now;
+    in property <bool> aqi-lit;
+    private property <length> u: Theme.unit;
+    border-radius: Theme.radius-panel;
+    background: Theme.glass;
+    border-width: 1 * root.u;
+    border-color: Theme.border;
+    clip: true;
+    VerticalLayout {
+        padding: 18 * root.u;
+        spacing: 8 * root.u;
+        HorizontalLayout {
+            spacing: 12 * root.u;
+            alignment: start;
+            Icon { name: root.now.icon; size: 56 * root.u; color: Theme.warm; }
+            Text { text: root.now.temp; color: Theme.text; font-size: Theme.type-clock; font-weight: 300; vertical-alignment: center; }
+        }
+        Text { text: root.now.summary; color: Theme.text-dim; font-size: Theme.type-body; overflow: elide; }
+        GridLayout {
+            spacing: 8 * root.u;
+            vertical-stretch: 1;
+            Row {
+                Stat { label: "Cảm giác như"; value: root.now.feels; }
+                Stat { label: "Độ ẩm"; value: root.now.humidity; }
+            }
+            Row {
+                Stat { label: "Gió"; value: root.now.wind; }
+                Stat { label: "UV"; value: root.now.uv; }
+            }
+            Row {
+                Rectangle {
+                    colspan: 2;
+                    border-radius: Theme.radius-s;
+                    background: root.aqi-lit ? Theme.accent.with-alpha(0.35) : Theme.card.with-alpha(0.55);
+                    border-width: 1 * root.u;
+                    border-color: root.aqi-lit ? Theme.accent : Theme.border.with-alpha(0.5);
+                    animate background { duration: Theme.anim-state; }
+                    HorizontalLayout {
+                        padding-left: 12 * root.u;
+                        spacing: 10 * root.u;
+                        alignment: start;
+                        VerticalLayout {
+                            alignment: center;
+                            Rectangle { width: 12 * root.u; height: 12 * root.u; border-radius: 6 * root.u; background: root.now.aqi-color; }
+                        }
+                        VerticalLayout {
+                            alignment: center;
+                            spacing: 2 * root.u;
+                            Text { text: "AQI " + root.now.aqi; color: Theme.text-dim; font-size: Theme.type-caption; }
+                            Text { text: root.now.aqi-level; color: Theme.text; font-size: Theme.type-body; font-weight: 600; overflow: elide; }
+                        }
+                    }
+                }
+            }
+            Row {
+                Stat { colspan: 2; label: "Mọc · Lặn"; value: root.now.sunrise + " · " + root.now.sunset; }
+            }
+        }
+    }
+}

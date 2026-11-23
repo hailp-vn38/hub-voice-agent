@@ -1,0 +1,23 @@
+import { SettingsData } from "../../contract/settings.slint";
+import { Choice } from "../../components/choice.slint";
+import { Toggle } from "../../components/toggle.slint";
+import { SettingRow } from "../../components/setting-row.slint";
+
+export component VoicePanel inherits VerticalLayout {
+    SettingRow {
+        label: "Wake word";
+        Toggle { on: SettingsData.voice.wake-word; toggled(v) => { SettingsData.toggle("wake-word", v); } }
+    }
+    SettingRow {
+        label: "Độ nhạy";
+        Choice { options: ["Thấp", "Vừa", "Cao"]; current: SettingsData.voice.sensitivity; chosen(v) => { SettingsData.choose("sensitivity", v); } }
+    }
+    SettingRow {
+        label: "Tắt mic";
+        Toggle { on: SettingsData.voice.mic-muted; toggled(v) => { SettingsData.toggle("mic-muted", v); } }
+    }
+    SettingRow {
+        label: "Đọc Reminder bằng giọng server";
+        Toggle { on: SettingsData.voice.read-reminder; toggled(v) => { SettingsData.toggle("read-reminder", v); } }
+    }
+}

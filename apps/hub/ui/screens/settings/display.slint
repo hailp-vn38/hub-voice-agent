@@ -1,0 +1,36 @@
+import { SettingsData } from "../../contract/settings.slint";
+import { Slider } from "../../components/slider.slint";
+import { Choice } from "../../components/choice.slint";
+import { Toggle } from "../../components/toggle.slint";
+import { SettingRow } from "../../components/setting-row.slint";
+
+export component DisplayPanel inherits VerticalLayout {
+    SettingRow {
+        label: "Độ sáng";
+        Slider { value: SettingsData.display.brightness; changed-to(v) => { SettingsData.set-brightness(v); } }
+    }
+    SettingRow {
+        label: "Tự chỉnh sáng";
+        Choice { options: ["Tắt", "Theo giờ"]; current: SettingsData.display.auto-brightness; chosen(v) => { SettingsData.choose("auto-brightness", v); } }
+    }
+    SettingRow {
+        label: "Độ phân giải";
+        Choice { options: SettingsData.display.resolutions; current: SettingsData.display.resolution; chosen(v) => { SettingsData.choose("resolution", v); } }
+    }
+    SettingRow {
+        label: "Cỡ chữ";
+        Choice { options: ["Nhỏ", "Vừa", "Lớn"]; current: SettingsData.display.text-size; chosen(v) => { SettingsData.choose("text-size", v); } }
+    }
+    SettingRow {
+        label: "Vào Ambient sau";
+        Choice { options: ["1 phút", "5 phút", "10 phút", "Không"]; current: SettingsData.display.ambient-after; chosen(v) => { SettingsData.choose("ambient-after", v); } }
+    }
+    SettingRow {
+        label: "Ambient ban đêm";
+        Toggle { on: SettingsData.display.ambient-night; toggled(v) => { SettingsData.toggle("ambient-night", v); } }
+    }
+    SettingRow {
+        label: "Khung giờ";
+        Choice { options: SettingsData.display.ambient-night-ranges; current: SettingsData.display.ambient-night-range; chosen(v) => { SettingsData.choose("ambient-night-range", v); } }
+    }
+}

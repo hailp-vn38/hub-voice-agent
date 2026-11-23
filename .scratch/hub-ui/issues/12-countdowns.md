@@ -1,6 +1,6 @@
 # 12 — Màn Đếm ngược
 
-Status: ready-for-agent
+Status: ready-for-human
 Blocked by: 06
 Spec: [../spec.md](../spec.md)
 Thiết kế: concept.md §6 "Màn Đếm ngược"
@@ -48,3 +48,12 @@ Map: chờ hub-core #07
 | `.confetti-serial` | |
 | `.focus` / `.focus-serial` | |
 | `select` / `open-detail` / `close-detail` / `remove` | |
+| `Countdown.fading` | |
+
+## Answer
+
+Đã làm contract/countdowns.slint, screens/countdowns.slint, components/confetti.slint, fixture và 8 kịch bản demo. Flip chỉ chạy khi value đổi và mốc không đổi. Pháo giấy 30 mảnh từ Orb, tự gỡ sau 2 giây. Chưa có: ô bị xoá mờ dần (chỉ các ô còn lại dồn lên), hiệu ứng phóng lên khi chạm mốc ở danh sách (hoán đổi tức thì), đo fps trên Pi (ready-for-human).
+
+## Comments
+
+- 2026-11-23 (review hub-ui): Thêm `Countdown.fading`: xoá thì ô mờ dần 400 ms rồi mới gỡ. Flip chỉ chạy khi số giảm (`FlipText.num`). Chạm mốc ở danh sách: mốc chính phóng lên từ chỗ ô vừa chạm. Demo thêm `clear_all` cho Setting → Dữ liệu. Còn lại cho người (ready-for-human): kiểm bằng mắt theo kịch bản demo, đo fps trên Pi, rồi tick nghiệm thu.

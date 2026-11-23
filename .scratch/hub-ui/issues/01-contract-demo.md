@@ -1,6 +1,6 @@
 # 01 — Hợp đồng, chế độ demo, Demo panel
 
-Status: ready-for-agent
+Status: ready-for-human
 Blocked by: —
 Spec: [../spec.md](../spec.md)
 
@@ -34,3 +34,11 @@ Map: chờ hub-core #05
 |---|---|
 | `Nav.screen` | |
 | `Nav.navigate(Screen)` | |
+
+## Answer
+
+Đã dựng `ui/contract/nav.slint`, feature `demo`, `src/ui/demo/` (mod, fixtures/mod.rs, scenarios.rs, clock), `ui/demo/panel.slint`; App có `demo-mode` hiện tên màn. Đường thật không đổi. Ghi chú: `DemoPanel` được export từ app.slint nên Slint vẫn biên dịch panel trên Pi, chỉ Rust demo bị loại; đồng hồ demo theo UTC.
+
+## Comments
+
+- 2026-11-23 (review hub-ui): Tổ chức lại `src/ui/demo/`: `mod.rs` chỉ khai báo; `start.rs` khởi động demo; mọi tính năng nằm trong `fixtures/<feature>` (`fixtures/wiring.rs` nạp và tick). `ui/demo/` chứa panel, sample, spawn-demo. `App` bỏ `demo-mode` và các property voice cũ; app thật cũng chạy Shell. Còn lại cho người (ready-for-human): kiểm bằng mắt theo kịch bản demo, đo fps trên Pi, rồi tick nghiệm thu.

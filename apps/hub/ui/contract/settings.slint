@@ -1,0 +1,72 @@
+// Hợp đồng Setting. Ticket UI: .scratch/hub-ui/issues/17-settings.md.
+// Danh sách lựa chọn (mode màn hình, entity HA, âm chuông, múi giờ) do hợp đồng cấp.
+export struct DisplaySettings {
+    brightness: float,
+    auto-brightness: string, // "Tắt" / "Theo giờ"
+    resolution: string,
+    resolutions: [string],
+    text-size: string, // "Nhỏ" / "Vừa" / "Lớn"
+    ambient-after: string, // "1 phút" / "5 phút" / "10 phút" / "Không"
+    ambient-night: bool,
+    ambient-night-range: string,
+    ambient-night-ranges: [string],
+}
+export struct AudioSettings {
+    volume: float,
+    ui-sounds: bool,
+    timer-sound: string,
+    reminder-sound: string,
+    sounds: [string],
+}
+export struct VoiceSettingsView {
+    wake-word: bool,
+    sensitivity: string, // "Thấp" / "Vừa" / "Cao"
+    mic-muted: bool,
+    read-reminder: bool,
+}
+export struct HomeEntity { name: string, selected: bool }
+export struct HomeSettings { entities: [HomeEntity] }
+export struct ConnectionSettings {
+    server-status: string, // "Đã kết nối · 42 ms", "Mất kết nối"…
+    device-id: string,
+    error: string, // "" nếu không có lỗi
+    enrolled: bool,
+    enrollment-code: string,
+    wifi-name: string,
+    wifi-strength: int,
+    wifi-ip: string,
+    ha-status: string,
+    calendar-status: string,
+    weather-status: string,
+}
+export struct SystemSettings {
+    version: string,
+    timezone: string,
+    timezones: [string],
+}
+
+export global SettingsData {
+    in property <DisplaySettings> display;
+    in property <AudioSettings> audio;
+    in property <VoiceSettingsView> voice;
+    in property <HomeSettings> home;
+    in property <ConnectionSettings> connection;
+    in property <SystemSettings> system;
+    in property <string> setup-url;
+    in property <image> setup-qr;
+    in property <int> resolution-confirm; // giây còn lại, 0 = ẩn
+    // Ngoại lệ tạm: OTA URL nhập ở đây cho tới khi hub-core #13 xong.
+    in-out property <string> ota-url;
+    // UI đặt true khi đang kéo slider để Shell không coi là vuốt điều hướng.
+    in-out property <bool> dragging;
+    callback set-brightness(float);
+    callback set-volume(float);
+    callback choose(string, string);
+    callback toggle(string, bool);
+    callback preview-sound(string);
+    callback clear(string);
+    callback system-action(string);
+    callback keep-resolution();
+    callback connect-voice();
+    callback save-voice-url(string);
+}

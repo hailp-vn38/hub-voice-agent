@@ -1,0 +1,57 @@
+import { Theme } from "../../theme.slint";
+import { Icon } from "../icon.slint";
+import { WeatherDay } from "../../contract/weather.slint";
+
+// Thẻ kính phải: 7 ngày, thanh khoảng nhiệt cùng thang week-min..week-max.
+// Ngày đang chọn: nền xanh accent (giống mục đang chọn); ngày mai: chữ cyan.
+export component DaysColumn inherits Rectangle {
+    in property <[WeatherDay]> days;
+    in property <float> week-min;
+    in property <float> week-max;
+    in property <string> selected;
+    in property <string> focus-key;
+    in property <bool> lit;
+    callback pick(string);
+    private property <length> u: Theme.unit;
+    private property <float> range: max(week-max - week-min, 1);
+    border-radius: Theme.radius-panel;
+    background: Theme.glass;
+    border-width: 1 * root.u;
+    border-color: Theme.border;
+    clip: true;
+    VerticalLayout {
+        padding: 10 * root.u;
+        spacing: 4 * root.u;
+        for d in days: Rectangle {
+            property <bool> hot: d.key == root.focus-key && root.lit;
+            property <bool> sel: d.key == root.selected;
+            border-radius: Theme.radius-s;
+            background: hot ? Theme.text.with-alpha(0.2) : sel ? Theme.accent.with-alpha(0.45) : touch.pressed ? Theme.card : transparent;
+            border-width: 1 * root.u;
+            border-color: sel ? Theme.accent : transparent;
+            animate background { duration: Theme.anim-state; }
+            HorizontalLayout {
+                padding-left: 10 * root.u;
+                padding-right: 10 * root.u;
+                spacing: 8 * root.u;
+                Text { width: 64 * root.u; text: d.label; color: d.is-tomorrow && !sel ? Theme.accent-cyan : Theme.text; font-size: Theme.type-body; font-weight: sel ? 600 : 400; vertical-alignment: center; overflow: elide; }
+                VerticalLayout { alignment: center; Icon { name: d.icon; size: 22 * root.u; color: Theme.warm; } }
+                Text { width: 36 * root.u; text: d.low-text; color: Theme.text-dim; font-size: Theme.type-caption; vertical-alignment: center; horizontal-alignment: right; }
+                Rectangle {
+                    horizontal-stretch: 1;
+                    Rectangle { height: 6 * root.u; y: (parent.height - self.height) / 2; background: Theme.border.with-alpha(0.6); border-radius: self.height / 2; }
+                    Rectangle {
+                        height: 6 * root.u;
+                        y: (parent.height - self.height) / 2;
+                        border-radius: self.height / 2;
+                        background: @linear-gradient(90deg, Theme.accent-cyan 0%, Theme.warm 100%);
+                        x: (d.low - root.week-min) / root.range * parent.width;
+                        width: max((d.high - d.low) / root.range * parent.width, 6 * root.u);
+                    }
+                }
+                Text { width: 36 * root.u; text: d.high-text; color: Theme.text; font-size: Theme.type-caption; font-weight: 600; vertical-alignment: center; }
+            }
+            touch := TouchArea { clicked => { root.pick(d.key); } }
+        }
+    }
+}

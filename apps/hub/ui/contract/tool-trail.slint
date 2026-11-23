@@ -1,0 +1,7 @@
+// Hợp đồng ToolTrail. Ticket UI: .scratch/hub-ui/issues/05-response-text-tool-trail.md.
+export enum StepState { running, done, failed }
+export struct ToolStep { key: string, label: string, state: StepState }
+
+export global ToolTrail {
+    in property <[ToolStep]> steps;
+}

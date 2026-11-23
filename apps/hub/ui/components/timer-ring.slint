@@ -1,0 +1,31 @@
+import { Theme } from "../theme.slint";
+
+// Vòng cạn dần theo `progress` (1 = đầy). progress đổi mỗi giây:
+// vòng chạy tuyến tính 1 s giữa hai giá trị nên liên tục, không giật theo giây.
+export component TimerRing inherits Rectangle {
+    in property <float> progress;
+    in property <color> tone: Theme.accent;
+    in property <length> stroke: 10px;
+    private property <float> p: clamp(root.progress, 0, 0.9999);
+    animate p { duration: 1s; easing: linear; }
+    private property <angle> a: root.p * 360deg;
+
+    Path {
+        width: 100%;
+        height: 100%;
+        viewbox-width: 100;
+        viewbox-height: 100;
+        stroke: Theme.border.with-alpha(0.55);
+        stroke-width: root.stroke;
+        commands: "M 50 6 A 44 44 0 1 1 50 94 A 44 44 0 1 1 50 6";
+    }
+    if root.p > 0.002: Path {
+        width: 100%;
+        height: 100%;
+        viewbox-width: 100;
+        viewbox-height: 100;
+        stroke: root.tone;
+        stroke-width: root.stroke;
+        commands: "M 50 6 A 44 44 0 \{root.p > 0.5 ? 1 : 0} 1 \{50 + 44 * sin(root.a)} \{50 - 44 * cos(root.a)}";
+    }
+}

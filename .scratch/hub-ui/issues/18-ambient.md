@@ -1,6 +1,6 @@
 # 18 — Ambient
 
-Status: ready-for-agent
+Status: ready-for-human
 Blocked by: 03
 Spec: [../spec.md](../spec.md)
 Thiết kế: concept.md §6 "Màn hình" (Ambient), "Hiệu ứng theo trạng thái" (Idle), Orb Idle/Ambient
@@ -33,3 +33,11 @@ Map: chờ hub-core #05 (view: Ambient), #09 (nhiệt độ)
 | `AmbientData.time` / `.temp` / `.icon` | |
 | `.night` | |
 | `wake()` | |
+
+## Answer
+
+Added `contract/ambient.slint` (AmbientData), `screens/ambient.slint` (large dim clock, temp+icon, slow hourly drift via day-phase, small breathing dot as Orb stand-in, tap -> wake()), fade overlay in `shell.slint`, demo scenarios "Vào Ambient" / "Ambient ban đêm", demo wake -> center. Overlay layer (14) and "Hôm nay" tile are not yet present; Ambient sits below the top layer so they can show. Real Orb replaces the dot in ticket 04.
+
+## Comments
+
+- 2026-11-23 (review hub-ui): Bỏ chấm thở tạm thay Orb; Orb thật của Shell hiện trên Ambient, thu nhỏ và mờ. Còn lại cho người (ready-for-human): kiểm bằng mắt theo kịch bản demo, đo fps trên Pi, rồi tick nghiệm thu.

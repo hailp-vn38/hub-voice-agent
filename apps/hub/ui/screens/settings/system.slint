@@ -1,0 +1,21 @@
+import { SettingsData } from "../../contract/settings.slint";
+import { Theme } from "../../theme.slint";
+import { Choice } from "../../components/choice.slint";
+import { ActionButton } from "../../components/action-button.slint";
+import { SettingRow } from "../../components/setting-row.slint";
+
+// Nút nguy hiểm xin xác nhận qua `ask(khoá, tiêu đề)`.
+export component SystemPanel inherits VerticalLayout {
+    callback ask(string, string);
+    SettingRow {
+        label: "Phiên bản";
+        Text { text: SettingsData.system.version; color: Theme.text-dim; font-size: Theme.type-caption; vertical-alignment: center; }
+    }
+    SettingRow {
+        label: "Múi giờ";
+        Choice { options: SettingsData.system.timezones; current: SettingsData.system.timezone; chosen(v) => { SettingsData.choose("timezone", v); } }
+    }
+    SettingRow { label: "App"; ActionButton { text: "Khởi động lại app"; clicked => { root.ask("restart-app", "Khởi động lại app?"); } } }
+    SettingRow { label: "Máy"; ActionButton { danger: true; text: "Khởi động lại máy"; clicked => { root.ask("reboot", "Khởi động lại máy?"); } } }
+    SettingRow { label: "Nguồn"; ActionButton { danger: true; text: "Tắt máy"; clicked => { root.ask("shutdown", "Tắt máy?"); } } }
+}

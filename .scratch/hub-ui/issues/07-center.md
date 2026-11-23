@@ -1,6 +1,6 @@
 # 07 — Màn trung tâm
 
-Status: ready-for-agent
+Status: ready-for-human
 Blocked by: 03, 06
 Spec: [../spec.md](../spec.md)
 Thiết kế: concept.md §6 "Màn hình" (bố cục màn chính), "Nguyên tắc", "Concept voice-first" mục 5; ô hẹn giờ ở "Màn Hẹn giờ"; ô mốc ở "Màn Đếm ngược"
@@ -44,3 +44,11 @@ Map: chờ hub-core #05, #06, #08, #09, #10, #11
 | `Center.focus` / `.focus-serial` | |
 | `Center.open(Screen)` | |
 | `Center.toggle-home(key)` | |
+
+## Answer
+
+Đã làm `contract/center.slint`, `screens/center.slint`, `components/center-card.slint`, `components/center-timer.slint`, fixture `demo/fixtures/center.rs` và 5 kịch bản demo; Shell dùng `CenterScreen` thay Placeholder. `HomeTile`/`home-tile.slint` đã có từ ticket 16 nên dùng lại. Chưa kiểm tra bằng mắt ở 1920x1080 và `text-scale` 1.25 (chỉ build qua). `CenterTimer.progress` là phần còn lại 1 → 0.
+
+## Comments
+
+- 2026-11-23 (review hub-ui): Còn lại cho người (ready-for-human): kiểm bằng mắt theo kịch bản demo, đo fps trên Pi, rồi tick nghiệm thu.

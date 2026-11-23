@@ -1,0 +1,26 @@
+import { Theme } from "../theme.slint";
+
+// Nhóm lựa chọn một trong nhiều (Aurora segmented); giá trị là nhãn.
+export component Choice inherits HorizontalLayout {
+    in property <[string]> options;
+    in property <string> current;
+    callback chosen(string);
+    spacing: 8 * Theme.unit;
+    alignment: start;
+    for o in root.options: Rectangle {
+        min-width: max(72 * Theme.unit, t.preferred-width + 28 * Theme.unit);
+        height: 40 * Theme.unit;
+        border-radius: Theme.radius-s;
+        background: o == root.current ? Theme.accent.with-alpha(0.55) : touch.pressed ? Theme.card : Theme.card.with-alpha(0.6);
+        border-width: 1 * Theme.unit;
+        border-color: o == root.current ? Theme.accent : Theme.border.with-alpha(0.6);
+        animate background { duration: Theme.anim-state; }
+        t := Text {
+            text: o;
+            color: o == root.current ? Theme.text : Theme.text-dim;
+            font-size: Theme.type-body;
+            font-weight: o == root.current ? 600 : 400;
+        }
+        touch := TouchArea { clicked => { root.chosen(o); } }
+    }
+}

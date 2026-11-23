@@ -1,0 +1,241 @@
+import { Theme } from "../theme.slint";
+import { Nav } from "../contract/nav.slint";
+import { BackNav } from "../components/back-nav.slint";
+import { Countdown, CountdownUnit, CountdownsData } from "../contract/countdowns.slint";
+import { Card } from "../components/card.slint";
+import { SpawnIn } from "../components/spawn.slint";
+import { Confetti } from "../components/confetti.slint";
+import { ActionButton } from "../components/action-button.slint";
+import { Dock } from "../components/orb.slint";
+
+global CdFmt {
+    pure public function show-value(c: Countdown) -> string {
+        return c.unit == CountdownUnit.days ? c.value + " ngày"
+            : c.unit == CountdownUnit.live ? c.value
+            : c.unit == CountdownUnit.today ? "Hôm nay là " + c.label
+            : "Đã qua";
+    }
+
+    pure public function value-color(c: Countdown) -> color {
+        return c.unit == CountdownUnit.live ? Theme.warm : c.unit == CountdownUnit.passed ? Theme.text-dim : Theme.text;
+    }
+}
+
+// Số ngày: khi số giảm (cùng mốc) thì số cũ trượt xuống, số mới trượt vào từ trên.
+component FlipText inherits Rectangle {
+    in property <string> text;
+    in property <float> num; // giá trị số của `text`, chỉ để biết chiều đổi
+    in property <string> key;
+    in property <length> font-size;
+    in property <color> text-color;
+    in property <bool> flip-enabled: true;
+    private property <string> cur: root.text;
+    private property <string> prev;
+    private property <string> cur-key: root.key;
+    private property <float> cur-num: root.num;
+    private property <duration> now: animation-tick();
+    private property <duration> t0: -10000ms;
+    private property <float> p: clamp((root.now - root.t0) / 450ms, 0, 1);
+    clip: true;
+    changed text => {
+        if (root.key == root.cur-key && root.flip-enabled && root.num < root.cur-num) {
+            root.prev = root.cur;
+            root.t0 = animation-tick();
+        }
+        root.cur = root.text;
+        root.cur-key = root.key;
+        root.cur-num = root.num;
+    }
+    Text {
+        y: (root.p - 1) * root.height;
+        width: parent.width;
+        height: parent.height;
+        text: root.text;
+        color: root.text-color;
+        font-size: root.font-size;
+        horizontal-alignment: left;
+        vertical-alignment: center;
+    }
+    if root.p < 1: Text {
+        y: root.p * root.height;
+        width: parent.width;
+        height: parent.height;
+        text: root.prev;
+        color: root.text-color;
+        font-size: root.font-size;
+        opacity: 1 - root.p;
+        horizontal-alignment: left;
+        vertical-alignment: center;
+    }
+}
+
+// Viền sáng ngắn khi trợ lý trả lời "còn bao nhiêu ngày đến …" (focus).
+component FocusPulse inherits Rectangle {
+    in property <string> key;
+    private property <int> serial: CountdownsData.focus-serial;
+    private property <duration> now: animation-tick();
+    private property <duration> t0: -10000ms;
+    private property <float> p: clamp((root.now - root.t0) / 1500ms, 0, 1);
+    changed serial => { if (CountdownsData.focus == root.key) { root.t0 = animation-tick(); } }
+    border-radius: Theme.radius;
+    border-width: 4px;
+    border-color: Theme.accent;
+    opacity: 1 - root.p;
+    visible: root.p < 1;
+}
+
+export component Countdowns inherits Rectangle {
+    private property <length> row-h: 150px;
+    // Chạm mốc ở danh sách: mốc chính phóng lên từ chỗ ô vừa chạm.
+    private property <duration> now: animation-tick();
+    private property <duration> promote-t0: -10000ms;
+    private property <length> from-x;
+    private property <length> from-y;
+    private property <float> q: clamp((root.now - root.promote-t0) / 400ms, 0, 1);
+    private property <float> qe: 1 - (1 - root.q) * (1 - root.q);
+    VerticalLayout {
+        padding: Theme.space-l;
+        spacing: Theme.space-m;
+        Rectangle {
+            height: Theme.touch-min;
+            Text {
+                text: "‹ " + CountdownsData.title;
+                color: Theme.text;
+                font-size: Theme.font-title;
+                horizontal-alignment: left;
+                vertical-alignment: center;
+            }
+            TouchArea { width: 480px; x: 0; clicked => { Nav.navigate(BackNav.origin); } }
+        }
+        if !CountdownsData.has-main: Text {
+            text: "Hey Jarvis, đếm ngược đến Tết";
+            color: Theme.text-dim;
+            font-size: Theme.font-body;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+            vertical-stretch: 1;
+        }
+        if CountdownsData.has-main: HorizontalLayout {
+            spacing: Theme.space-l;
+            vertical-stretch: 1;
+            main-card := SpawnIn {
+                key: CountdownsData.main.key;
+                horizontal-stretch: 3;
+                opacity: CountdownsData.main.fading ? 0 : 1;
+                animate opacity { duration: 400ms; easing: ease-out; }
+                Card {
+                    x: root.from-x * (1 - root.qe);
+                    y: root.from-y * (1 - root.qe);
+                    transform-scale: 0.5 + 0.5 * root.qe;
+                    VerticalLayout {
+                        padding: Theme.space-l;
+                        spacing: Theme.space-m;
+                        Text { text: CountdownsData.main.label; color: Theme.text-dim; font-size: Theme.font-title; }
+                        FlipText {
+                            key: CountdownsData.main.key;
+                            num: CountdownsData.main.value.to-float();
+                            text: CdFmt.show-value(CountdownsData.main);
+                            text-color: CdFmt.value-color(CountdownsData.main);
+                            font-size: Theme.font-hero;
+                            flip-enabled: CountdownsData.main.unit == CountdownUnit.days;
+                            vertical-stretch: 1;
+                        }
+                        Text {
+                            text: CountdownsData.main.target + (CountdownsData.main.lunar != "" ? " · " + CountdownsData.main.lunar : "");
+                            color: Theme.text;
+                            font-size: Theme.font-body;
+                        }
+                        Rectangle {
+                            height: 16px;
+                            border-radius: 8px;
+                            background: Theme.background;
+                            Rectangle {
+                                x: 0;
+                                width: parent.width * clamp(CountdownsData.main.progress, 0, 1);
+                                border-radius: 8px;
+                                background: Theme.accent;
+                            }
+                        }
+                        Text { text: CountdownsData.main.progress-text; color: Theme.text-dim; font-size: Theme.font-small; }
+                    }
+                    FocusPulse { key: CountdownsData.main.key; }
+                    TouchArea { clicked => { CountdownsData.open-detail(); } }
+                }
+            }
+            Rectangle {
+                horizontal-stretch: 2;
+                for c[i] in CountdownsData.others: Rectangle {
+                    y: i * (root.row-h + Theme.space-m);
+                    height: root.row-h;
+                    width: parent.width;
+                    opacity: c.fading ? 0 : 1;
+                    animate y { duration: 350ms; easing: ease-out; }
+                    animate opacity { duration: 400ms; easing: ease-out; }
+                    SpawnIn {
+                        key: c.key;
+                        Card {
+                            HorizontalLayout {
+                                padding: Theme.space-m;
+                                spacing: Theme.space-m;
+                                VerticalLayout {
+                                    alignment: center;
+                                    Text { text: c.label; color: Theme.text; font-size: Theme.font-body; overflow: elide; }
+                                    Text {
+                                        text: c.target + (c.repeat-text != "" ? " · " + c.repeat-text : "");
+                                        color: Theme.text-dim;
+                                        font-size: Theme.font-small;
+                                        overflow: elide;
+                                    }
+                                }
+                                Text {
+                                    text: CdFmt.show-value(c);
+                                    color: CdFmt.value-color(c);
+                                    font-size: Theme.font-body;
+                                    horizontal-alignment: right;
+                                    vertical-alignment: center;
+                                }
+                            }
+                            FocusPulse { key: c.key; }
+                            TouchArea {
+                                clicked => {
+                                    root.from-x = self.absolute-position.x - main-card.absolute-position.x;
+                                    root.from-y = self.absolute-position.y - main-card.absolute-position.y;
+                                    root.promote-t0 = animation-tick();
+                                    CountdownsData.select(c.key);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        Rectangle { height: Dock.height; } // chừa Voice dock
+    }
+    if CountdownsData.detail-open && CountdownsData.has-main: Rectangle {
+        background: #000000a0;
+        TouchArea { clicked => { CountdownsData.close-detail(); } }
+        Card {
+            width: min(800px, root.width - 2 * Theme.space-l);
+            height: min(420px, root.height - 2 * Theme.space-l);
+            VerticalLayout {
+                padding: Theme.space-l;
+                spacing: Theme.space-m;
+                Text { text: CountdownsData.main.label; color: Theme.text; font-size: Theme.font-title; }
+                Text {
+                    text: CountdownsData.main.target + (CountdownsData.main.lunar != "" ? " · " + CountdownsData.main.lunar : "")
+                        + (CountdownsData.main.repeat-text != "" ? " · " + CountdownsData.main.repeat-text : "");
+                    color: Theme.text-dim;
+                    font-size: Theme.font-body;
+                    wrap: word-wrap;
+                }
+                Rectangle { vertical-stretch: 1; }
+                HorizontalLayout {
+                    spacing: Theme.space-m;
+                    ActionButton { text: "Đóng"; clicked => { CountdownsData.close-detail(); } }
+                    ActionButton { text: "Xoá"; danger: true; clicked => { CountdownsData.remove(CountdownsData.main.key); } }
+                }
+            }
+        }
+    }
+    Confetti { serial: CountdownsData.confetti-serial; }
+}

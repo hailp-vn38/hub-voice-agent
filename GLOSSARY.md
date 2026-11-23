@@ -51,11 +51,16 @@ _Avoid_: highlight, selection
 ## Giao diện
 
 **Màn trung tâm** (`Screen::Center`):
-Màn mặc định với các card hub; không tab, không cuộn.
+Màn mặc định với các card hub; không tab, không cuộn. Nhãn "Home" trên Thanh điều hướng.
 _Avoid_: home screen (trùng tính năng Nhà), dashboard
 
 **Menu tính năng** (`Screen::Menu`):
-Lưới 4 × 2 ô mở các Màn tính năng; vào bằng vuốt phải → trái từ Màn trung tâm.
+Lưới 4 × 2 ô mở các Màn tính năng; nhãn "Ứng dụng" trên Thanh điều hướng, cũng vào được bằng vuốt phải → trái từ Màn trung tâm.
+_Avoid_: thiết bị, app drawer
+
+**Thanh điều hướng** (`nav_rail`):
+Cột nút cố định ở mép trái màn: Home, Ứng dụng, Thống kê, Cài đặt.
+_Avoid_: sidebar, tab bar
 
 **Màn tính năng** (`Screen::Feature`):
 Màn của một tính năng (Thời tiết, Lịch, Nhà, Hẹn giờ, Đếm ngược, Reminder, Ảnh, Setting).
@@ -66,15 +71,15 @@ Màn đồng hồ lớn, độ sáng thấp khi không có tương tác hoặc b
 _Avoid_: screensaver, sleep
 
 **Voice dock** (`voice_dock`):
-Vùng cố định ở góc phải dưới trên mọi màn, chứa Orb, Chữ phản hồi và Dải bước tool.
+Thanh cố định trải ngang đáy mọi màn, chứa Orb ở đầu trái, Chữ phản hồi và Dải bước tool.
 _Avoid_: thanh voice, màn voice
 
 **Orb** (`orb`):
-Hình tròn sống đại diện cho agent; mọi thứ agent tạo ra đều sinh ra từ Orb.
-_Avoid_: avatar, nút mic
+Nút sống ở đầu trái Voice dock (icon mic và vạch sóng) đại diện cho agent; mọi thứ agent tạo ra đều sinh ra từ Orb.
+_Avoid_: avatar
 
 **Chữ phản hồi** (`response_text`):
-Dòng chữ chạy từ Orb sang trái, hiện lời agent và transcript người dùng.
+Dòng chữ chạy từ Orb sang phải, hiện lời agent và transcript người dùng.
 _Avoid_: subtitle, caption, kinetic text
 
 **Dải bước tool** (`tool_trail`):

@@ -94,9 +94,15 @@ ai-hub/
 │   ├── src/
 │   │   ├── main.rs               # nối dây (xem 3.3)
 │   │   ├── ui/
-│   │   │   ├── mod.rs            # run_ui(): event loop Slint trên main thread
-│   │   │   └── bridge/           # mod.rs đọc watch<UiState>; <screen>.rs: apply cho từng màn;
-│   │   │                         # callback Slint → UserInput
+│   │   │   ├── mod.rs            # chọn adapter: demo (feature `demo`) hoặc bridge
+│   │   │   ├── bridge.rs         # watch<UiState> → global hợp đồng; callback hợp đồng → UserInput
+│   │   │   │                     # (tách thành bridge/<feature>.rs khi map thêm tính năng)
+│   │   │   └── demo/             # feature `demo`, không biên dịch cho Pi
+│   │   │       ├── mod.rs        # khai báo module, re-export start()
+│   │   │       ├── start.rs      # Nav cục bộ, tick 1 Hz, Demo panel
+│   │   │       ├── scenarios.rs  # bảng kịch bản của Demo panel
+│   │   │       ├── clock.rs, levels.rs, qr.rs   # giờ, mức mic/TTS giả, sinh QR
+│   │   │       └── fixtures/     # một module mỗi tính năng (fixture + kịch bản); wiring.rs nạp/tick tất cả
 │   │   ├── audio/
 │   │   │   ├── mod.rs            # spawn() → (Sender<AudioCommand>, Receiver<AudioEvent>, watch<Levels>)
 │   │   │   ├── devices.rs        # cpal: chọn XVF3800 cả vào lẫn ra
@@ -109,12 +115,16 @@ ai-hub/
 │   │       ├── pi.rs             # backlight sysfs, nmcli, systemctl
 │   │       └── desktop.rs        # no-op + log
 │   ├── ui/                       # file .slint
-│   │   ├── app.slint             # cửa sổ gốc: tầng màn, Voice dock, lớp báo
+│   │   ├── app.slint             # cửa sổ gốc: Shell (hoặc bảng mẫu theme trong demo)
 │   │   ├── theme.slint           # màu, font, cỡ theo scale-factor
-│   │   ├── components/           # orb, response-text, tool-trail, card, slider, page-dots
-│   │   └── screens/              # center, menu, weather, calendar, home, timers,
-│   │                             # countdowns, reminders, photos, settings, ambient,
-│   │                             # alert, first-boot
+│   │   ├── contract/             # hợp đồng mỗi tính năng: struct + global <Feature>Data
+│   │   ├── components/           # shell, orb, spawn, response-text, tool-trail, card, slider,
+│   │   │                         # page-dots, back-nav…; calendar/, weather/ cho component riêng màn
+│   │   ├── screens/              # center, menu, weather, calendar, home, timers, countdowns,
+│   │   │                         # reminders, photos, photo-viewer, settings (+ settings/), ambient,
+│   │   │                         # first-boot
+│   │   ├── overlays/             # alert, voice-slider, confirm
+│   │   └── demo/                 # chỉ dùng trong demo: panel, sample, spawn-demo
 │   └── assets/
 │       ├── fonts/                # Be Vietnam Pro / Inter, 2 độ đậm
 │       ├── icons/                # SVG outline

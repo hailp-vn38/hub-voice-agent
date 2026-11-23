@@ -1,0 +1,92 @@
+import { Theme } from "../../theme.slint";
+import { Nav, Screen } from "../../contract/nav.slint";
+
+component NavButton inherits Rectangle {
+    in property <image> icon;
+    in property <string> label;
+    in property <bool> active;
+    in property <length> u: 1px;
+    callback activated();
+
+    border-radius: Theme.radius-s;
+    background: root.active ? Theme.accent.with-alpha(0.55) : touch.pressed ? Theme.card : Theme.card.with-alpha(0.6);
+    border-color: root.active ? Theme.accent : Theme.border.with-alpha(0.4);
+    border-width: 1 * root.u;
+    drop-shadow-blur: root.active ? 14 * root.u : 0;
+    drop-shadow-color: Theme.accent.with-alpha(0.38);
+    transform-scale: touch.pressed ? 0.96 : 1.0;
+    animate transform-scale { duration: Theme.anim-tap; easing: ease-out; }
+    animate background { duration: Theme.anim-state; }
+
+    Image {
+        y: 16 * root.u;
+        width: 30 * root.u;
+        height: 30 * root.u;
+        source: root.icon;
+        colorize: root.active ? Theme.text : Theme.text-dim;
+    }
+    Text {
+        y: 54 * root.u;
+        width: parent.width - 4 * root.u;
+        height: 24 * root.u;
+        text: root.label;
+        color: root.active ? Theme.text : Theme.text-dim;
+        font-size: Theme.type-caption;
+        font-weight: root.active ? 600 : 400;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+        overflow: elide;
+    }
+    touch := TouchArea { clicked => { root.activated(); } }
+}
+
+// Thanh điều hướng trái: Home (Màn trung tâm), Ứng dụng (Menu tính năng), Thống kê (màn Nhà), Cài đặt.
+export component NavRail inherits Rectangle {
+    in property <length> u: 1px;
+    in property <Screen> current;
+    width: 100 * root.u;
+    background: Theme.background.with-alpha(0.74);
+    border-color: Theme.border.with-alpha(0.5);
+    border-width: 1 * root.u;
+    border-radius: Theme.radius-panel;
+
+    VerticalLayout {
+        padding-top: 27 * root.u;
+        padding-left: 17 * root.u;
+        padding-right: 17 * root.u;
+        spacing: 16 * root.u;
+        alignment: start;
+        NavButton {
+            height: 90 * root.u;
+            u: root.u;
+            icon: @image-url("../../../assets/home/icons/home.png");
+            label: "Home";
+            active: root.current == Screen.center;
+            activated => { Nav.navigate(Screen.center); }
+        }
+        NavButton {
+            height: 90 * root.u;
+            u: root.u;
+            icon: @image-url("../../../assets/home/icons/devices.png");
+            label: "Ứng dụng";
+            active: root.current == Screen.menu;
+            activated => { Nav.navigate(Screen.menu); }
+        }
+        NavButton {
+            height: 90 * root.u;
+            u: root.u;
+            icon: @image-url("../../../assets/home/icons/chart.png");
+            label: "Thống kê";
+            active: root.current == Screen.home;
+            activated => { Nav.navigate(Screen.home); }
+        }
+        NavButton {
+            height: 90 * root.u;
+            u: root.u;
+            icon: @image-url("../../../assets/home/icons/settings.png");
+            label: "Cài đặt";
+            active: root.current == Screen.settings;
+            activated => { Nav.navigate(Screen.settings); }
+        }
+    }
+}

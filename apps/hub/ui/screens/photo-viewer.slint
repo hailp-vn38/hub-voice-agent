@@ -1,0 +1,174 @@
+import { Theme } from "../theme.slint";
+import { PhotosData, PhotoState, Photo } from "../contract/photos.slint";
+import { SpawnIn } from "../components/spawn.slint";
+import { PendingState } from "../contract/spawn.slint";
+import { Icon } from "../components/icon.slint";
+import { Confirm } from "../overlays/confirm.slint";
+
+// Xem ảnh toàn màn: Ken Burns, crossfade, chạm mép đổi ảnh, vuốt trái → phải về lưới.
+export component PhotoViewer inherits Rectangle {
+    private property <int> idx: PhotosData.viewer-index;
+    private property <Photo> cur: PhotosData.viewer[root.idx];
+    private property <bool> ready: root.cur.state == PhotoState.ready;
+    private property <bool> captions: true;
+    private property <bool> confirm-remove;
+    private property <duration> now: animation-tick();
+    private property <duration> t0: animation-tick();
+    private property <duration> pin-t: -10000ms;
+    private property <float> fade: clamp((root.now - root.t0) / 600ms, 0, 1);
+    // Ken Burns: phóng 1.0 → 1.12 trong 12 giây; chỉ số chẵn/lẻ đổi điểm neo.
+    private property <float> kb: clamp((root.now - root.t0) / 12000ms, 0, 1);
+    private property <float> pin-bump: clamp((root.now - root.pin-t) / 350ms, 0, 1);
+    private property <image> shown; // ảnh đang hiện, thành ảnh nền khi crossfade
+    private property <image> prev;
+    private property <bool> pinned: root.cur.pinned;
+    private property <float> grow: root.ready ? 1 : 0;
+    animate grow { duration: 500ms; easing: ease-out; }
+
+    init => { root.shown = root.cur.full; root.t0 = animation-tick(); }
+    changed idx => {
+        root.prev = root.shown;
+        root.shown = root.cur.full;
+        root.t0 = animation-tick();
+    }
+    changed ready => { root.t0 = animation-tick(); root.shown = root.cur.full; }
+    changed pinned => { root.pin-t = animation-tick(); }
+
+    Rectangle { background: Theme.background; opacity: 0.94; }
+
+    // Khung chờ / lỗi: thẻ nhỏ sinh từ Orb, nở thành toàn màn khi ảnh xong.
+    SpawnIn {
+        key: "photo";
+        pending: root.cur.state == PhotoState.failed ? PendingState.failed : PendingState.none;
+        width: parent.width * (0.3 + 0.7 * root.grow);
+        height: parent.height * (0.3 + 0.7 * root.grow);
+        x: (parent.width - self.width) / 2;
+        y: (parent.height - self.height) / 2;
+        Rectangle {
+            border-radius: Theme.radius-panel * (1 - root.grow);
+            background: Theme.card;
+            clip: true;
+            Image {
+                source: root.prev;
+                width: parent.width;
+                height: parent.height;
+                image-fit: cover;
+            }
+            Image {
+                source: root.shown;
+                width: parent.width;
+                height: parent.height;
+                image-fit: cover;
+                opacity: root.ready ? root.fade : 0;
+                transform-scale: 1 + 0.12 * root.kb;
+                transform-origin: { x: mod(root.idx, 2) == 0 ? 0px : parent.width, y: parent.height / 2 };
+            }
+            if !root.ready: VerticalLayout {
+                alignment: center;
+                spacing: 8 * Theme.unit;
+                Icon { name: "photo"; color: Theme.text-dim; size: 64 * Theme.unit; x: (parent.width - self.width) / 2; }
+                Text {
+                    text: root.cur.state == PhotoState.failed ? "Không tải được ảnh" : "Đang tải ảnh…";
+                    color: Theme.text-dim;
+                    font-size: Theme.type-body;
+                    horizontal-alignment: center;
+                }
+            }
+        }
+    }
+
+    // Chạm giữa = ẩn/hiện chú thích; chạm mép = đổi ảnh; vuốt trái → phải = về lưới.
+    SwipeGestureHandler {
+        handle-swipe-right: true;
+        swiped => { PhotosData.close-viewer(); }
+        TouchArea {
+            clicked => {
+                if (self.mouse-x < 160 * Theme.unit) { PhotosData.previous(); }
+                else if (self.mouse-x > self.width - 160 * Theme.unit) { PhotosData.next(); }
+                else { root.captions = !root.captions; }
+            }
+        }
+    }
+
+    // Chấm chỉ số ở mép trên.
+    if PhotosData.viewer.length > 1: HorizontalLayout {
+        y: 24 * Theme.unit;
+        height: 8 * Theme.unit;
+        alignment: center;
+        spacing: 8 * Theme.unit;
+        for p[i] in PhotosData.viewer: Rectangle {
+            width: i == root.idx ? 24 * Theme.unit : 8 * Theme.unit;
+            height: 8 * Theme.unit;
+            border-radius: 4 * Theme.unit;
+            animate width { duration: Theme.anim-state; }
+            background: i == root.idx ? Theme.text : Theme.text-dim;
+            opacity: i == root.idx ? 1 : 0.5;
+        }
+    }
+
+    if root.captions && root.ready: Rectangle {
+        y: parent.height - self.height;
+        height: 200 * Theme.unit;
+        background: @linear-gradient(180deg, Theme.background.with-alpha(0) 0%, Theme.background.with-alpha(0.85) 100%);
+        VerticalLayout {
+            padding-left: 40 * Theme.unit;
+            padding-right: 40 * Theme.unit;
+            padding-bottom: 100 * Theme.unit;
+            alignment: end;
+            spacing: 4 * Theme.unit;
+            Text { text: root.cur.caption; color: Theme.text; font-size: Theme.type-page-title; font-weight: 600; overflow: elide; }
+            Text { text: root.cur.source; color: Theme.text-dim; font-size: Theme.type-body; overflow: elide; }
+        }
+    }
+
+    // Ghim (nhảy lên khi đổi trạng thái) và xoá.
+    if root.captions && root.ready: HorizontalLayout {
+        x: parent.width - self.width - 30 * Theme.unit;
+        y: 42 * Theme.unit;
+        height: 48 * Theme.unit;
+        spacing: 12 * Theme.unit;
+        Rectangle {
+            width: self.height;
+            border-radius: self.height / 2;
+            background: root.pinned ? Theme.warm : Theme.glass;
+            border-width: 1 * Theme.unit;
+            border-color: root.pinned ? Theme.warm.brighter(0.4) : Theme.border;
+            drop-shadow-blur: root.pinned ? 12 * Theme.unit : 0;
+            drop-shadow-color: Theme.warm.with-alpha(0.45);
+            Icon {
+                name: "pin";
+                color: Theme.text;
+                size: 22 * Theme.unit;
+                y: (parent.height - self.height) / 2 - 10 * Theme.unit * sin(root.pin-bump * 180deg);
+            }
+            TouchArea { clicked => { PhotosData.toggle-pin(root.cur.key); } }
+        }
+        Rectangle {
+            width: 88 * Theme.unit;
+            border-radius: self.height / 2;
+            background: Theme.glass;
+            border-width: 1 * Theme.unit;
+            border-color: Theme.error.with-alpha(0.6);
+            Text { text: "Xoá"; color: Theme.error; font-size: Theme.type-body; font-weight: 600; }
+            TouchArea { clicked => { root.confirm-remove = true; } }
+        }
+    }
+
+    Timer {
+        interval: 6s;
+        running: PhotosData.auto-advance && PhotosData.viewer.length > 1 && root.ready;
+        triggered => { PhotosData.next(); }
+    }
+
+    // Xoá cần xác nhận (thẻ dùng chung, ticket 14).
+    if root.confirm-remove: Confirm {
+        title: "Xoá ảnh này?";
+        body: root.cur.caption;
+        action-text: "Xoá";
+        cancelled => { root.confirm-remove = false; }
+        confirmed => {
+            PhotosData.remove(root.cur.key);
+            root.confirm-remove = false;
+        }
+    }
+}

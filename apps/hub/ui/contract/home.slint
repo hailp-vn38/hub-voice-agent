@@ -1,0 +1,20 @@
+// Hợp đồng Home. Ticket UI: .scratch/hub-ui/issues/16-home.md.
+export enum HomeKind { light, switch, sensor }
+
+export struct HomeTile {
+    key: string,
+    name: string,
+    kind: HomeKind,
+    on: bool,
+    value: string,
+    pending: bool,
+    stale: bool,
+}
+
+export global HomeData {
+    in property <[HomeTile]> tiles;
+    in property <bool> configured;
+    in property <bool> connected: true;
+    in property <string> updated; // "HH:MM"
+    callback toggle(string);
+}

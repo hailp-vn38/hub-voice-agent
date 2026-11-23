@@ -1,0 +1,199 @@
+import { Theme } from "../theme.slint";
+import { Screen } from "../contract/nav.slint";
+import { StatusBar } from "../contract/status.slint";
+import { Center, CenterCard } from "../contract/center.slint";
+import { Icon } from "../components/icon.slint";
+import { Backdrop } from "../components/home/backdrop.slint";
+import { AgendaCard, NextCard } from "../components/home/agenda.slint";
+import { QuickTile, DeviceTile, TimerTile, HomeSafeCard } from "../components/home/quick-tile.slint";
+
+// Màn trung tâm (Home) theo thiết kế docs/smart-hub-home.
+// Toạ độ theo canvas 1280×600 nhân `u`; canvas giãn theo cửa sổ (cw × ch ≥ 1280 × 600):
+// cột phải bám mép phải, hàng ô và thanh Voice (Shell) bám đáy, phần giữa dàn theo dy.
+export component CenterScreen inherits Rectangle {
+    in property <length> u: 1px;
+    in property <float> cw: 1280;
+    in property <float> ch: 600;
+    private property <float> dy: root.ch - 600;
+    private property <float> gap: 12;
+    private property <int> extra: (Center.timer.visible ? 1 : 0) + (Center.countdown.visible ? 1 : 0);
+    private property <int> tiles: max(1, root.extra + Center.home.length);
+    private property <float> row-x: 130;
+    private property <float> row-w: root.cw - 244 - root.gap - root.row-x;
+    private property <float> tw: min(160, (root.row-w - root.gap * (root.tiles - 1)) / root.tiles);
+    private property <float> row-y: 360 + root.dy;
+    private property <float> hour: StatusBar.day-phase * 24;
+    private property <CenterCard> zoom-card: CenterCard.none;
+    private property <int> serial: Center.focus-serial;
+
+    changed serial => {
+        root.zoom-card = Center.focus;
+        zoom-timer.running = true;
+    }
+    zoom-timer := Timer {
+        interval: 1400ms;
+        running: false;
+        triggered => {
+            self.running = false;
+            root.zoom-card = CenterCard.none;
+        }
+    }
+
+    Backdrop { }
+
+    // Đồng hồ + thời tiết: chạm mở màn Thời tiết. Cụm thời tiết đi theo bề rộng đồng hồ.
+    Rectangle {
+        x: 140 * root.u;
+        y: (52 + root.dy * 0.2) * root.u;
+        width: 660 * root.u;
+        height: 130 * root.u;
+        transform-scale: root.zoom-card == CenterCard.weather ? 1.06 : 1.0;
+        animate transform-scale { duration: Theme.anim-state; easing: ease-out; }
+        TouchArea { clicked => { Center.open(Screen.weather); } }
+        HorizontalLayout {
+            padding-left: 10 * root.u;
+            spacing: 28 * root.u;
+            alignment: start;
+            VerticalLayout {
+                alignment: start;
+                Text { text: Center.time; font-size: Theme.type-clock; font-weight: 300; color: Theme.text; }
+                Text { text: Center.date; font-size: Theme.type-body; color: Theme.text-dim; overflow: elide; }
+            }
+            Rectangle {
+                width: 1 * root.u;
+                height: 72 * root.u;
+                y: 14 * root.u;
+                background: Theme.border;
+            }
+            VerticalLayout {
+                alignment: start;
+                padding-top: 8 * root.u;
+                HorizontalLayout {
+                    spacing: 10 * root.u;
+                    alignment: start;
+                    if Center.weather.icon == "sun": Image {
+                        width: 44 * root.u;
+                        height: 44 * root.u;
+                        y: (parent.height - self.height) / 2;
+                        source: @image-url("../../assets/home/icons/sun.png");
+                        colorize: Theme.warm;
+                    }
+                    if Center.weather.icon != "sun": Icon {
+                        y: (parent.height - self.height) / 2;
+                        name: Center.weather.icon;
+                        size: 44 * root.u;
+                        color: Theme.warm;
+                    }
+                    Text { text: Center.weather.temp; font-size: Theme.type-clock * 0.8; font-weight: 300; color: Theme.text; }
+                }
+                Text { text: Center.weather.summary; font-size: Theme.type-body; color: Theme.text-dim; overflow: elide; }
+                if Center.weather.stale: Text {
+                    text: "cập nhật lúc " + Center.weather.updated;
+                    font-size: Theme.type-caption;
+                    color: Theme.warm;
+                }
+            }
+        }
+    }
+
+    // Lời chào + mascot.
+    Text {
+        x: 150 * root.u;
+        y: (238 + root.dy * 0.5) * root.u;
+        width: 380 * root.u;
+        text: root.hour < 11 ? "Chào buổi sáng!" : root.hour < 18 ? "Chào buổi chiều!" : "Chào buổi tối!";
+        font-size: Theme.type-page-title;
+        font-weight: 600;
+        color: Theme.text;
+        overflow: elide;
+    }
+    Text {
+        x: 152 * root.u;
+        y: (292 + root.dy * 0.5) * root.u;
+        width: 360 * root.u;
+        text: "Chúc bạn một ngày thật tuyệt vời!";
+        font-size: Theme.type-body;
+        color: Theme.text-dim;
+        overflow: elide;
+    }
+    Image {
+        x: 500 * root.u;
+        y: (188 + root.dy * 0.5) * root.u;
+        width: 240 * root.u;
+        height: 190 * root.u;
+        source: @image-url("../../assets/home/mascot/assistant.png");
+        image-fit: contain;
+    }
+
+    // Cột phải: lịch hôm nay, Reminder tiếp theo.
+    AgendaCard {
+        x: (root.cw - 460) * root.u;
+        y: (42 + root.dy * 0.2) * root.u;
+        width: 430 * root.u;
+        height: 182 * root.u;
+        u: root.u;
+        zoomed: root.zoom-card == CenterCard.calendar;
+        tapped => { Center.open(Screen.calendar); }
+    }
+    NextCard {
+        x: (root.cw - 460) * root.u;
+        y: (238 + root.dy * 0.5) * root.u;
+        width: 430 * root.u;
+        height: 110 * root.u;
+        u: root.u;
+        zoomed: root.zoom-card == CenterCard.reminders;
+        tapped => { Center.open(Screen.reminders); }
+    }
+
+    // Hàng ô động: các ô dời mượt khi thêm/bớt.
+    TimerTile {
+        x: root.row-x * root.u;
+        y: root.row-y * root.u;
+        width: root.tw * root.u;
+        height: 130 * root.u;
+        u: root.u;
+        timer: Center.timer;
+        opacity: Center.timer.visible ? 1 : 0;
+        visible: self.opacity > 0;
+        zoomed: root.zoom-card == CenterCard.timer;
+        animate opacity { duration: Theme.anim-state; }
+        tapped => { Center.open(Screen.timers); }
+    }
+    QuickTile {
+        x: (root.row-x + (Center.timer.visible ? root.tw + root.gap : 0)) * root.u;
+        y: root.row-y * root.u;
+        width: root.tw * root.u;
+        height: 130 * root.u;
+        u: root.u;
+        icon: @image-url("../../assets/home/icons/lantern.png");
+        title: Center.countdown.today ? "Hôm nay" : Center.countdown.value;
+        detail: Center.countdown.label;
+        highlight: Center.countdown.today;
+        opacity: Center.countdown.visible ? 1 : 0;
+        visible: self.opacity > 0;
+        zoomed: root.zoom-card == CenterCard.countdown;
+        animate x { duration: Theme.anim-state; easing: ease-out; }
+        animate opacity { duration: Theme.anim-state; }
+        tapped => { Center.open(Screen.countdowns); }
+    }
+    for t[i] in Center.home: DeviceTile {
+        x: (root.row-x + (root.extra + i) * (root.tw + root.gap)) * root.u;
+        y: root.row-y * root.u;
+        width: root.tw * root.u;
+        height: 130 * root.u;
+        u: root.u;
+        tile: t;
+        updated: Center.weather.updated;
+        animate x { duration: Theme.anim-state; easing: ease-out; }
+        toggle(k) => { Center.toggle-home(k); }
+    }
+    HomeSafeCard {
+        x: (root.cw - 244) * root.u;
+        y: root.row-y * root.u;
+        width: 213 * root.u;
+        height: 130 * root.u;
+        u: root.u;
+        safe: Center.home-safe;
+        tapped => { Center.open(Screen.home); }
+    }
+}

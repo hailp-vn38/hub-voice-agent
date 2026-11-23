@@ -1,0 +1,195 @@
+import { Theme } from "../../theme.slint";
+import { CenterTimer } from "../../contract/center.slint";
+import { HomeTile, HomeKind } from "../../contract/home.slint";
+
+// Khung ô nhanh (Aurora GlassCard): kính xanh, hoặc cam ấm khi `highlight` (thiết bị đang bật).
+// Nhấn: co nhẹ và sáng lên; phóng lớn tại chỗ khi `zoomed` (Center.focus).
+export component TileFrame inherits Rectangle {
+    in property <length> u: 1px;
+    in property <bool> highlight;
+    in property <bool> zoomed;
+    callback tapped();
+    border-radius: Theme.radius-card;
+    background: root.highlight ? @linear-gradient(135deg, Theme.warm.darker(0.45) 0%, Theme.warm 80%)
+        : Theme.glass;
+    border-width: 1 * root.u;
+    border-color: root.highlight ? Theme.warm.brighter(0.4) : Theme.border;
+    drop-shadow-blur: root.highlight ? 13 * root.u : 0;
+    drop-shadow-color: Theme.warm.with-alpha(0.38);
+    transform-scale: root.zoomed ? 1.06 : touch.pressed ? 0.97 : 1.0;
+    animate transform-scale { duration: touch.pressed ? Theme.anim-tap : Theme.anim-state; easing: ease-out; }
+    Rectangle {
+        border-radius: parent.border-radius;
+        background: Theme.text.with-alpha(touch.pressed ? 0.08 : 0);
+        animate background { duration: Theme.anim-tap; }
+    }
+    touch := TouchArea { clicked => { root.tapped(); } }
+    @children
+}
+
+// Ô icon + tiêu đề + dòng phụ (+ công tắc). Icon xám khi chưa bật, `tint` khi có trạng thái.
+export component QuickTile inherits TileFrame {
+    in property <image> icon;
+    in property <color> tint: Theme.accent-cyan;
+    in property <string> title;
+    in property <string> detail;
+    in property <bool> switchable;
+    in property <bool> on;
+
+    Rectangle {
+        x: 13 * root.u;
+        y: 13 * root.u;
+        width: 41 * root.u;
+        height: 41 * root.u;
+        border-radius: Theme.radius-s;
+        background: root.highlight ? Theme.text.with-alpha(0.2) : Theme.accent.with-alpha(0.25);
+        Image {
+            width: parent.width - 14 * root.u;
+            height: parent.height - 14 * root.u;
+            source: root.icon;
+            colorize: root.highlight ? Theme.text : root.tint;
+        }
+    }
+    Text {
+        x: 14 * root.u;
+        y: 56 * root.u;
+        width: parent.width - 23 * root.u;
+        height: 44 * root.u;
+        text: root.title;
+        color: Theme.text;
+        font-size: Theme.type-card-title;
+        font-weight: 600;
+        wrap: word-wrap;
+        overflow: elide;
+        vertical-alignment: bottom;
+    }
+    Text {
+        x: 14 * root.u;
+        y: 100 * root.u;
+        width: parent.width - (root.switchable ? 64 : 23) * root.u;
+        height: 20 * root.u;
+        text: root.detail;
+        color: root.highlight ? Theme.text : Theme.text-dim;
+        font-size: Theme.type-caption;
+        overflow: elide;
+        vertical-alignment: center;
+    }
+    if root.switchable: Rectangle {
+        x: parent.width - 49 * root.u;
+        y: parent.height - 31 * root.u;
+        width: 38 * root.u;
+        height: 21 * root.u;
+        border-radius: self.height / 2;
+        background: root.on ? Theme.text : Theme.border;
+        Rectangle {
+            x: (root.on ? 20 : 3) * root.u;
+            y: 3 * root.u;
+            width: 15 * root.u;
+            height: 15 * root.u;
+            border-radius: self.height / 2;
+            background: root.on ? Theme.warm.darker(0.2) : Theme.text;
+            animate x { duration: Theme.anim-state; }
+        }
+    }
+}
+
+// Ô thiết bị nhà thông minh (Aurora DeviceTile / SensorTile).
+export component DeviceTile inherits QuickTile {
+    in property <HomeTile> tile;
+    in property <string> updated;
+    callback toggle(string);
+    private property <bool> sensor: root.tile.kind == HomeKind.sensor;
+    icon: root.tile.kind == HomeKind.light ? @image-url("../../../assets/home/icons/light.png")
+        : root.tile.kind == HomeKind.switch ? @image-url("../../../assets/home/icons/fan.png")
+        : @image-url("../../../assets/home/icons/snowflake.png");
+    // Cảm biến: cyan; thiết bị đang tắt: xám (đang bật thì khung đã cam).
+    tint: root.sensor ? Theme.accent-cyan : Theme.text-dim;
+    title: root.tile.name;
+    detail: root.tile.pending ? "Đang chờ…"
+        : root.tile.stale ? "cập nhật lúc " + root.updated
+        : root.sensor ? root.tile.value
+        : root.tile.on ? "Bật" : "Tắt";
+    switchable: !root.sensor;
+    on: root.tile.on;
+    highlight: root.tile.on && !root.sensor;
+    opacity: root.tile.stale ? 0.45 : 1.0;
+    tapped => {
+        if (!root.sensor && !root.tile.pending) { root.toggle(root.tile.key); }
+    }
+}
+
+// Ô hẹn giờ: vòng tiến độ + thời gian còn lại.
+export component TimerTile inherits TileFrame {
+    in property <CenterTimer> timer;
+    private property <length> d: 46 * root.u;
+    private property <float> p: clamp(root.timer.progress, 0.001, 0.999);
+    private property <angle> a: root.p * 360deg;
+    Path {
+        x: 12 * root.u;
+        y: (parent.height - self.height) / 2;
+        width: root.d;
+        height: root.d;
+        viewbox-width: 100;
+        viewbox-height: 100;
+        commands: "M 50 6 A 44 44 0 1 1 49.99 6";
+        stroke: Theme.border;
+        stroke-width: 5 * root.u;
+    }
+    Path {
+        x: 12 * root.u;
+        y: (parent.height - self.height) / 2;
+        width: root.d;
+        height: root.d;
+        viewbox-width: 100;
+        viewbox-height: 100;
+        commands: "M 50 6 A 44 44 0 " + (root.p > 0.5 ? 1 : 0) + " 1 " + (50 + 44 * sin(root.a)) + " " + (50 - 44 * cos(root.a));
+        stroke: Theme.accent-cyan;
+        stroke-width: 5 * root.u;
+    }
+    VerticalLayout {
+        x: root.d + 22 * root.u;
+        width: parent.width - self.x - 8 * root.u;
+        alignment: center;
+        Text { text: root.timer.remaining; color: Theme.text; font-size: Theme.type-card-title; font-weight: 600; overflow: elide; }
+        Text { text: root.timer.label; color: Theme.text-dim; font-size: Theme.type-caption; overflow: elide; }
+    }
+}
+
+// Thẻ "Nhà của bạn" (Aurora StatusBadge): ảnh nhà + trạng thái an toàn, có cả chữ lẫn màu.
+export component HomeSafeCard inherits TileFrame {
+    in property <bool> safe;
+    clip: true;
+    Image {
+        y: parent.height * 0.5;
+        width: parent.width;
+        height: parent.height * 0.5;
+        source: @image-url("../../../assets/home/backgrounds/security-house.jpg");
+        image-fit: cover;
+        opacity: 0.7;
+    }
+    Text {
+        x: 18 * root.u;
+        y: 15 * root.u;
+        text: "Nhà của bạn";
+        font-size: Theme.type-card-title;
+        font-weight: 600;
+        color: Theme.text;
+    }
+    Image {
+        x: 18 * root.u;
+        y: 43 * root.u;
+        width: 19 * root.u;
+        height: 19 * root.u;
+        source: @image-url("../../../assets/home/icons/shield.png");
+        colorize: root.safe ? Theme.done : Theme.warm;
+    }
+    Text {
+        x: 44 * root.u;
+        y: 43 * root.u;
+        height: 19 * root.u;
+        text: root.safe ? "An toàn" : "Cần kiểm tra";
+        color: root.safe ? Theme.done : Theme.warm;
+        font-size: Theme.type-caption;
+        vertical-alignment: center;
+    }
+}

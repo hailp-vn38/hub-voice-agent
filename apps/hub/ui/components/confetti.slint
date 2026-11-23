@@ -1,0 +1,27 @@
+import { Theme } from "../theme.slint";
+import { Dock } from "orb.slint";
+
+// ~30 mảnh pháo giấy bắn ra từ Orb mỗi khi `serial` đổi; hết 2 giây thì không còn phần tử nào.
+export component Confetti inherits Rectangle {
+    in property <int> serial;
+    private property <int> s: root.serial;
+    private property <duration> now: animation-tick();
+    private property <duration> t0: -10000ms;
+    private property <float> p: clamp((root.now - root.t0) / 2000ms, 0, 1);
+    changed s => { root.t0 = animation-tick(); }
+
+    if root.p < 1: Rectangle {
+        for i in 30: Rectangle {
+            private property <float> dir: -0.25 + (mod(i * 7, 30) / 30 - 0.5) * 0.7;
+            private property <length> speed: (700 + mod(i * 13, 10) * 90) * 1px;
+            x: Dock.orb-x - root.absolute-position.x + cos(self.dir * 360deg) * self.speed * root.p * 1.2;
+            y: Dock.orb-y - root.absolute-position.y + sin(self.dir * 360deg) * self.speed * root.p * 1.2 + 1400px * root.p * root.p;
+            width: 14px;
+            height: 22px;
+            border-radius: 3px;
+            opacity: 1 - root.p * root.p;
+            transform-rotation: mod(i * 53, 360) * 1deg + root.p * 720deg;
+            background: mod(i, 4) == 0 ? Theme.warm : mod(i, 4) == 1 ? Theme.accent : mod(i, 4) == 2 ? Theme.done : Theme.error;
+        }
+    }
+}

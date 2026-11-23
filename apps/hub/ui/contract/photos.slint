@@ -1,0 +1,29 @@
+// Hợp đồng Photos. Ticket UI: .scratch/hub-ui/issues/15-photos.md.
+export enum PhotoState { loading, ready, failed }
+
+export struct Photo {
+    key: string,
+    thumb: image,
+    full: image,
+    caption: string,
+    source: string,
+    time: string,
+    pinned: bool,
+    state: PhotoState,
+}
+
+export global PhotosData {
+    in property <string> title;
+    in property <string> pinned-text;
+    in property <[Photo]> photos;
+    in property <bool> viewing;
+    in property <[Photo]> viewer;
+    in property <int> viewer-index;
+    in property <bool> auto-advance;
+    callback open(string);
+    callback next();
+    callback previous();
+    callback close-viewer();
+    callback toggle-pin(string);
+    callback remove(string);
+}

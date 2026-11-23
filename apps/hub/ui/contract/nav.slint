@@ -1,0 +1,8 @@
+// Hợp đồng Nav. Ticket UI: .scratch/hub-ui/issues/03-shell-navigation.md (tạo ở 01-contract-demo.md).
+// Quy tắc hợp đồng: .scratch/hub-ui/spec.md.
+export enum Screen { center, menu, weather, calendar, home, timers, countdowns, reminders, photos, settings, ambient, first-boot }
+
+export global Nav {
+    in property <Screen> screen;
+    callback navigate(Screen);
+}

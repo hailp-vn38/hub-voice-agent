@@ -1,0 +1,99 @@
+import { Theme } from "../../theme.slint";
+import { RemindersData, ReminderItem, ReminderPast } from "../../contract/reminders.slint";
+import { SpawnIn } from "../spawn.slint";
+
+// Một dòng lời nhắc (Aurora): khối giờ bên trái, nội dung bên phải, icon lặp lại.
+// Huỷ: mờ dần. Hoãn (giờ đổi, cùng key): dòng trượt sang giờ mới.
+// Focus giọng nói (focus-serial đổi): các mục trong `focus` sáng lên rồi tắt dần.
+export component ItemRow inherits Rectangle {
+    in property <ReminderItem> item;
+    private property <length> u: Theme.unit;
+    height: 58 * root.u;
+    private property <duration> now: animation-tick();
+    private property <int> focus-serial: RemindersData.focus-serial;
+    private property <duration> focus-t: -10000ms;
+    changed focus-serial => { root.focus-t = animation-tick(); }
+    private property <float> glow: 1 - clamp((root.now - root.focus-t - 2s) / 800ms, 0, 1);
+    private property <string> time: root.item.time;
+    private property <string> time-key: root.item.key;
+    private property <duration> move-t: -10000ms;
+    changed time => {
+        if (root.item.key == root.time-key) { root.move-t = animation-tick(); }
+        root.time-key = root.item.key;
+    }
+    private property <float> mv: clamp((root.now - root.move-t) / 500ms, 0, 1);
+    SpawnIn {
+        key: root.item.key;
+        Rectangle {
+            y: (1 - root.mv) * -root.height * 0.6;
+            border-radius: Theme.radius-s;
+            background: Theme.card.with-alpha(0.55);
+            border-width: 1 * root.u;
+            border-color: Theme.border.with-alpha(0.5);
+            opacity: root.item.fading ? 0 : 1;
+            animate opacity { duration: 500ms; easing: ease-out; }
+            for f in RemindersData.focus: Rectangle {
+                if f == root.item.key && root.glow > 0: Rectangle {
+                    opacity: root.glow;
+                    border-width: 2 * root.u;
+                    border-color: Theme.accent;
+                    border-radius: Theme.radius-s;
+                    background: Theme.accent.with-alpha(0.18);
+                }
+            }
+            Rectangle {
+                x: 9 * root.u;
+                width: 70 * root.u;
+                height: parent.height - 18 * root.u;
+                border-radius: Theme.radius-s * 0.75;
+                background: Theme.accent.with-alpha(0.25);
+                Text {
+                    text: root.item.time;
+                    color: Theme.accent-cyan;
+                    font-size: Theme.type-body;
+                    font-weight: 600;
+                }
+            }
+            Text {
+                x: 92 * root.u;
+                width: parent.width - self.x - (root.item.repeats ? 44 : 14) * root.u;
+                text: root.item.text;
+                color: Theme.text;
+                font-size: Theme.type-body;
+                vertical-alignment: center;
+                overflow: elide;
+            }
+            if root.item.repeats: Text {
+                x: parent.width - 36 * root.u;
+                text: "↻";
+                color: Theme.text-dim;
+                font-size: Theme.type-card-title;
+                vertical-alignment: center;
+            }
+        }
+    }
+}
+
+// Lời nhắc đã qua: xanh khi đã nhắc, cam + chữ "Đã lỡ" khi lỡ.
+export component PastCard inherits Rectangle {
+    in property <ReminderPast> past;
+    private property <length> u: Theme.unit;
+    border-radius: Theme.radius-s;
+    background: root.past.missed ? Theme.warm.with-alpha(0.16) : Theme.card.with-alpha(0.55);
+    border-width: 1 * root.u;
+    border-color: root.past.missed ? Theme.warm : Theme.border.with-alpha(0.5);
+    VerticalLayout {
+        alignment: center;
+        padding-left: 12 * root.u;
+        padding-right: 12 * root.u;
+        spacing: 2 * root.u;
+        Text {
+            text: root.past.time + (root.past.missed ? " · Đã lỡ" : " · Đã nhắc");
+            color: root.past.missed ? Theme.warm : Theme.done;
+            font-size: Theme.type-caption;
+            font-weight: 600;
+            overflow: elide;
+        }
+        Text { text: root.past.text; color: Theme.text; font-size: Theme.type-body; overflow: elide; }
+    }
+}

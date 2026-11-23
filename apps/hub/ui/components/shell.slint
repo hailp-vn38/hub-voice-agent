@@ -1,0 +1,159 @@
+import { Theme } from "../theme.slint";
+import { Nav, Screen } from "../contract/nav.slint";
+import { PageDots } from "page-dots.slint";
+import { StatusBarView } from "status-bar.slint";
+import { IdleBackground } from "idle-background.slint";
+import { Alert } from "../overlays/alert.slint";
+import { VoiceSliderOverlay } from "../overlays/voice-slider.slint";
+import { Dock } from "orb.slint";
+import { VoiceBar } from "voice-bar.slint";
+import { Ambient } from "../screens/ambient.slint";
+import { MenuScreen } from "../screens/menu.slint";
+import { Home } from "../screens/home.slint";
+import { Weather } from "../screens/weather.slint";
+import { FirstBoot } from "../screens/first-boot.slint";
+import { Settings } from "../screens/settings.slint";
+import { Calendar } from "../screens/calendar.slint";
+import { SettingsData } from "../contract/settings.slint";
+import { SpawnDemo, SpawnDemoScreen } from "../demo/spawn-demo.slint";
+import { Photos } from "../screens/photos.slint";
+import { PhotosData } from "../contract/photos.slint";
+import { Countdowns } from "../screens/countdowns.slint";
+import { Reminders } from "../screens/reminders.slint";
+import { FloatingCardsView } from "floating-cards.slint";
+import { BackNav } from "back-nav.slint";
+import { SpawnClock } from "spawn.slint";
+import { CenterScreen } from "../screens/center.slint";
+import { Timers } from "../screens/timers.slint";
+import { NavRail } from "home/nav-rail.slint";
+
+// Khung app: tầng trung tâm ⇄ menu (vuốt theo ngón tay), tầng màn tính năng,
+// lớp phủ ở trên cùng. Màn phủ kín cửa sổ; thanh Voice (nút mic trái, chữ phản hồi) nổi trên đáy màn.
+export component Shell inherits Rectangle {
+    // Đơn vị thiết kế: 1 px canvas 1280×600, co đều theo cửa sổ; canvas giãn thành cw × ch.
+    private property <length> u: 1px * min(self.width / 1280px, self.height / 600px);
+    private property <float> cw: self.width / root.u;
+    private property <float> ch: self.height / root.u;
+    // Chiều cao hàng Voice (thanh Voice + lề) theo cùng đơn vị.
+    private property <length> dock-height: 88 * root.u;
+    // Màn đang hiển thị: theo Nav.screen, nhưng chuyển ngay khi người dùng vuốt xong.
+    private property <Screen> shown: Nav.screen;
+    private property <bool> is-feature: shown != Screen.center && shown != Screen.menu;
+    private property <length> w: swipe.width;
+    private property <length> dx: swipe.current-position.x - swipe.pressed-position.x;
+    private property <duration> t0;
+    private property <float> menu-target: (shown == Screen.menu || (is-feature && BackNav.origin == Screen.menu)) ? 1 : 0;
+    private property <float> feat-target: is-feature ? 1 : 0;
+    private property <float> menu-p: swipe.swiping && !is-feature ? clamp(menu-target - dx / w, 0, 1) : menu-target;
+    private property <float> feat-p: swipe.swiping && is-feature ? clamp(1 - dx / w, 0, 1) : feat-target;
+    private property <float> away: max(menu-p, feat-p);
+    // Thanh điều hướng trái dùng chung, đứng yên khi chuyển giữa các màn có nó.
+    private property <bool> has-rail: shown == Screen.center || shown == Screen.menu || shown == Screen.timers || shown == Screen.reminders || shown == Screen.calendar;
+    private property <float> rail-p: has-rail ? 1 : 0;
+    animate rail-p { duration: Theme.anim-screen; easing: ease-out; }
+    animate menu-p, feat-p { duration: swipe.swiping ? 0ms : Theme.anim-screen; easing: ease-out; }
+
+    // Màn tính năng đọc Dock.height để chừa hàng Voice ở đáy.
+    init => {
+        Dock.height = root.dock-height;
+        Theme.unit = root.u;
+    }
+    changed dock-height => { Dock.height = root.dock-height; }
+    changed u => { Theme.unit = root.u; }
+
+    changed shown => {
+        if (!root.is-feature) { BackNav.origin = root.shown; }
+    }
+    private property <Screen> nav-screen: Nav.screen;
+    changed nav-screen => { root.shown = root.nav-screen; }
+
+
+    // Tầng nội dung (vuốt được), phủ kín cửa sổ. Orb nằm trên nên chạm Orb không thành vuốt.
+    swipe := SwipeGestureHandler {
+        y: 0;
+        height: parent.height;
+        handle-swipe-left: root.shown == Screen.center;
+        handle-swipe-right: root.shown != Screen.center && root.shown != Screen.first-boot && !SettingsData.dragging && !(root.shown == Screen.photos && PhotosData.viewing);
+        changed swiping => { if (self.swiping) { root.t0 = animation-tick(); } }
+        swiped => {
+            // Đủ xa (> 30% chiều rộng) hoặc vuốt nhanh thì hoàn tất.
+            if (abs(root.dx) > root.w * 0.3 || (abs(root.dx) > 120px && animation-tick() - root.t0 < 250ms)) {
+                root.shown = root.shown == Screen.center ? Screen.menu : (root.shown == Screen.menu ? Screen.center : BackNav.origin);
+                Nav.navigate(root.shown);
+            }
+        }
+
+        Rectangle {
+            clip: true;
+            Rectangle {
+                opacity: 1 - root.away;
+                y: 0;
+                background: transparent;
+                IdleBackground { }
+                CenterScreen { u: root.u; cw: root.cw; ch: root.ch; }
+                transform-scale: 1 - 0.08 * root.away;
+            }
+            Rectangle {
+                x: (1 - root.menu-p) * root.w;
+                opacity: root.menu-p;
+                background: Theme.background;
+                MenuScreen { u: root.u; cw: root.cw; ch: root.ch; }
+            }
+            if root.feat-p > 0 && root.shown != Screen.ambient: Rectangle {
+                x: (1 - root.feat-p) * root.w;
+                opacity: root.feat-p;
+                background: Theme.background;
+                if root.shown == Screen.home: Home { }
+                if root.shown == Screen.weather: Weather { }
+                if root.shown == Screen.settings: Settings { }
+                if root.shown == Screen.reminders: Reminders { }
+                if root.shown == Screen.timers: Timers { }
+                if root.shown == Screen.photos: Photos { }
+                if root.shown == Screen.calendar: Calendar { }
+                if root.shown == Screen.countdowns: Countdowns { }
+                if root.shown == Screen.first-boot: FirstBoot { }
+            }
+        }
+    }
+
+    // Thanh điều hướng: nằm trên tầng nội dung nên không trượt theo màn, chỉ view đổi.
+    if root.rail-p > 0: NavRail {
+        x: 14 * root.u;
+        y: 42 * root.u;
+        height: (root.ch - 152) * root.u;
+        u: root.u;
+        current: root.shown;
+        opacity: root.rail-p;
+    }
+
+    // Ambient: fade vào/ra, phủ nội dung; chạm để thoát (AmbientData.wake).
+    private property <float> amb-p: shown == Screen.ambient ? 1 : 0;
+    animate amb-p { duration: Theme.anim-screen; easing: ease-out; }
+    if amb-p > 0: Ambient { opacity: root.amb-p; }
+
+    // Lớp trên cùng cố định: thanh trạng thái, chấm trang. Không nhận chuột.
+    StatusBarView { y: 0; width: parent.width; }
+    PageDots {
+        y: 24px;
+        height: 12px;
+        menu-progress: root.menu-p;
+        opacity: 1 - root.feat-p;
+    }
+    VoiceSliderOverlay { }
+    Alert { dock-height: root.dock-height; }
+    // Thanh Voice neo đáy, trải ngang, đứng yên khi chuyển màn. Lần đầu khởi động: mic xám, không chạm được.
+    VoiceBar {
+        x: 20 * root.u;
+        y: (root.ch - 80) * root.u;
+        width: (root.cw - 40) * root.u;
+        height: 54 * root.u;
+        u: root.u;
+        disabled: root.shown == Screen.first-boot;
+        // Ambient: thanh mờ đi.
+        opacity: root.shown == Screen.ambient ? 0.35 : 1;
+        animate opacity { duration: Theme.anim-screen; easing: ease-out; }
+    }
+    if SpawnDemo.show: SpawnDemoScreen { height: parent.height - root.dock-height; }
+    FloatingCardsView { dock-height: root.dock-height; }
+    SpawnClock { }
+}

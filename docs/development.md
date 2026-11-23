@@ -40,6 +40,10 @@ ai-hub/
 
 Chọn bằng feature của crate `apps/hub` (dự kiến `desktop` mặc định, `pi` khi build cho Pi). Code ngoài phần chọn backend giống nhau trên hai nơi.
 
+### Chế độ demo (UI không cần hub-core)
+
+`scripts/run.sh run --features demo` mở app với dữ liệu fixture và cửa sổ Demo panel (nút kịch bản); không chạy hub-core hay voice-client. Bản Pi không biên dịch `src/ui/demo/`.
+
 ### Mô phỏng màn hình 5 inch 1080p
 
 - Cửa sổ kích thước logic 1920×1080, thu nhỏ bằng `SLINT_SCALE_FACTOR` (vd. `0.5`) cho vừa màn Mac.

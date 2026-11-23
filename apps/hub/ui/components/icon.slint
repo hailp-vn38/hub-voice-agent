@@ -1,0 +1,20 @@
+// Icon Tabler outline; mọi đường dẫn icon nằm ở đây.
+export component Icon inherits Image {
+    in property <string> name;
+    in property <color> color: #e8edf2;
+    in property <length> size: 48px;
+    width: root.size;
+    height: root.size;
+    colorize: root.color;
+    source: root.name == "sun" ? @image-url("../../assets/icons/sun.svg")
+        : root.name == "cloud" ? @image-url("../../assets/icons/cloud.svg")
+        : root.name == "clock" ? @image-url("../../assets/icons/clock.svg")
+        : root.name == "calendar" ? @image-url("../../assets/icons/calendar.svg")
+        : root.name == "home" ? @image-url("../../assets/icons/home.svg")
+        : root.name == "alarm" ? @image-url("../../assets/icons/alarm.svg")
+        : root.name == "settings" ? @image-url("../../assets/icons/settings.svg")
+        : root.name == "microphone" ? @image-url("../../assets/icons/microphone.svg")
+        : root.name == "pin" ? @image-url("../../assets/icons/pin.svg")
+        : root.name == "photo" ? @image-url("../../assets/icons/photo.svg")
+        : @image-url("../../assets/icons/bell.svg");
+}

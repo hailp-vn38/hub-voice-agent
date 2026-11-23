@@ -1,0 +1,63 @@
+import { Theme } from "../theme.slint";
+import { StatusBar } from "../contract/status.slint";
+import { Orb } from "orb.slint";
+import { ResponseText } from "response-text.slint";
+import { ToolTrailView } from "tool-trail.slint";
+
+// Thanh Voice ở đáy màn (thiết kế smart-hub-home): nút mic bên trái, chữ phản hồi chạy
+// sang phải, dải tool và icon kết nối ở mép phải. `u` = 1 px của canvas 1280×600.
+export component VoiceBar inherits Rectangle {
+    in property <length> u: 1px;
+    in property <bool> disabled;
+    border-radius: Theme.radius-panel;
+    background: Theme.background.with-alpha(0.8);
+    border-color: Theme.border.with-alpha(0.5);
+    border-width: 1 * root.u;
+
+    orb := Orb {
+        x: 20 * root.u;
+        y: (parent.height - self.height) / 2;
+        u: root.u;
+        disabled: root.disabled;
+    }
+    private property <length> text-x: orb.x + orb.width + 19 * root.u;
+    private property <length> icons-w: 128 * root.u;
+    ResponseText {
+        x: root.text-x;
+        width: root.width - root.text-x - root.icons-w - 20 * root.u;
+        height: parent.height;
+        font-size: Theme.type-card-title;
+    }
+    ToolTrailView {
+        x: root.width - root.icons-w - self.width;
+        width: 120 * root.u;
+        y: (parent.height - self.height) / 2;
+    }
+    HorizontalLayout {
+        x: root.width - root.icons-w;
+        width: root.icons-w - 18 * root.u;
+        spacing: 20 * root.u;
+        alignment: end;
+        Image {
+            y: (parent.height - self.height) / 2;
+            width: 25 * root.u;
+            height: 25 * root.u;
+            source: @image-url("../../assets/home/icons/wifi.png");
+            colorize: StatusBar.offline ? Theme.error : Theme.text-dim;
+        }
+        Image {
+            y: (parent.height - self.height) / 2;
+            width: 25 * root.u;
+            height: 25 * root.u;
+            source: @image-url("../../assets/home/icons/bluetooth.png");
+            colorize: Theme.text-dim;
+        }
+        Image {
+            y: (parent.height - self.height) / 2;
+            width: 20 * root.u;
+            height: 25 * root.u;
+            source: @image-url("../../assets/home/icons/phone.png");
+            colorize: Theme.text-dim;
+        }
+    }
+}

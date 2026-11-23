@@ -1,0 +1,61 @@
+import { Theme } from "../../theme.slint";
+import { WeatherHour } from "../../contract/weather.slint";
+
+// Đường nhiệt độ 24 giờ (thang chung cả tuần), cột mưa mờ, chạm điểm xem chi tiết.
+export component HoursChart inherits Rectangle {
+    in property <[WeatherHour]> hours;
+    in property <float> lo;
+    in property <float> hi;
+    in property <string> focus-key;
+    in property <bool> lit;
+    in-out property <int> picked: -1;
+    private property <length> cw: self.width;
+    private property <length> ch: self.height - 72 * Theme.unit * Theme.text-scale;
+    private property <length> top: 36 * Theme.unit;
+    private property <float> range: max(hi - lo, 1);
+    private property <length> step: cw / 24;
+
+    pure function py(t: float) -> length { return top + (ch - top) * (1 - (t - lo) / range); }
+
+    for h[i] in hours: Rectangle {
+        x: i * step + 4 * Theme.unit; width: step - 8 * Theme.unit;
+        y: ch - h.rain * (ch - top); height: h.rain * (ch - top);
+        background: Theme.accent-cyan; opacity: 0.22; border-radius: 6 * Theme.unit;
+    }
+    for h[i] in hours: Path {
+        width: root.cw; height: root.height;
+        viewbox-width: self.width / 1px; viewbox-height: self.height / 1px;
+        stroke: Theme.warm; stroke-width: 3 * Theme.unit;
+        visible: i < hours.length - 1;
+        commands: "M " + ((i + 0.5) * step / 1px) + " " + (py(h.temp) / 1px)
+            + " C " + ((i + 1) * step / 1px) + " " + (py(h.temp) / 1px) + " " + ((i + 1) * step / 1px) + " " + (py(hours[min(i + 1, hours.length - 1)].temp) / 1px)
+            + " " + ((i + 1.5) * step / 1px) + " " + (py(hours[min(i + 1, hours.length - 1)].temp) / 1px);
+    }
+    for h[i] in hours: Rectangle {
+        property <bool> on: i == root.picked || h.key == root.focus-key;
+        property <bool> peak: h.peak;
+        x: (i + 0.5) * step - self.width / 2; y: py(h.temp) - self.height / 2;
+        width: on ? 16 * Theme.unit : (peak ? 12 * Theme.unit : 6 * Theme.unit); height: self.width; border-radius: self.width / 2;
+        background: peak || on ? Theme.warm : Theme.text;
+        border-width: on && root.lit ? 3 * Theme.unit : 0px; border-color: #ffffff;
+        animate width { duration: 150ms; }
+        if peak: Text { x: (self.width - parent.width) / -2; y: -26 * Theme.unit * Theme.text-scale; width: 60 * Theme.unit; text: h.temp + "°"; color: Theme.warm; font-size: Theme.type-caption; horizontal-alignment: center; }
+    }
+    for h[i] in hours: Text {
+        x: i * step; width: step; y: root.height - 58 * Theme.unit * Theme.text-scale;
+        text: mod(i, 6) == 0 ? h.label : ""; color: Theme.text-dim; font-size: Theme.type-caption;
+        horizontal-alignment: center;
+    }
+    for h[i] in hours: TouchArea {
+        x: i * step; width: step; y: 0; height: ch + 20 * Theme.unit;
+        clicked => { root.picked = i; }
+    }
+    // Chi tiết giờ đã chạm
+    Text {
+        y: root.height - 26 * Theme.unit * Theme.text-scale; width: root.width;
+        text: root.picked >= 0 && root.picked < hours.length
+            ? hours[root.picked].label + " · " + hours[root.picked].temp + "° · mưa " + round(hours[root.picked].rain * 100) + "% · gió " + hours[root.picked].wind
+            : "Chạm một điểm để xem chi tiết giờ";
+        color: Theme.text-dim; font-size: Theme.type-caption; horizontal-alignment: center; overflow: elide;
+    }
+}

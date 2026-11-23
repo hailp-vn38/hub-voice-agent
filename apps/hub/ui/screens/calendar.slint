@@ -1,0 +1,104 @@
+import { Theme } from "../theme.slint";
+import { CalendarData } from "../contract/calendar.slint";
+import { StatusBar } from "../contract/status.slint";
+import { Backdrop } from "../components/home/backdrop.slint";
+import { WeekStrip } from "../components/calendar/week-strip.slint";
+import { Timeline } from "../components/calendar/timeline.slint";
+import { UpcomingList } from "../components/calendar/upcoming.slint";
+import { MonthGrid } from "../components/calendar/month-grid.slint";
+import { DetailCard } from "../components/calendar/detail.slint";
+
+// Màn Lịch (Aurora): Thanh điều hướng trái; đầu màn là tiêu đề, nút tháng và trạng thái đồng bộ;
+// dải tuần; dòng thời gian + "Sắp tới" (hoặc lưới tháng). Toạ độ theo canvas 1280×600 nhân Theme.unit.
+export component Calendar inherits Rectangle {
+    private property <length> u: Theme.unit;
+    private property <float> cw: self.width / root.u;
+    private property <float> ch: self.height / root.u;
+    private property <float> left: 130;
+    private property <float> right: root.cw - 30;
+    private property <float> bottom: root.ch - 92;
+    private property <bool> offline: CalendarData.stale || StatusBar.offline;
+
+    Backdrop { dim: 0.35; }
+
+    // Đầu màn.
+    HorizontalLayout {
+        x: root.left * root.u;
+        y: 42 * root.u;
+        width: (root.right - root.left) * root.u;
+        height: 40 * root.u;
+        spacing: 16 * root.u;
+        Text {
+            text: "Lịch";
+            color: Theme.text;
+            font-size: Theme.type-page-title;
+            font-weight: 600;
+            vertical-alignment: center;
+        }
+        // Nút tháng: chạm để chuyển dòng thời gian ⇄ lưới tháng.
+        month-btn := Rectangle {
+            width: month-label.preferred-width + 36 * root.u;
+            border-radius: Theme.radius-s;
+            background: CalendarData.month-view ? Theme.accent.with-alpha(0.55) : month-touch.pressed ? Theme.card : Theme.glass;
+            border-width: 1 * root.u;
+            border-color: CalendarData.month-view ? Theme.accent : Theme.border;
+            animate background { duration: Theme.anim-state; }
+            month-label := Text {
+                text: CalendarData.month-title + (CalendarData.month-view ? "  ▴" : "  ▾");
+                color: Theme.text;
+                font-size: Theme.type-body;
+                vertical-alignment: center;
+            }
+            month-touch := TouchArea { clicked => { CalendarData.toggle-month(); } }
+        }
+        Rectangle { horizontal-stretch: 1; }
+        // Trạng thái đồng bộ: chấm + chữ, không chỉ dựa vào màu.
+        Rectangle {
+            width: sync-label.preferred-width + 44 * root.u;
+            border-radius: self.height / 2;
+            background: root.offline ? Theme.warm.with-alpha(0.18) : Theme.glass;
+            border-width: 1 * root.u;
+            border-color: root.offline ? Theme.warm : Theme.border;
+            Rectangle {
+                x: 16 * root.u;
+                width: 8 * root.u;
+                height: self.width;
+                border-radius: self.width / 2;
+                background: root.offline ? Theme.warm : Theme.done;
+            }
+            sync-label := Text {
+                x: 32 * root.u;
+                text: (root.offline ? "Offline · " : "") + "Đồng bộ " + CalendarData.synced;
+                color: root.offline ? Theme.warm : Theme.text-dim;
+                font-size: Theme.type-caption;
+                vertical-alignment: center;
+            }
+        }
+    }
+
+    if !CalendarData.month-view: WeekStrip {
+        x: root.left * root.u;
+        y: 96 * root.u;
+        width: (root.right - root.left) * root.u;
+        height: 84 * root.u;
+    }
+    if !CalendarData.month-view: Timeline {
+        x: root.left * root.u;
+        y: 192 * root.u;
+        width: ((root.right - root.left) * 0.62) * root.u;
+        height: (root.bottom - 192) * root.u;
+    }
+    if !CalendarData.month-view: UpcomingList {
+        x: (root.left + (root.right - root.left) * 0.62 + 16) * root.u;
+        y: 192 * root.u;
+        width: ((root.right - root.left) * 0.38 - 16) * root.u;
+        height: (root.bottom - 192) * root.u;
+    }
+    if CalendarData.month-view: MonthGrid {
+        x: root.left * root.u;
+        y: 96 * root.u;
+        width: (root.right - root.left) * root.u;
+        height: (root.bottom - 96) * root.u;
+    }
+    if CalendarData.detail.visible: DetailCard { }
+}

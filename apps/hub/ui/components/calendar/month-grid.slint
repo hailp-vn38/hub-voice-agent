@@ -1,0 +1,62 @@
+import { Theme } from "../../theme.slint";
+import { CalendarData } from "../../contract/calendar.slint";
+
+// Lưới tháng trong thẻ kính: hàng thứ, 6 × 7 ô; chạm ngày → về dòng thời gian ngày đó.
+export component MonthGrid inherits Rectangle {
+    private property <length> u: Theme.unit;
+    private property <length> pad: 16 * root.u;
+    private property <length> gap: 8 * root.u;
+    private property <length> head: 28 * root.u;
+    private property <length> cw: (self.width - 2 * root.pad - 6 * root.gap) / 7;
+    private property <length> ch: (self.height - 2 * root.pad - root.head - 5 * root.gap) / 6;
+    border-radius: Theme.radius-panel;
+    background: Theme.glass;
+    border-width: 1 * root.u;
+    border-color: Theme.border;
+
+    for w[i] in ["T2", "T3", "T4", "T5", "T6", "T7", "CN"]: Text {
+        x: root.pad + i * (root.cw + root.gap);
+        y: root.pad;
+        width: root.cw;
+        height: root.head;
+        text: w;
+        color: Theme.text-dim;
+        font-size: Theme.type-caption;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+    for d[i] in CalendarData.month: Rectangle {
+        x: root.pad + mod(i, 7) * (root.cw + root.gap);
+        y: root.pad + root.head + floor(i / 7) * (root.ch + root.gap);
+        width: root.cw;
+        height: root.ch;
+        border-radius: Theme.radius-s;
+        background: d.today ? Theme.accent.with-alpha(0.55) : touch.pressed ? Theme.card : Theme.accent.with-alpha(0.1);
+        border-width: 1 * root.u;
+        border-color: d.today ? Theme.accent : Theme.border.with-alpha(0.6);
+        opacity: d.in-month ? 1 : 0.35;
+        animate background { duration: Theme.anim-tap; }
+        Text {
+            x: 10 * root.u;
+            y: 6 * root.u;
+            text: d.day;
+            color: Theme.text;
+            font-size: Theme.type-body;
+            font-weight: d.today ? 600 : 400;
+        }
+        HorizontalLayout {
+            x: 10 * root.u;
+            y: parent.height - 14 * root.u;
+            height: 6 * root.u;
+            alignment: start;
+            spacing: 4 * root.u;
+            for k in min(d.dots, 3): Rectangle {
+                width: 6 * root.u;
+                height: 6 * root.u;
+                border-radius: 3 * root.u;
+                background: d.today ? Theme.text : Theme.warm;
+            }
+        }
+        touch := TouchArea { clicked => { CalendarData.select-day(d.key); } }
+    }
+}

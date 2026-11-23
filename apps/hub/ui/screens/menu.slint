@@ -1,0 +1,89 @@
+import { Theme } from "../theme.slint";
+import { Nav, Screen } from "../contract/nav.slint";
+import { Menu } from "../contract/menu.slint";
+import { Backdrop } from "../components/home/backdrop.slint";
+import { TileFrame } from "../components/home/quick-tile.slint";
+
+struct AppTile { icon: image, name: string, info: string, screen: Screen }
+
+component AppTileView inherits TileFrame {
+    in property <AppTile> app;
+    tapped => { Nav.navigate(root.app.screen); }
+    Rectangle {
+        x: 20 * root.u;
+        y: 20 * root.u;
+        width: 56 * root.u;
+        height: 56 * root.u;
+        border-radius: Theme.radius-s;
+        background: Theme.accent.with-alpha(0.25);
+        Image {
+            width: 32 * root.u;
+            height: 32 * root.u;
+            source: root.app.icon;
+            colorize: Theme.accent-cyan;
+        }
+    }
+    VerticalLayout {
+        x: 20 * root.u;
+        width: parent.width - 40 * root.u;
+        padding-bottom: 18 * root.u;
+        alignment: end;
+        spacing: 4 * root.u;
+        Text {
+            text: root.app.name;
+            color: Theme.text;
+            font-size: Theme.type-section;
+            font-weight: 600;
+            overflow: elide;
+        }
+        Text {
+            text: root.app.info;
+            color: Theme.text-dim;
+            font-size: Theme.type-body;
+            overflow: elide;
+        }
+    }
+}
+
+// Menu tính năng (nhãn "Ứng dụng"): lưới 4 × 2 thẻ kính, cùng nền và Thanh điều hướng với Màn trung tâm.
+// Toạ độ theo canvas 1280×600 nhân `u`, canvas giãn thành cw × ch; đáy chừa thanh Voice.
+export component MenuScreen inherits Rectangle {
+    in property <length> u: 1px;
+    in property <float> cw: 1280;
+    in property <float> ch: 600;
+    private property <float> gap: 16;
+    private property <float> gx: 130;
+    private property <float> gy: 96;
+    private property <float> tw: (root.cw - 30 - root.gx - root.gap * 3) / 4;
+    private property <float> th: (root.ch - 92 - root.gy - root.gap) / 2;
+    private property <[AppTile]> apps: [
+        { icon: @image-url("../../assets/home/icons/sun.png"), name: "Thời tiết", info: Menu.weather, screen: Screen.weather },
+        { icon: @image-url("../../assets/home/icons/calendar.png"), name: "Lịch", info: Menu.calendar, screen: Screen.calendar },
+        { icon: @image-url("../../assets/home/icons/home.png"), name: "Nhà", info: Menu.home, screen: Screen.home },
+        { icon: @image-url("../../assets/home/icons/timer.png"), name: "Hẹn giờ", info: Menu.timers, screen: Screen.timers },
+        { icon: @image-url("../../assets/home/icons/lantern.png"), name: "Đếm ngược", info: Menu.countdowns, screen: Screen.countdowns },
+        { icon: @image-url("../../assets/home/icons/sparkle.png"), name: "Reminder", info: Menu.reminders, screen: Screen.reminders },
+        { icon: @image-url("../../assets/icons/photo.svg"), name: "Ảnh", info: Menu.photos, screen: Screen.photos },
+        { icon: @image-url("../../assets/home/icons/settings.png"), name: "Setting", info: Menu.settings, screen: Screen.settings },
+    ];
+
+    Backdrop { dim: 0.35; }
+    Text {
+        x: root.gx * root.u;
+        y: 42 * root.u;
+        height: 40 * root.u;
+        text: "Ứng dụng";
+        color: Theme.text;
+        font-size: Theme.type-page-title;
+        font-weight: 600;
+        vertical-alignment: center;
+    }
+    for a[i] in root.apps: AppTileView {
+        x: (root.gx + mod(i, 4) * (root.tw + root.gap)) * root.u;
+        y: (root.gy + floor(i / 4) * (root.th + root.gap)) * root.u;
+        width: root.tw * root.u;
+        height: root.th * root.u;
+        u: root.u;
+        app: a;
+    }
+}

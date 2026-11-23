@@ -1,0 +1,16 @@
+import { SettingsData } from "../../contract/settings.slint";
+import { Theme } from "../../theme.slint";
+import { Toggle } from "../../components/toggle.slint";
+import { SettingRow } from "../../components/setting-row.slint";
+
+export component HomePanel inherits VerticalLayout {
+    Text {
+        text: "Chọn tối đa 4 thiết bị cho màn trung tâm";
+        color: Theme.text-dim;
+        font-size: Theme.type-caption;
+    }
+    for e in SettingsData.home.entities: SettingRow {
+        label: e.name;
+        Toggle { on: e.selected; toggled(v) => { SettingsData.toggle("entity:" + e.name, v); } }
+    }
+}

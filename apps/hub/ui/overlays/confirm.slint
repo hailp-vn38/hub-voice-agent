@@ -1,0 +1,36 @@
+import { Theme } from "../theme.slint";
+import { ActionButton } from "../components/action-button.slint";
+
+// Thẻ xác nhận dùng chung (Aurora): tiêu đề, nội dung, "Huỷ" / nút hành động.
+export component Confirm inherits Rectangle {
+    in property <string> title;
+    in property <string> body;
+    in property <string> action-text: "Đồng ý";
+    in property <bool> danger: true;
+    callback confirmed();
+    callback cancelled();
+    private property <length> u: Theme.unit;
+    background: Theme.background.with-alpha(0.7);
+    TouchArea { }
+    Rectangle {
+        width: min(460 * root.u, root.width - 64 * root.u);
+        height: lay.preferred-height;
+        border-radius: Theme.radius-panel;
+        background: Theme.card;
+        border-width: 1 * root.u;
+        border-color: Theme.border;
+        drop-shadow-blur: 30 * root.u;
+        drop-shadow-color: #00000080;
+        lay := VerticalLayout {
+            padding: 28 * root.u;
+            spacing: 16 * root.u;
+            Text { text: root.title; color: Theme.text; font-size: Theme.type-section; font-weight: 600; horizontal-alignment: center; wrap: word-wrap; }
+            if root.body != "": Text { text: root.body; color: Theme.text-dim; font-size: Theme.type-body; horizontal-alignment: center; wrap: word-wrap; }
+            HorizontalLayout {
+                spacing: 12 * root.u;
+                ActionButton { text: "Huỷ"; clicked => { root.cancelled(); } }
+                ActionButton { text: root.action-text; danger: root.danger; clicked => { root.confirmed(); } }
+            }
+        }
+    }
+}
