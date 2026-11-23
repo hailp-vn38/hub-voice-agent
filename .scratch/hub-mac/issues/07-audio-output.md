@@ -31,5 +31,5 @@ Spec: [../spec.md](../spec.md) · Thiết kế: [../design.md](../design.md) §2
 - Attribution của hai MP3 vẫn `needs-info`: metadata chỉ cho biết codec/tần số/kênh, còn lịch sử git chỉ cho thấy chúng có sẵn trong commit nền `ba704ae`. Không sửa hai binary.
 - Còn gate kiểm tay với thiết bị Mac và vela-server; chưa xác nhận runtime.
 - 2026-11-23 review fix: `Mixer` giữ Ding một lần riêng với alert loop; `StopSound` dừng đúng alert và Ding không lặp. Regression test Mixer: 8 passed; test thiết bị: 3 passed; test voice bridge sau khi chuyển orchestration: 1 passed.
-- Automated: `cargo check -p hub --no-default-features --features pi` pass; `scripts/test.sh -p hub` pass với 182 tests. Rustfmt cho các file Rust đã sửa và `git diff --check` pass.
+- Automated: cấu hình feature Pi pass `cargo check` trên host macOS; Pi và XVF3800 chưa được kiểm runtime. `scripts/test.sh -p hub` pass với 182 tests. Rustfmt cho các file Rust đã sửa và `git diff --check` pass.
 - Kiểm tay trên Mac/phần cứng Pi và với vela-server vẫn pending; hai checkbox tay ở trên chưa được xác nhận.
