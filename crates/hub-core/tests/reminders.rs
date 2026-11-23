@@ -84,6 +84,75 @@ async fn reminder_create_through_run() {
             }
         }
     }
+    for (id, name, arguments) in [
+        (
+            2,
+            "hub_reminder_create",
+            json!({"label":"Uống trà", "at":"2026-11-22T12:02:00+07:00[Asia/Ho_Chi_Minh]", "repeat":"none"}),
+        ),
+        (3, "hub_reminder_cancel", json!({"label":"uong tra"})),
+    ] {
+        let frame = json!({"type":"mcp", "payload":{"jsonrpc":"2.0", "id":id, "method":"tools/call", "params":{"name":name, "arguments":arguments}}});
+        socket
+            .send(Message::Text(frame.to_string().into()))
+            .await
+            .unwrap();
+        loop {
+            if let Message::Text(text) = socket.next().await.unwrap().unwrap() {
+                let value: Value = serde_json::from_str(&text).unwrap();
+                if value["payload"]["id"] == id {
+                    assert!(value["payload"]["result"].is_object(), "{value}");
+                    break;
+                }
+            }
+        }
+    }
+    for (id, name, arguments) in [
+        (
+            4,
+            "hub_reminder_create",
+            json!({"label":"Snooze", "at":"2026-11-22T12:00:10+07:00[Asia/Ho_Chi_Minh]", "repeat":"daily"}),
+        ),
+        (5, "hub_reminder_snooze", json!({"minutes": 1})),
+        (6, "hub_reminder_cancel", json!({"label":"Snooze"})),
+    ] {
+        if id == 5 {
+            tokio::time::advance(Duration::from_secs(11)).await;
+            tokio::task::yield_now().await;
+            assert!(matches!(
+                ui_rx.borrow().alert,
+                Some(hub_core::Alert::Reminder(_))
+            ));
+        }
+        let frame = json!({"type":"mcp", "payload":{"jsonrpc":"2.0", "id":id, "method":"tools/call", "params":{"name":name, "arguments":arguments}}});
+        socket
+            .send(Message::Text(frame.to_string().into()))
+            .await
+            .unwrap();
+        loop {
+            if let Message::Text(text) = socket.next().await.unwrap().unwrap() {
+                let value: Value = serde_json::from_str(&text).unwrap();
+                if value["payload"]["id"] == id {
+                    assert!(value["payload"]["result"].is_object(), "{value}");
+                    break;
+                }
+            }
+        }
+        if id == 5 {
+            assert!(ui_rx.borrow().alert.is_none());
+            let ui = ui_rx.borrow();
+            let snoozed = ui
+                .reminders
+                .iter()
+                .find(|item| item.label == "Snooze")
+                .unwrap();
+            assert_eq!(
+                snoozed.next_occurrence().unwrap(),
+                "2026-11-23T12:00:10+07:00[Asia/Ho_Chi_Minh]"
+            );
+        }
+    }
+    assert_eq!(ui_rx.borrow().reminders.len(), 1);
     assert_eq!(ui_rx.borrow().view.screen, hub_core::Screen::Reminders);
     drop(ui_rx);
     task.await.unwrap().unwrap();

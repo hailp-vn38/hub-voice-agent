@@ -1,6 +1,6 @@
 # 08 — Reminder
 
-Status: ready-for-agent
+Status: completed
 Blocked by: 06, 07
 Spec: [../spec.md](../spec.md)
 
@@ -14,8 +14,8 @@ Spec: [../spec.md](../spec.md)
 
 - [x] Unit test `weekly` qua Chủ nhật, `daily` qua đổi tháng, lỡ 30 phút → nhắc, lỡ 2 giờ → chỉ đánh dấu đã lỡ.
 - [x] Test qua `run()`: đến hạn khi online → `DirectSpeech`; `SessionBusy` → gửi lại; Offline → không gửi.
-- [ ] Huỷ theo nhãn dùng `selector`.
+- [x] Huỷ theo nhãn dùng `selector`.
 
 ## Comments
 
-- Đã triển khai Reminder, thông báo và công cụ; test qua `run()` bao phủ online, SessionBusy, offline và nhắc lỡ. Cần bổ sung test huỷ theo nhãn và snooze trước khi đóng ticket.
+- Đã triển khai Reminder, thông báo và công cụ; test qua `run()` bao phủ online, SessionBusy, offline và nhắc lỡ. Test qua `run()` xác nhận huỷ theo nhãn không dấu và snooze giữ lịch lặp.

@@ -93,6 +93,7 @@ impl Feature {
             Ok(tool) => tool,
             Err(err) => return vec![Effect::Reply(call, Err(err))],
         };
+        let mut dismissed_effects = Vec::new();
         match tool {
             tools::Tool::Create(args) => {
                 let repeat = match args.repeat.as_str() {
@@ -149,7 +150,11 @@ impl Feature {
                         labels.iter().position(|label| *label == found).unwrap()
                     }
                 };
-                self.items.remove(index);
+                let removed = self.items.remove(index);
+                if matches!(alerts.active(), Some(crate::Alert::Reminder(active)) if active.id == removed.id)
+                {
+                    dismissed_effects = alerts.dismiss().1;
+                }
             }
             tools::Tool::Snooze(args) => {
                 let id = match alerts.active() {
@@ -210,6 +215,7 @@ impl Feature {
             self.items.clone(),
             self.history.clone(),
         )];
+        effects.extend(dismissed_effects);
         effects.extend(self.snapshot());
         effects.extend(view.open(crate::Screen::Reminders, None, now));
         effects.push(Effect::Reply(
