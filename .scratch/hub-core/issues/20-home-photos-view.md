@@ -18,9 +18,9 @@ Spec: [../spec.md](../spec.md) · UI: hub-ui #15, #16
 - [x] Test qua `run()` với `HomeSource` giả: `ToggleHome` → `pending` true, rồi `State` mới → `pending` false, `on` đổi.
 - [x] Test `present`: `sensor.temp` "23.5" + đơn vị → `value == "23,5 °C"`.
 - [x] Test: `hub_image_control` next rồi chạm `close-viewer` → `viewing` false, vẫn ở màn Ảnh.
-- [x] Test: `RemovePhoto` → mất khỏi `UiState`, tệp bị xoá.
+- [x] Test: `RemovePhoto` → mất khỏi `UiState`, tệp bị xoá; nếu ảnh đang focus thì viewer đóng.
 
 ## Comments
 
 - Đã thêm dữ liệu trình bày Nhà/Ảnh, trạng thái tải ảnh và xoá ảnh cùng hai tệp cache. Viewer focus tiếp tục do `hub-core` giữ qua `Focus`; `auto-advance` tiếp tục thuộc UI.
-- Gates sau khi ghép `feat/hub-core` ở `8a6f137`: `scripts/test.sh -p hub-core` (132 passed), `cargo fmt --all -- --check`, `cargo build -p hub` và `git diff --check`.
+- Gates sau khi sửa viewer focus khi xoá ảnh: `scripts/test.sh -p hub-core` (132 passed), `cargo fmt --all -- --check`, `cargo build -p hub` và `git diff --check` đều đạt.

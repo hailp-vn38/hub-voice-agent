@@ -273,6 +273,14 @@ impl Hub {
                 effects.extend(hub.home.toggle(&id));
                 effects
             }
+            UserInput::RemovePhoto { id } => {
+                let mut effects = hub.view.on_user(UserInput::Activity, seconds);
+                if hub.view.focus() == Some(&Focus::Photo(id.clone())) {
+                    effects.extend(hub.view.on_user(UserInput::Focus(None), seconds));
+                }
+                effects.push(Effect::RemovePhoto(id));
+                effects
+            }
             input => hub.view.on_user(input, seconds),
         })
     }

@@ -204,6 +204,15 @@ async fn show_image_displays_downloaded_photo() {
         ui_rx.changed().await.unwrap();
     }
     assert_eq!(ui_rx.borrow().view.screen, Screen::Photos);
+    input_tx
+        .send(hub_core::UserInput::Focus(Some(hub_core::Focus::Photo(
+            photo_to_remove.id.clone(),
+        ))))
+        .await
+        .unwrap();
+    while !hub_core::present(&ui_rx.borrow()).photos.viewing {
+        ui_rx.changed().await.unwrap();
+    }
 
     let image_path = photo_to_remove.image_path.clone();
     let thumbnail_path = photo_to_remove.thumbnail_path.clone();
@@ -216,6 +225,7 @@ async fn show_image_displays_downloaded_photo() {
     while ui_rx.borrow().photos.len() != 1 {
         ui_rx.changed().await.unwrap();
     }
+    assert!(!hub_core::present(&ui_rx.borrow()).photos.viewing);
     assert!(!std::path::Path::new(&image_path).exists());
     assert!(!std::path::Path::new(&thumbnail_path).exists());
     task.abort();
