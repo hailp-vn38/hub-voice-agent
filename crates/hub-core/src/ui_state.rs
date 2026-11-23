@@ -4,6 +4,8 @@ pub struct UiState {
     /// Local time as `HH:MM:SS`.
     pub clock: String,
     pub alert: Option<crate::Alert>,
+    pub reminders: Vec<crate::Reminder>,
+    pub reminder_history: Vec<crate::ReminderHistory>,
     pub countdowns: Vec<crate::CountdownView>,
     pub view: crate::ViewState,
     pub voice_settings: VoiceSettingsState,
