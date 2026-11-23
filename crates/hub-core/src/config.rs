@@ -14,7 +14,7 @@ pub struct VoiceSettings {
     pub client_id: String,
     pub ota_url: Option<String>,
 }
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct CalendarSettings {
     pub client_id: String,
