@@ -69,6 +69,7 @@ Chọn bằng feature của crate `apps/hub` (dự kiến `desktop` mặc địn
 | Mic/loa có sẵn của Mac (`cpal` → CoreAudio) | Phát triển UI và luồng hội thoại; **đeo tai nghe** để loa không lọt vào mic (Mac không có AEC cho app) |
 | ReSpeaker XVF3800 cắm USB vào Mac | Test wake word, AEC và barge-in thật. Chọn XVF3800 làm **cả ngõ vào và ngõ ra**, loa cắm vào cổng ra của mic array |
 
+- TTS Opus cần thư viện hệ thống: cài bằng `brew install opus` trước khi build.
 - Lần đầu dùng mic, macOS hỏi quyền Microphone cho terminal/IDE đang chạy app.
 - Wake word `hey_jarvis` (openWakeWord qua `ort`) chạy được trên macOS arm64; model ONNX tải về thư mục `models/` (không commit).
 

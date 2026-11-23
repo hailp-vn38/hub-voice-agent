@@ -11,6 +11,11 @@ path = "src/main.rs"
 hub-core = { path = "../../crates/hub-core" }
 voice-client = { path = "../../crates/voice-client" }
 slint = { workspace = true, features = ["std", "compat-1-2"] }
+cpal = "0.18"
+opus = "0.4"
+rubato = "5.1"
+rtrb = "0.4"
+symphonia = { version = "0.5.5", default-features = false, features = ["mp3"] }
 
 tokio = { workspace = true, features = ["rt-multi-thread", "sync"] }
 anyhow = { workspace = true }
