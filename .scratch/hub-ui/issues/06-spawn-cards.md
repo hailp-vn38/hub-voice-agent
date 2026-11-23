@@ -1,6 +1,6 @@
 # 06 — Thẻ sinh ra từ Orb, thẻ nổi
 
-Status: ready-for-agent
+Status: resolved
 Blocked by: 04
 Spec: [../spec.md](../spec.md)
 Thiết kế: concept.md §6 "Concept voice-first" mục 4 (spawn choreography); "Agent điều khiển hub" (`hub_show_card`, ví dụ "tạo sự kiện")
@@ -38,3 +38,7 @@ Map: chờ hub-core #04 trở đi (serial theo tool); `hub_show_card` chưa có 
 | `Spawn.serial` / `.key` | |
 | `FloatingCards.cards` | |
 | `FloatingCards.fading` | |
+
+## Answer
+
+Done: contract/spawn.slint, components/{card,spawn,floating-cards}.slint, screens/spawn-demo.slint (demo-only SpawnDemo global + 6-cell grid), 5 demo scenarios. SpawnIn uses easeOutBack 600ms from Dock.orb; it runs on serial change or when the card is created in that turn (init), so re-entering a screen with the same key replays it. Check mark is the "✓" glyph (no check icon yet). Not visually verified.

@@ -1,0 +1,27 @@
+// Màn thử chỉ có trong demo: lưới 6 ô cho SpawnIn.
+import { Theme } from "../theme.slint";
+import { PendingState } from "../contract/spawn.slint";
+import { Card } from "../components/card.slint";
+import { SpawnIn } from "../components/spawn.slint";
+
+export global SpawnDemo {
+    in property <bool> show;
+    in property <PendingState> pending;
+}
+
+export component SpawnDemoScreen inherits Rectangle {
+    background: Theme.background;
+    GridLayout {
+        padding: Theme.space-l;
+        spacing: Theme.space-m;
+        for i in 6: SpawnIn {
+            row: i < 3 ? 0 : 1;
+            col: mod(i, 3);
+            key: "cell" + (i + 1);
+            pending: i == 2 ? SpawnDemo.pending : PendingState.none;
+            Card {
+                Text { text: "Ô " + (i + 1); color: Theme.text; font-size: Theme.font-title; horizontal-alignment: center; vertical-alignment: center; }
+            }
+        }
+    }
+}
