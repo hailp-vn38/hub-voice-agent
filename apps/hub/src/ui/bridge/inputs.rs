@@ -51,7 +51,7 @@ impl Inputs {
     }
 }
 
-fn to_core_screen(screen: crate::Screen) -> Option<CoreScreen> {
+pub(super) fn to_core_screen(screen: crate::Screen) -> Option<CoreScreen> {
     use crate::Screen as UiScreen;
     match screen {
         UiScreen::Center => Some(CoreScreen::Center),
@@ -243,11 +243,15 @@ pub fn connect_inputs(app: &App, input_tx: mpsc::Sender<UserInput>, bridge_state
     let settings = app.global::<SettingsData>();
     let save = inputs.clone();
     settings.on_save_voice_url(move |url| {
-        save.borrow().send(UserInput::SaveVoiceUrl(url.to_string()));
+        let mut input = save.borrow_mut();
+        input.activity();
+        input.send(UserInput::SaveVoiceUrl(url.to_string()));
     });
     let connect = inputs.clone();
     settings.on_connect_voice(move || {
-        connect.borrow().send(UserInput::VoiceConnect);
+        let mut input = connect.borrow_mut();
+        input.activity();
+        input.send(UserInput::VoiceConnect);
     });
 
     let timers = app.global::<TimersData>();
@@ -293,5 +297,6 @@ pub fn connect_inputs(app: &App, input_tx: mpsc::Sender<UserInput>, bridge_state
     });
 
     super::home::connect_inputs(app, inputs.clone());
-    super::photos::connect_inputs(app, inputs);
+    super::photos::connect_inputs(app, inputs.clone());
+    super::center::connect_inputs(app, inputs);
 }

@@ -7,8 +7,8 @@ use hub_core::{
     PhotoState, ResponseSpeaker, ToolTrailState, UiState, VoiceSettingsState,
     VoiceState as CoreVoiceState,
     present::{
-        AlertView, CalendarView, HomeView, PhotosView, ResponseView, StatusView, TimersView,
-        ToolTrailView, VoiceView, WeatherDataView,
+        AlertView, AmbientView, CalendarView, CenterView, HomeView, MenuView, PhotosView,
+        ResponseView, StatusView, TimersView, ToolTrailView, VoiceView, WeatherDataView,
     },
 };
 use slint::{ComponentHandle, ModelRc, VecModel, Weak};
@@ -108,6 +108,9 @@ pub(super) fn apply_changed(
     alert: Option<Option<&AlertView>>,
     home: Option<&HomeView>,
     photos: Option<&PhotosView>,
+    center: Option<&CenterView>,
+    menu: Option<&MenuView>,
+    ambient: Option<&AmbientView>,
 ) {
     if let Some(nav) = nav {
         apply_nav(app, nav);
@@ -144,6 +147,15 @@ pub(super) fn apply_changed(
     }
     if let Some(photos) = photos {
         super::photos::apply_photos(app, photos);
+    }
+    if let Some(center) = center {
+        super::center::apply_center(app, center);
+    }
+    if let Some(menu) = menu {
+        super::center::apply_menu(app, menu);
+    }
+    if let Some(ambient) = ambient {
+        super::center::apply_ambient(app, ambient);
     }
 }
 
@@ -205,6 +217,15 @@ pub fn spawn_bridge(app: Weak<App>, mut rx: watch::Receiver<UiState>, bridge_sta
             let photos = previous
                 .is_none_or(|previous| previous.photos != view.photos)
                 .then(|| view.photos.clone());
+            let center = previous
+                .is_none_or(|previous| previous.center != view.center)
+                .then(|| view.center.clone());
+            let menu = previous
+                .is_none_or(|previous| previous.menu != view.menu)
+                .then(|| view.menu.clone());
+            let ambient = previous
+                .is_none_or(|previous| previous.ambient != view.ambient)
+                .then(|| view.ambient.clone());
             let start_auto_advance =
                 previous.is_some_and(|previous| agent_photos_finished(previous, &view));
             shown = Some(view);
@@ -224,6 +245,9 @@ pub fn spawn_bridge(app: Weak<App>, mut rx: watch::Receiver<UiState>, bridge_sta
                 && alert.is_none()
                 && home.is_none()
                 && photos.is_none()
+                && center.is_none()
+                && menu.is_none()
+                && ambient.is_none()
             {
                 continue;
             }
@@ -262,6 +286,9 @@ pub fn spawn_bridge(app: Weak<App>, mut rx: watch::Receiver<UiState>, bridge_sta
                         alert.as_ref().map(|alert| alert.as_ref()),
                         home.as_ref(),
                         photos.as_ref(),
+                        center.as_ref(),
+                        menu.as_ref(),
+                        ambient.as_ref(),
                     );
                 }
             })

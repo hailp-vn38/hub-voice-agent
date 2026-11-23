@@ -30,20 +30,20 @@ Fixture đủ mọi card. Kịch bản: "Thêm hẹn giờ" (ô xuất hiện), 
 
 ## Map với hub-core
 
-Map: chờ hub-core #05, #06, #08, #09, #10, #11
+Map: done (hub-core #21; bridge ticket 06)
 
 | Hợp đồng | UiState / UserInput |
 |---|---|
-| `Center.time` / `.date` | |
-| `Center.weather` | |
-| `Center.today` | |
-| `Center.reminders` | |
-| `Center.timer` | |
-| `Center.countdown` | |
-| `Center.home` | |
-| `Center.focus` / `.focus-serial` | |
-| `Center.open(Screen)` | |
-| `Center.toggle-home(key)` | |
+| `Center.time` / `.date` | `HubView.center.time/date` ← `UiState.now` (`present` #21) |
+| `Center.weather` | `HubView.center.weather` ← `HubView.weather` (#18, #21) |
+| `Center.today` | `HubView.center.today` ← calendar state (#10, #21) |
+| `Center.reminders` | `HubView.center.reminders` ← `HubView.reminders` (#17, #21) |
+| `Center.timer` | `HubView.center.timer` ← timer state / `HubView.timers` (#16, #21) |
+| `Center.countdown` | `HubView.center.countdown` ← `HubView.countdowns` (#17, #21) |
+| `Center.home` | `HubView.center.home` ← `HubView.home.tiles`, capped at four (#20, #21) |
+| `Center.focus` / `.focus-serial` | `UiState.view.focus` / `UiState.events.focus` via `HubView.center` (#14, #21) |
+| `Center.open(Screen)` | `UserInput::Open(Screen)` through the bridge's Screen mapping |
+| `Center.toggle-home(key)` | `UserInput::ToggleHome(key)` |
 
 ## Answer
 

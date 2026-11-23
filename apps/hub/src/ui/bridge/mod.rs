@@ -1,5 +1,6 @@
 //! Adapter thật: UiState → global hợp đồng, callback hợp đồng → UserInput.
 mod calendar;
+mod center;
 mod countdowns;
 mod home;
 mod images;
@@ -22,3 +23,7 @@ pub struct BridgeState {
 #[cfg(test)]
 #[path = "timers_tests.rs"]
 mod timers_tests;
+
+#[cfg(test)]
+#[path = "center_tests.rs"]
+mod center_tests;

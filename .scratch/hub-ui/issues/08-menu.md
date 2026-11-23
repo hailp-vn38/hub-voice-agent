@@ -23,11 +23,11 @@ Fixture: đủ 8 dòng; kịch bản "Không có gì đang chạy" (dòng trốn
 
 ## Map với hub-core
 
-Map: chờ hub-core #05 (và tính năng tương ứng cho từng dòng)
+Map: done (hub-core #21; bridge ticket 06)
 
 | Hợp đồng | UiState / UserInput |
 |---|---|
-| `Menu.weather` … `Menu.settings` | |
+| `Menu.weather` … `Menu.settings` | Chép trường tương ứng từ `HubView.menu` (`present` #21); hub-core tạo từng dòng từ `UiState` và view của tính năng. |
 
 ## Answer
 
