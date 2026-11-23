@@ -1,0 +1,37 @@
+# 16 — Màn Nhà
+
+Status: ready-for-agent
+Blocked by: 03
+Spec: [../spec.md](../spec.md)
+Thiết kế: concept.md §5 "Home Assistant (demo)", §6 "Màn hình" (Nhà), "Phong cách" (màu ấm cho thiết bị đang bật)
+
+## Việc
+
+- `screens/home.slint`: "‹ Nhà"; toàn bộ thẻ demo đã chọn: đèn, công tắc (chạm để bật/tắt), cảm biến (chỉ đọc).
+- Thẻ đang bật dùng màu ấm; đang chờ phản hồi sau khi chạm thì hiện trạng thái chờ; `stale` → thẻ mờ + "cập nhật lúc HH:MM"; mất kết nối HA → dòng báo ở đầu màn.
+- Chưa cấu hình HA → trạng thái trống hướng dẫn mở Setup web.
+- `components/home-tile.slint` dùng chung với màn trung tâm (ticket 07).
+- `contract/home.slint`:
+  - `export enum HomeKind { light, switch, sensor }`.
+  - `HomeTile { key, name, kind: HomeKind, on: bool, value, pending: bool, stale: bool }`.
+  - `global HomeData { in property <[HomeTile]> tiles; in property <bool> configured; in property <bool> connected; in property <string> updated; callback toggle(string); }`.
+
+## Demo
+
+Kịch bản: "Bật đèn phòng khách" (chờ → bật), "Mất kết nối HA" (stale), "Chưa cấu hình".
+
+## Nghiệm thu
+
+- [ ] Đèn/công tắc bật tắt bằng chạm, trạng thái chờ hiện rõ.
+- [ ] Cảm biến không chạm được.
+- [ ] Thẻ cũ phân biệt rõ với thẻ đang cập nhật.
+
+## Map với hub-core
+
+Map: chờ hub-core #11
+
+| Hợp đồng | UiState / UserInput |
+|---|---|
+| `HomeData.tiles` | |
+| `.configured` / `.connected` / `.updated` | |
+| `toggle(key)` | |

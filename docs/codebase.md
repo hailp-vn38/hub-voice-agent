@@ -401,3 +401,5 @@ Ví dụ test qua interface của hub-core: gửi `ToolCall("hub_timer_start", {
 - **Giờ trước khi NTP đồng bộ.** Pi 4 không có RTC; khởi động khi mất mạng thì giờ hệ thống sai (fake-hwclock chỉ giữ giờ lúc tắt). Hẹn giờ/Reminder theo giờ tuyệt đối có thể báo sai hoặc gắn "Đã lỡ" sai. Đề xuất: `System` báo trạng thái đồng bộ giờ, `alerts` không xử lý mục quá hạn cho tới khi đã đồng bộ.
 - **Đổi độ phân giải lúc chạy.** Chưa rõ Slint `linuxkms` có đổi mode KMS mà không khởi động lại app không. Nếu phải khởi động lại, luồng "Giữ độ phân giải này? 10" cần lưu mode cũ vào config để quay về sau lần khởi động kế.
 - **Sample rate.** Kiểm sample rate Opus mà Voice Protocol yêu cầu; openWakeWord cần 16 kHz. Khác nhau thì `capture` phải resample một nhánh.
+
+**View hiện có:** `UiState.view` chứa `Screen` và `Focus`; `UserInput::Open`, `Back`, `Activity` điều hướng và đặt lại hạn 60 giây. Tool timer thành công mở màn Hẹn giờ và timer mới được focus theo ID. Chạm hoặc wake word thoát Ambient; tự vào Ambient cần setting thời gian và lịch ban đêm. Bảng ánh xạ tool server chưa được xác định. Vị trí thời tiết tạm xem và cache thuộc ticket 09.

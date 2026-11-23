@@ -1,6 +1,6 @@
 # 05 — View: điều hướng, focus, tự về màn trung tâm
 
-Status: ready-for-agent
+Status: needs-info
 Blocked by: 04
 Spec: [../spec.md](../spec.md)
 
@@ -14,5 +14,9 @@ Spec: [../spec.md](../spec.md)
 ## Nghiệm thu
 
 - [ ] Test: `hub_timer_start` → `UiState.view.screen == Timers` với focus thẻ mới; tiến clock 60 s không thao tác → `Center`.
-- [ ] Thao tác người dùng đặt lại bộ đếm tự quay về.
+- [x] Thao tác người dùng đặt lại bộ đếm tự quay về.
 - [ ] `ServerTool{name, Started}` với tên đã biết → mở đúng màn.
+
+## Comments
+
+Điều hướng bằng `UserInput`, focus timer vừa tạo và thời hạn 60 giây đã có; đã kiểm tra focus khi tạo timer và thời hạn/reset qua `run`. Chưa có bảng tên tool server đáng tin cậy: vela-server dùng external MCP có tên theo cấu hình, còn `server_*_reminder` quản lý dữ liệu khác Reminder cục bộ (concept yêu cầu chặn). Cần xác nhận tên tool server thực tế trước khi ánh xạ. Ambient có thể mở bằng input, thoát khi chạm hoặc wake word; tự vào Ambient cần setting thời gian và lịch ban đêm chưa có trong Config. Vị trí tạm xem và cache thuộc ticket 09: concept yêu cầu trở về vị trí nhà khi rời màn, giữ cache 30 phút; tiêu chí ticket 09 lại ghi quay về nhà sau 30 phút, cần làm rõ sự khác biệt này.

@@ -9,6 +9,7 @@ mod runtime;
 pub mod setup_web;
 mod store;
 mod ui_state;
+mod view;
 mod voice_settings;
 
 use std::sync::Arc;
@@ -21,6 +22,7 @@ pub use ports::{Clock, SystemClock};
 pub use runtime::run;
 use tokio::sync::{mpsc, watch};
 pub use ui_state::{UiState, VoiceSettingsState, VoiceState, VoiceUiState};
+pub use view::{Focus, Screen, ViewState};
 use voice_client::{VoiceCommand, VoiceConfig, VoiceEvent};
 pub use voice_settings::DEFAULT_OTA_URL;
 
@@ -28,8 +30,10 @@ pub struct Ports {
     pub clock: Arc<dyn Clock>,
 }
 
-/// User inputs will be added with the corresponding behavior.
 pub enum UserInput {
+    Open(Screen),
+    Back,
+    Activity,
     SaveVoiceUrl(String),
     VoiceConnect,
     Setup(
