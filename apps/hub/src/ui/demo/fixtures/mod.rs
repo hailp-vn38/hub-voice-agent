@@ -12,6 +12,9 @@ pub fn init(app: &App) {
     menu::init(app);
     home::init(app);
     first_boot::init(app);
+    super::timers::init(app);
 }
 
-pub fn tick(_app: &App) {}
+pub fn tick(app: &App) {
+    super::timers::tick(app);
+}

@@ -13,6 +13,7 @@ import { Settings } from "../screens/settings.slint";
 import { SettingsData } from "../contract/settings.slint";
 import { SpawnDemo, SpawnDemoScreen } from "../screens/spawn-demo.slint";
 import { FloatingCardsView } from "floating-cards.slint";
+import { Timers } from "../screens/timers.slint";
 
 // Khung app: tầng trung tâm ⇄ menu (vuốt theo ngón tay), tầng màn tính năng,
 // hàng dưới cùng dành cho Voice dock (ngoài vùng vuốt), lớp phủ ở trên cùng.
@@ -79,9 +80,10 @@ export component Shell inherits Rectangle {
                 x: (1 - root.feat-p) * root.w;
                 opacity: root.feat-p;
                 background: Theme.background;
-                if root.shown != Screen.home && root.shown != Screen.settings: Placeholder { title: root.title(root.shown); }
+                if root.shown != Screen.home && root.shown != Screen.settings && root.shown != Screen.timers: Placeholder { title: root.title(root.shown); }
                 if root.shown == Screen.home: Home { }
                 if root.shown == Screen.settings: Settings { }
+                if root.shown == Screen.timers: Timers { }
             }
         }
     }
