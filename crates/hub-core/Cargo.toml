@@ -19,6 +19,7 @@ axum = "0.8"
 reqwest = { workspace = true, features = ["json"] }
 futures-util = { workspace = true }
 tokio-tungstenite = { workspace = true }
+image = { version = "0.25", default-features = false, features = ["jpeg", "png", "webp"] }
 rusqlite = { version = "0.37", features = ["bundled"] }
 
 [dev-dependencies]

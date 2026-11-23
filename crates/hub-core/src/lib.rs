@@ -25,7 +25,8 @@ pub use config::{
     CalendarSettings, Config, ConfigStore, HomeSettings, VoiceSettings, WeatherSettings,
 };
 pub use ports::{
-    Clock, HomeEntity, HomeEvent, HomeSource, System, SystemClock, WeatherLocation, WeatherSource,
+    Clock, FetchedImage, HomeEntity, HomeEvent, HomeSource, ImageFetcher, System, SystemClock,
+    WeatherLocation, WeatherSource,
 };
 pub use runtime::run;
 use tokio::sync::{mpsc, watch};
@@ -67,7 +68,7 @@ pub struct Io {
 pub use features::countdowns::{Countdown, CountdownView};
 pub use features::timers::Timer;
 pub use features::weather::WeatherView;
-pub use sources::{HomeAssistant, OpenMeteo};
+pub use sources::{HomeAssistant, HttpImageFetcher, OpenMeteo};
 pub use store::Store;
 
 pub fn tool_definitions() -> Vec<voice_client::ToolDef> {

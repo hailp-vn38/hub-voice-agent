@@ -15,3 +15,8 @@ Spec: [../spec.md](../spec.md)
 - [ ] Adapter từ chối URL `127.0.0.1`, `192.168.x.x`, ảnh quá lớn.
 - [ ] Unit test chính sách xoá: vượt giới hạn → xoá cũ nhất không ghim.
 - [ ] Test qua `run()`: tool show_image → màn Ảnh hiện ảnh mới sau khi fake trả về.
+
+## Tiến độ
+
+- Adapter `HttpImageFetcher` đã có giới hạn tải, kiểm tra địa chỉ DNS cho từng bước chuyển hướng, và tạo ảnh/thumbnail PNG đã thu nhỏ.
+- Chưa hoàn tất: kiểm thử chuyển hướng và ảnh quá lớn; tích hợp `Ports`, cache/ghim/xoá ảnh, tool và kiểm thử qua `run()`.

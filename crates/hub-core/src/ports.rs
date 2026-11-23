@@ -61,3 +61,19 @@ pub trait HomeSource: Send + Sync {
         service: String,
     ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + '_>>;
 }
+
+/// Decoded, size-limited PNG data for display and its preview.
+#[derive(Clone, Debug)]
+pub struct FetchedImage {
+    pub image: Vec<u8>,
+    pub thumbnail: Vec<u8>,
+}
+
+pub trait ImageFetcher: Send + Sync {
+    fn fetch(
+        &self,
+        url: String,
+    ) -> std::pin::Pin<
+        Box<dyn std::future::Future<Output = anyhow::Result<FetchedImage>> + Send + '_>,
+    >;
+}
