@@ -1,5 +1,6 @@
 //! Hub core: the actor that owns state and drives the UI snapshot. Depends on `voice-client`.
 
+mod alerts;
 mod audio;
 mod config;
 mod conversation;
@@ -18,11 +19,12 @@ mod voice_settings;
 
 use std::sync::Arc;
 
+pub use alerts::Alert;
 pub use audio::{AudioCommand, AudioEvent, Sensitivity, Sound};
 pub use config::{
     CalendarSettings, Config, ConfigStore, HomeSettings, VoiceSettings, WeatherSettings,
 };
-pub use ports::{Clock, SystemClock, WeatherLocation, WeatherSource};
+pub use ports::{Clock, System, SystemClock, WeatherLocation, WeatherSource};
 pub use runtime::run;
 use tokio::sync::{mpsc, watch};
 pub use ui_state::{UiState, VoiceSettingsState, VoiceState, VoiceUiState};
@@ -33,9 +35,11 @@ pub use voice_settings::DEFAULT_OTA_URL;
 pub struct Ports {
     pub clock: Arc<dyn Clock>,
     pub weather: Arc<dyn WeatherSource>,
+    pub system: Arc<dyn System>,
 }
 
 pub enum UserInput {
+    DismissAlert,
     Open(Screen),
     Back,
     Activity,

@@ -58,6 +58,7 @@ async fn weather_preview_returns_home_and_uses_cache() {
         Ports {
             clock: Arc::new(TestClock::at(start.clone())),
             weather: source.clone(),
+            system: Arc::new(support::Synced),
         },
         Io {
             voice_config_tx: config_tx.clone(),

@@ -40,6 +40,13 @@ impl View {
     pub fn screen(&self) -> Screen {
         self.state.screen
     }
+    pub fn new(now: i64) -> Self {
+        Self {
+            last_activity: Some(now),
+            ..Self::default()
+        }
+    }
+
     pub fn open(&mut self, screen: Screen, focus: Option<Focus>, now: i64) -> Vec<Effect> {
         if screen != Screen::Menu && !matches!(screen, Screen::Center | Screen::Ambient) {
             if self.state.screen == Screen::Menu {
@@ -71,9 +78,10 @@ impl View {
             UserInput::Activity if self.state.screen == Screen::Ambient => {
                 self.open(Screen::Center, None, now)
             }
-            UserInput::SaveVoiceUrl(_) | UserInput::VoiceConnect | UserInput::Setup(_, _) => {
-                Vec::new()
-            }
+            UserInput::SaveVoiceUrl(_)
+            | UserInput::VoiceConnect
+            | UserInput::Setup(_, _)
+            | UserInput::DismissAlert => Vec::new(),
             UserInput::Activity => {
                 self.last_activity = Some(now);
                 Vec::new()
@@ -82,12 +90,19 @@ impl View {
     }
 
     pub fn tick(&mut self, now: i64) -> Vec<Effect> {
-        if !matches!(self.state.screen, Screen::Center | Screen::Ambient)
-            && self
-                .last_activity
-                .is_some_and(|last| now.saturating_sub(last) >= 60)
-        {
-            return self.open(Screen::Center, None, now);
+        if let Some(last) = self.last_activity {
+            let idle = now.saturating_sub(last);
+            if idle >= 300 && self.state.screen != Screen::Ambient {
+                self.state = ViewState {
+                    screen: Screen::Ambient,
+                    focus: None,
+                };
+                return self.snapshot();
+            }
+            if idle >= 60 && !matches!(self.state.screen, Screen::Center | Screen::Ambient) {
+                self.state = ViewState::default();
+                return self.snapshot();
+            }
         }
         Vec::new()
     }

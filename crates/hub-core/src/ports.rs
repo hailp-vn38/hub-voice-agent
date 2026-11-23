@@ -29,3 +29,8 @@ pub trait WeatherSource: Send + Sync {
         Box<dyn std::future::Future<Output = anyhow::Result<serde_json::Value>> + Send + '_>,
     >;
 }
+
+/// Reports whether wall time is reliable.
+pub trait System: Send + Sync {
+    fn time_synced(&self) -> bool;
+}

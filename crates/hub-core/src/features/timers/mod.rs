@@ -82,8 +82,13 @@ impl Feature {
             Err(err) => vec![Effect::Reply(call, Err(tools::error(&err)))],
         }
     }
-    pub fn tick(&mut self, now: i64) -> Vec<Effect> {
-        let _due = self.timers.due(now);
-        Vec::new()
+    pub fn due(&self, now: i64) -> Vec<Timer> {
+        self.timers.due(now)
+    }
+    pub fn dismiss(&mut self, id: i64) -> Vec<Effect> {
+        self.timers.items.retain(|timer| timer.id != id);
+        let mut effects = vec![Effect::Persist(self.timers.items.clone())];
+        effects.extend(self.snapshot());
+        effects
     }
 }
