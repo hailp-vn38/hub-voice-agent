@@ -51,6 +51,7 @@ async fn countdown_updates_at_midnight_through_run() {
         Ports {
             clock: Arc::new(TestClock::at(start.clone())),
             calendar: Arc::new(hub_core::sources::google_calendar::GoogleCalendar::default()),
+            system: Arc::new(support::Synced),
         },
         Io {
             voice_config_tx: config_tx.clone(),
@@ -138,6 +139,7 @@ async fn countdown_updates_at_midnight_through_run() {
         Ports {
             clock: Arc::new(TestClock::at(start)),
             calendar: Arc::new(hub_core::sources::google_calendar::GoogleCalendar::default()),
+            system: Arc::new(support::Synced),
         },
         Io {
             voice_config_tx,

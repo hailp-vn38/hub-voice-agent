@@ -73,6 +73,7 @@ async fn actor_refreshes_and_keeps_cached_events_when_offline() {
                     .unwrap(),
             )),
             calendar: fake.clone(),
+            system: Arc::new(support::Synced),
         },
         Io {
             voice_config_tx,

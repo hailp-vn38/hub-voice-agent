@@ -50,6 +50,10 @@ pub struct Hub {
 
 impl Hub {
     pub fn start(start: Zoned) -> Self {
+        Self::start_with_store(start, hub_core::Store::in_memory().unwrap())
+    }
+
+    pub fn start_with_store(start: Zoned, store: hub_core::Store) -> Self {
         let (voice_tx, voice_rx) = mpsc::channel(16);
         let (voice_event_tx, voice_event_rx) = mpsc::channel(16);
         let (audio_tx, audio_rx) = mpsc::channel(16);
@@ -61,10 +65,11 @@ impl Hub {
         let (voice_config_tx, config_rx) = watch::channel(None);
         let task = tokio::spawn(run(
             config,
-            hub_core::Store::in_memory().unwrap(),
+            store,
             Ports {
                 clock: Arc::new(TestClock::at(start)),
                 calendar: Arc::new(hub_core::sources::google_calendar::GoogleCalendar::default()),
+                system: Arc::new(Synced),
             },
             Io {
                 voice_config_tx,
@@ -87,5 +92,12 @@ impl Hub {
             _dir: dir,
             task,
         }
+    }
+}
+
+pub struct Synced;
+impl hub_core::System for Synced {
+    fn time_synced(&self) -> bool {
+        true
     }
 }
