@@ -1,16 +1,41 @@
+import { Button } from "std-widgets.slint";
 import { Theme } from "theme.slint";
+import { VoiceSettings } from "screens/voice-settings.slint";
 
 export component App inherits Window {
     in property <string> clock: "--:--:--";
+    in-out property <string> ota-url;
+    in property <string> device-id;
+    in property <string> voice-status;
+    in property <string> activation;
+    in property <string> voice-error;
+    in property <bool> enrolling;
+    private property <bool> settings-open: false;
+    callback save-voice-url(string);
+    callback connect-voice();
     preferred-width: 1920px;
     preferred-height: 1080px;
     background: Theme.background;
 
-    Text {
-        text: root.clock;
-        color: Theme.text;
-        font-size: 160px;
-        horizontal-alignment: center;
-        vertical-alignment: center;
+    if !root.settings-open: Rectangle {
+        Text {
+            text: root.clock;
+            color: Theme.text;
+            font-size: 160px;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+        Button { text: "Settings"; x: parent.width - self.width - 32px; y: 32px; clicked => { root.settings-open = true; } }
+    }
+    if root.settings-open: VoiceSettings {
+        ota-url <=> root.ota-url;
+        device-id: root.device-id;
+        status: root.voice-status;
+        activation: root.activation;
+        error: root.voice-error;
+        enrolling: root.enrolling;
+        save(url) => { root.save-voice-url(url); }
+        connect => { root.connect-voice(); }
+        back => { root.settings-open = false; }
     }
 }

@@ -1648,10 +1648,19 @@ name = "hub"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "futures-util",
  "hub-core",
+ "serde",
+ "serde_json",
  "slint",
  "slint-build",
+ "tempfile",
  "tokio",
+ "tokio-tungstenite",
+ "toml",
+ "url",
+ "uuid",
+ "voice-client",
 ]
 
 [[package]]
@@ -5113,6 +5122,7 @@ version = "1.29.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3c14b15dffa2f4bd712103e857140aa04a4f2ff6e955c77d7eb8e53ee02a3b64"
 dependencies = [
+ "getrandom 0.4.3",
  "js-sys",
  "serde_core",
  "wasm-bindgen",

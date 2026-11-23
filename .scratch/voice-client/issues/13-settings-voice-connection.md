@@ -1,6 +1,6 @@
 # 13 — Settings: Kết nối voice và hiển thị mã kích hoạt
 
-Status: needs-triage
+Status: ready-for-human
 Blocked by: 03
 Spec: [../spec.md](../spec.md)
 
@@ -16,8 +16,8 @@ Thêm mục **Kết nối voice** trong Settings của hub (`apps/hub`, Slint) �
 
 ## Nghiệm thu
 
-- [ ] Nhập OTA URL hợp lệ, lưu → voice-client nhận config mới; khởi động lại hub vẫn giữ URL, Device ID và Client ID.
-- [ ] URL không hợp lệ → báo lỗi, config không đổi.
+- [x] Nhập OTA URL hợp lệ, lưu → voice-client nhận config mới; khởi động lại hub vẫn giữ URL, Device ID và Client ID (kiểm thử qua controller và config store).
+- [x] URL không hợp lệ → báo lỗi, config không đổi (kiểm thử qua controller và config store).
 - [ ] Server giả trả `activation` → Settings hiện đúng mã và trạng thái "Chờ kích hoạt"; bấm Kết nối lần nữa, OTA trả `websocket` → trạng thái "Đã kết nối", mã biến mất.
 
 ## Comments
@@ -25,3 +25,5 @@ Thêm mục **Kết nối voice** trong Settings của hub (`apps/hub`, Slint) �
 Cần chốt khi triage:
 
 - Nơi lưu config (file TOML/JSON trong thư mục dữ liệu app?) và module nào sở hữu (`hub-core` hay `apps/hub`). Spec voice-client đang để "Lưu `VoiceConfig` và Setup web" ngoài phạm vi crate.
+
+- Quyết định triển khai: `apps/hub` sở hữu voice settings, lưu `[voice]` trong `<data>/config.toml` quyền 0600 theo ADR 0012. Thư mục lấy từ `AI_HUB_DATA_DIR`, `STATE_DIRECTORY` hoặc `.data`; chưa có URL thì chưa chạy voice-client. Các test controller với server OTA/WS giả xác nhận mã, `Connect` và `Ready`; nghiệm thu trực quan trên cửa sổ Slint và với vela-server thật còn chờ người kiểm thử.

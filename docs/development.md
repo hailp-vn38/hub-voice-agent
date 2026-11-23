@@ -52,6 +52,7 @@ Chọn bằng feature của crate `apps/hub` (dự kiến `desktop` mặc địn
 - Chạy vela-server trên cùng Mac bằng compose của repo `AI_Agent_Voice_rust`.
 - Hub dùng OTA URL `http://localhost:<port>/voice/ota` để lấy địa chỉ WebSocket và token; URL được đặt qua Setup web (`http://localhost:<port-setup>`) hoặc file config.
 - Cấu hình vela-server với `devices.enrollment.transport = "ota"`. Chế độ `"websocket"` không được hub hỗ trợ vì không phân biệt được Enrollment Session với Voice Session.
+- Mở **Settings → Kết nối voice**, nhập OTA URL rồi lưu. Device ID, Client ID và URL được lưu trong `[voice]` của `<data>/config.toml`; thư mục dữ liệu lấy từ `AI_HUB_DATA_DIR`, `STATE_DIRECTORY` hoặc `.data` theo thứ tự ưu tiên. Khi hiện mã kích hoạt, nhập mã trên admin web rồi bấm **Kết nối**.
 - Đăng ký hub như một Physical Device qua Enrollment, như thiết bị thật.
 - Server cần bật `barge_in.enabled` và `barge_in.trust_client_aec_feature` khi test barge-in; client gửi `features.mcp`, `features.tool_status`, `features.direct_tts`.
 

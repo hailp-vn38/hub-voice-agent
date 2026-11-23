@@ -1,0 +1,37 @@
+import { Button, LineEdit, VerticalBox, HorizontalBox } from "std-widgets.slint";
+
+export component VoiceSettings inherits Rectangle {
+    in-out property <string> ota-url;
+    in property <string> device-id;
+    in property <string> status;
+    in property <string> activation;
+    in property <string> error;
+    in property <bool> enrolling;
+    callback save(string);
+    callback connect();
+    callback back();
+
+    background: #0b0f14;
+    VerticalBox {
+        padding: 48px;
+        spacing: 18px;
+        Text { text: "Settings · Kết nối voice"; color: #e8edf2; font-size: 34px; }
+        Text { text: "OTA URL"; color: #e8edf2; font-size: 22px; }
+        HorizontalBox {
+            spacing: 12px;
+            LineEdit { text <=> root.ota-url; placeholder-text: "http://<server>/voice/ota"; }
+            Button { text: "Lưu"; clicked => { root.save(root.ota-url); } }
+        }
+        if root.error != "": Text { text: root.error; color: #ff8c8c; font-size: 20px; wrap: word-wrap; }
+        Text { text: "Device ID: " + root.device-id; color: #e8edf2; font-size: 20px; }
+        Text { text: "Trạng thái: " + root.status; color: #e8edf2; font-size: 22px; }
+        if root.enrolling: VerticalBox {
+            spacing: 12px;
+            Text { text: root.activation; color: #4cc2ff; font-size: 52px; }
+            Text { text: "Nhập mã này trong mục Thêm thiết bị trên admin web, rồi bấm Kết nối"; color: #e8edf2; font-size: 20px; wrap: word-wrap; }
+            Button { text: "Kết nối"; clicked => { root.connect(); } }
+        }
+        Rectangle { vertical-stretch: 1; }
+        Button { text: "Quay lại"; clicked => { root.back(); } }
+    }
+}
