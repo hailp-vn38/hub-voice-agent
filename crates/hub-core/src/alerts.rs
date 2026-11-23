@@ -74,16 +74,18 @@ impl Alerts {
         } else {
             (None, Vec::new())
         };
-        if self.active.is_none() && !turn_active && synced {
-            if let Some(alert) = self.queue.pop_front() {
-                self.active = Some((alert.clone(), now));
-                let sound = alert.sound();
-                effects.push(Effect::Ui(Box::new(move |ui| {
-                    ui.alert = Some(alert);
-                    true
-                })));
-                effects.push(Effect::Audio(AudioCommand::Play(sound)));
-            }
+        if self.active.is_none()
+            && !turn_active
+            && synced
+            && let Some(alert) = self.queue.pop_front()
+        {
+            self.active = Some((alert.clone(), now));
+            let sound = alert.sound();
+            effects.push(Effect::Ui(Box::new(move |ui| {
+                ui.alert = Some(alert);
+                true
+            })));
+            effects.push(Effect::Audio(AudioCommand::Play(sound)));
         }
         (dismissed, effects)
     }

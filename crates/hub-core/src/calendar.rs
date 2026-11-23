@@ -4,6 +4,8 @@ use std::{future::Future, pin::Pin};
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CalendarEvent {
+    #[serde(default)]
+    pub location: Option<String>,
     pub id: String,
     pub summary: String,
     pub start: String,
@@ -11,6 +13,7 @@ pub struct CalendarEvent {
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct NewCalendarEvent {
+    pub location: Option<String>,
     pub summary: String,
     pub start: String,
     pub end: String,

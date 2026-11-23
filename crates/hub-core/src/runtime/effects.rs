@@ -29,7 +29,7 @@ pub(crate) enum Effect {
     CancelJob(JobId),
     PersistCountdowns(Vec<crate::Countdown>),
     PersistReminders(Vec<crate::Reminder>, Vec<crate::ReminderHistory>),
-    PersistCalendar(Vec<crate::CalendarEvent>, Option<String>),
+    PersistCalendar(Vec<crate::CalendarEvent>, Option<String>, Option<i64>),
     Reply(ToolCall, Result<serde_json::Value, ToolError>),
     ReplyError(ToolCall, &'static str),
 }
@@ -44,7 +44,10 @@ pub(super) async fn execute(
 ) -> anyhow::Result<()> {
     match effect {
         Effect::PersistReminders(items, history) => store.reminders_save(&items, &history)?,
-        Effect::PersistCalendar(events, token) => store.calendar_save(&events, &token)?,
+        Effect::PersistCalendar(events, token, last_sync) => {
+            store.calendar_save(&events, &token)?;
+            store.calendar_save_sync(last_sync)?;
+        }
         Effect::CancelJob(id) => {
             if let Some(call) = jobs.cancel(&id) {
                 reply_error(call, "Job cancelled");
@@ -59,10 +62,10 @@ pub(super) async fn execute(
         Effect::PersistPhotos(results, now, reply) => {
             let mut loaded = 0;
             for (caption, image) in results {
-                if let Ok(image) = image {
-                    if store.photos_add(caption, image, now).is_ok() {
-                        loaded += 1;
-                    }
+                if let Ok(image) = image
+                    && store.photos_add(caption, image, now).is_ok()
+                {
+                    loaded += 1;
                 }
             }
             let photos = store.photos_load()?;

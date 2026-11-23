@@ -20,6 +20,7 @@ pub enum Screen {
 pub enum Focus {
     Timer(i64),
     Calendar(String),
+    Photo(String),
     Countdown(i64),
     Weather(String),
 }
@@ -38,6 +39,9 @@ pub(crate) struct View {
 }
 
 impl View {
+    pub fn focus(&self) -> Option<&Focus> {
+        self.state.focus.as_ref()
+    }
     pub fn screen(&self) -> Screen {
         self.state.screen
     }

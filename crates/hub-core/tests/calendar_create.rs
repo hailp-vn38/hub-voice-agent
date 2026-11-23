@@ -30,7 +30,12 @@ impl CalendarSource for Fake {
         event: NewCalendarEvent,
     ) -> CalendarFuture<CalendarEvent> {
         Box::pin(async move {
+            if event.summary == "Fail" {
+                anyhow::bail!("offline");
+            }
+            assert_eq!(event.location.as_deref(), Some("Hanoi"));
             Ok(CalendarEvent {
+                location: event.location.clone(),
                 id: "created".into(),
                 summary: event.summary,
                 start: event.start,
@@ -49,7 +54,7 @@ async fn creating_event_replies_after_source_and_focuses_event() {
     tokio::spawn(async move {
         let (mut conn, _) = ota.accept().await.unwrap();
         let mut buf = [0; 4096];
-        conn.read(&mut buf).await.unwrap();
+        assert!(conn.read(&mut buf).await.unwrap() > 0);
         let body =
             json!({"websocket":{"url":format!("ws://{ws_addr}"),"token":"token"}}).to_string();
         conn.write_all(format!("HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}", body.len()).as_bytes()).await.unwrap();
@@ -62,7 +67,7 @@ async fn creating_event_replies_after_source_and_focuses_event() {
     let (voice_tx, voice_rx) = voice_client::spawn(config_rx);
     let (audio_tx, _audio_rx) = mpsc::channel(16);
     let (_audio_events, audio_rx) = mpsc::channel(16);
-    let (_input_tx, input_rx) = mpsc::channel(16);
+    let (input_tx, input_rx) = mpsc::channel(16);
     let (ui_tx, ui_rx) = watch::channel(UiState::default());
     let task = tokio::spawn(run(
         config,
@@ -93,7 +98,7 @@ async fn creating_event_replies_after_source_and_focuses_event() {
     let mut socket = accept_async(stream).await.unwrap();
     socket.next().await.unwrap().unwrap();
     socket.send(Message::Text(json!({"type":"hello","transport":"websocket","session_id":"test","audio_params":{"format":"opus","sample_rate":24000,"channels":1,"frame_duration":60}}).to_string().into())).await.unwrap();
-    socket.send(Message::Text(json!({"type":"mcp","payload":{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"hub_calendar_create","arguments":{"summary":"Lunch","start":"2026-11-23T12:00:00+07:00","end":"2026-11-23T13:00:00+07:00"}}}}).to_string().into())).await.unwrap();
+    socket.send(Message::Text(json!({"type":"mcp","payload":{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"hub_calendar_create","arguments":{"summary":"Lunch","start":"2026-11-23","end":"2026-11-24","location":"Hanoi"}}}}).to_string().into())).await.unwrap();
     let reply: Value = loop {
         let message = tokio::time::timeout(std::time::Duration::from_secs(5), socket.next())
             .await
@@ -114,5 +119,47 @@ async fn creating_event_replies_after_source_and_focuses_event() {
         Some(Focus::Calendar("created".into()))
     );
     assert_eq!(ui_rx.borrow().calendar[0].summary, "Lunch");
+    socket.send(Message::Text(json!({"type":"mcp","payload":{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"hub_calendar_get","arguments":{"focus":"2026-11-23"}}}}).to_string().into())).await.unwrap();
+    loop {
+        let message = tokio::time::timeout(std::time::Duration::from_secs(5), socket.next())
+            .await
+            .unwrap()
+            .unwrap()
+            .unwrap();
+        if let Message::Text(text) = message {
+            let value: Value = serde_json::from_str(&text).unwrap();
+            if value["payload"]["id"] == 3 {
+                assert_eq!(value["payload"]["result"]["events"][0]["id"], "created");
+                break;
+            }
+        }
+    }
+    assert_eq!(
+        ui_rx.borrow().view.focus,
+        Some(Focus::Calendar("2026-11-23".into()))
+    );
+    input_tx
+        .send(hub_core::UserInput::Open(Screen::Center))
+        .await
+        .unwrap();
+    for _ in 0..20 {
+        tokio::task::yield_now().await;
+    }
+    socket.send(Message::Text(json!({"type":"mcp","payload":{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"hub_calendar_create","arguments":{"summary":"Fail","start":"2026-11-23","end":"2026-11-24"}}}}).to_string().into())).await.unwrap();
+    loop {
+        let message = tokio::time::timeout(std::time::Duration::from_secs(5), socket.next())
+            .await
+            .unwrap()
+            .unwrap()
+            .unwrap();
+        if let Message::Text(text) = message {
+            let value: Value = serde_json::from_str(&text).unwrap();
+            if value["payload"]["id"] == 2 {
+                assert!(value["payload"]["error"].is_object());
+                break;
+            }
+        }
+    }
+    assert_eq!(ui_rx.borrow().view.screen, Screen::Calendar);
     task.abort();
 }

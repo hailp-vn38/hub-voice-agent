@@ -16,7 +16,7 @@ async fn google_adapter_lists_inserts_and_reports_expired_sync_token() {
         .route("/calendar/calendars/primary/events", get(|query: axum::extract::RawQuery| async move {
             if query.0.unwrap_or_default().contains("syncToken=expired") { return (StatusCode::GONE, Json(json!({}))).into_response(); }
             Json(json!({"items":[{"id":"one","summary":"Meeting","start":{"dateTime":"2026-11-23T10:00:00+07:00"},"end":{"dateTime":"2026-11-23T11:00:00+07:00"}},{"id":"gone","status":"cancelled"}],"nextSyncToken":"next"})).into_response()
-        }).post(|| async { Json(json!({"id":"new","summary":"Lunch","start":{"dateTime":"2026-11-23T12:00:00+07:00"},"end":{"dateTime":"2026-11-23T13:00:00+07:00"}})) }));
+        }).post(|Json(body): Json<serde_json::Value>| async move { assert_eq!(body["start"]["date"], "2026-11-23"); assert_eq!(body["end"]["date"], "2026-11-24"); assert_eq!(body["location"], "Hanoi"); Json(json!({"id":"new","summary":"Lunch","location":"Hanoi","start":{"date":"2026-11-23"},"end":{"date":"2026-11-24"}})) }));
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let addr = listener.local_addr().unwrap();
     let server = tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
@@ -44,13 +44,15 @@ async fn google_adapter_lists_inserts_and_reports_expired_sync_token() {
         .create(
             settings,
             NewCalendarEvent {
+                location: Some("Hanoi".into()),
                 summary: "Lunch".into(),
-                start: "2026-11-23T12:00:00+07:00".into(),
-                end: "2026-11-23T13:00:00+07:00".into(),
+                start: "2026-11-23".into(),
+                end: "2026-11-24".into(),
             },
         )
         .await
         .unwrap();
     assert_eq!(event.id, "new");
+    assert_eq!(event.location.as_deref(), Some("Hanoi"));
     server.abort();
 }

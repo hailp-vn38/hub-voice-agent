@@ -84,6 +84,7 @@ impl GoogleCalendar {
                     item.end.and_then(Time::value),
                 ) {
                     events.push(CalendarEvent {
+                        location: item.location,
                         id: item.id,
                         summary: item.summary.unwrap_or_default(),
                         start,
@@ -109,8 +110,27 @@ impl GoogleCalendar {
         event: NewCalendarEvent,
     ) -> anyhow::Result<CalendarEvent> {
         let access = self.access(&settings).await?;
-        let item: Item = self.client.post(format!("{}/calendars/primary/events", self.api)).bearer_auth(access).json(&serde_json::json!({"summary":event.summary,"start":{"dateTime":event.start},"end":{"dateTime":event.end}})).send().await?.error_for_status()?.json().await?;
+        let key = if event.start.parse::<jiff::civil::Date>().is_ok() {
+            "date"
+        } else {
+            "dateTime"
+        };
+        let mut body = serde_json::json!({"summary": event.summary, "start": {key: event.start}, "end": {key: event.end}});
+        if let Some(location) = event.location {
+            body["location"] = location.into();
+        }
+        let item: Item = self
+            .client
+            .post(format!("{}/calendars/primary/events", self.api))
+            .bearer_auth(access)
+            .json(&body)
+            .send()
+            .await?
+            .error_for_status()?
+            .json()
+            .await?;
         Ok(CalendarEvent {
+            location: item.location,
             id: item.id,
             summary: item.summary.unwrap_or_default(),
             start: item
@@ -152,6 +172,7 @@ struct ListResponse {
 }
 #[derive(Deserialize)]
 struct Item {
+    location: Option<String>,
     id: String,
     status: Option<String>,
     summary: Option<String>,

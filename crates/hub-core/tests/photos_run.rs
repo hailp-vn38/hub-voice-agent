@@ -49,7 +49,7 @@ async fn show_image_displays_downloaded_photo() {
     tokio::spawn(async move {
         let (mut conn, _) = ota.accept().await.unwrap();
         let mut buf = [0; 4096];
-        conn.read(&mut buf).await.unwrap();
+        assert!(conn.read(&mut buf).await.unwrap() > 0);
         let body =
             json!({"websocket":{"url":format!("ws://{ws_addr}"),"token":"token"}}).to_string();
         conn.write_all(format!("HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}", body.len()).as_bytes()).await.unwrap();
@@ -120,5 +120,36 @@ async fn show_image_displays_downloaded_photo() {
         tokio::task::yield_now().await;
     }
     assert!(ui_rx.borrow().photos[0].pinned);
+    socket.send(Message::Text(json!({"type":"mcp","payload":{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"hub_image_list","arguments":{}}}}).to_string().into())).await.unwrap();
+    let list: Value = loop {
+        let message = tokio::time::timeout(std::time::Duration::from_secs(5), socket.next())
+            .await
+            .unwrap()
+            .unwrap()
+            .unwrap();
+        if let Message::Text(text) = message {
+            let value: Value = serde_json::from_str(&text).unwrap();
+            if value["payload"]["id"] == 2 {
+                break value;
+            }
+        }
+    };
+    assert_eq!(list["payload"]["result"]["images"][0]["caption"], "Lake");
+    socket.send(Message::Text(json!({"type":"mcp","payload":{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"hub_image_control","arguments":{"action":"unpin"}}}}).to_string().into())).await.unwrap();
+    let control: Value = loop {
+        let message = tokio::time::timeout(std::time::Duration::from_secs(5), socket.next())
+            .await
+            .unwrap()
+            .unwrap()
+            .unwrap();
+        if let Message::Text(text) = message {
+            let value: Value = serde_json::from_str(&text).unwrap();
+            if value["payload"]["id"] == 3 {
+                break value;
+            }
+        }
+    };
+    assert_eq!(control["payload"]["result"]["ok"], true);
+    assert!(!ui_rx.borrow().photos[0].pinned);
     task.abort();
 }

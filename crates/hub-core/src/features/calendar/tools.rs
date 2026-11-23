@@ -5,6 +5,7 @@ use voice_client::ToolDef;
 #[derive(Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Create {
+    pub location: Option<String>,
     pub summary: String,
     pub start: String,
     pub end: String,
@@ -12,6 +13,7 @@ pub struct Create {
 #[derive(Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct List {
+    pub focus: Option<String>,
     pub start: Option<String>,
     pub end: Option<String>,
 }
@@ -24,10 +26,10 @@ fn definition<T: JsonSchema>(name: &str, description: &str) -> ToolDef {
 }
 pub fn definitions() -> Vec<ToolDef> {
     vec![
-        definition::<List>("hub_calendar_list", "List calendar events"),
+        definition::<List>("hub_calendar_get", "List calendar events"),
         definition::<Create>(
             "hub_calendar_create",
-            "Create a calendar event; start and end are RFC3339 timestamps",
+            "Create a calendar event; start and end are RFC3339 timestamps or all-day YYYY-MM-DD dates (end exclusive)",
         ),
     ]
 }

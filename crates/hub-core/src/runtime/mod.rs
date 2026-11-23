@@ -114,8 +114,23 @@ pub async fn run(
                 }
                 let old_screen = view.screen();
                 let mut pending = match event {
-                    VoiceEvent::ToolCall(call) if call.name.starts_with("hub_calendar_") => calendar.on_tool(&mut view, call, ports.calendar.clone(), config.get().calendar.clone(), ports.clock.now().timestamp().as_second()),
-                    VoiceEvent::ToolCall(call) => tools::route(&mut timers, &mut reminders, &mut countdowns, &mut view, &mut alerts, &mut weather, &home, &photos, &store, call, ports.clock.now()),
+                    VoiceEvent::ToolCall(call) => {
+                        let now = ports.clock.now();
+                        let screen = if call.name.starts_with("hub_calendar_") { Some(crate::Screen::Calendar) }
+                            else if call.name.starts_with("hub_timer_") { Some(crate::Screen::Timers) }
+                            else if call.name.starts_with("hub_countdown_") { Some(crate::Screen::Countdowns) }
+                            else if call.name.starts_with("hub_reminder_") { Some(crate::Screen::Reminders) }
+                            else if call.name.starts_with("hub_weather_") { Some(crate::Screen::Weather) }
+                            else if call.name.starts_with("hub_home_") { Some(crate::Screen::Home) }
+                            else if call.name.starts_with("hub_image_") || call.name == "hub_show_image" { Some(crate::Screen::Photos) }
+                            else { None };
+                        let mut effects = screen.map(|screen| { let focus = if view.screen() == screen { view.focus().cloned() } else { None }; view.open(screen, focus, now.timestamp().as_second()) }).unwrap_or_default();
+                        let routed = if call.name.starts_with("hub_calendar_") {
+                            calendar.on_tool(&mut view, call, ports.calendar.clone(), config.get().calendar.clone(), now.timestamp().as_second())
+                        } else { tools::route(&mut timers, &mut reminders, &mut countdowns, &mut view, &mut alerts, &mut weather, &home, &photos, &store, call, now) };
+                        effects.extend(routed);
+                        effects
+                    },
                     event => voice::on(event, &mut conversation, ports.clock.now()),
                 };
                 if old_screen == crate::Screen::Weather && view.screen() != crate::Screen::Weather { pending.extend(weather.leave(&store, ports.clock.now().timestamp().as_second())); }

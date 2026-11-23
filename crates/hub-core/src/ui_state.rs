@@ -4,6 +4,8 @@ pub struct UiState {
     /// Local time as `HH:MM:SS`.
     pub clock: String,
     pub calendar: Vec<crate::CalendarEvent>,
+    pub calendar_online: Option<bool>,
+    pub calendar_last_sync: Option<i64>,
     pub weather: crate::WeatherView,
     pub home: Vec<crate::HomeEntity>,
     pub photos: Vec<crate::Photo>,

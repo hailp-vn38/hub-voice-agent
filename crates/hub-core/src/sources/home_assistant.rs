@@ -132,7 +132,7 @@ async fn session(
                         if let Some(states) = value["result"].as_array() { for state in states { if let Some(entity) = parse_state(state) { events.send(HomeEvent::State(entity)).await?; } } }
                     } else if id == 1 { anyhow::ensure!(value["success"] == true, "subscribe_events failed"); }
                     else if let Some(reply) = pending.remove(&id) { let result = if value["success"] == true { Ok(()) } else { Err(anyhow::anyhow!("Home Assistant service failed")) }; let _ = reply.send(result); }
-                } else if value["type"] == "event" { if let Some(entity) = parse_state(&value["event"]["data"]["new_state"]) { events.send(HomeEvent::State(entity)).await?; } }
+                } else if value["type"] == "event" && let Some(entity) = parse_state(&value["event"]["data"]["new_state"]) { events.send(HomeEvent::State(entity)).await?; }
             }
         }
     }

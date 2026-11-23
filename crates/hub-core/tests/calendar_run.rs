@@ -34,6 +34,7 @@ impl CalendarSource for Fake {
             }
             Ok(CalendarDelta {
                 events: vec![CalendarEvent {
+                    location: None,
                     id: "one".into(),
                     summary: "Meeting".into(),
                     start: "2026-11-23T10:00:00+07:00".into(),
@@ -92,6 +93,9 @@ async fn actor_refreshes_and_keeps_cached_events_when_offline() {
         ui_rx.changed().await.unwrap();
     }
     assert_eq!(ui_rx.borrow().calendar[0].summary, "Meeting");
+    assert_eq!(ui_rx.borrow().calendar_online, Some(true));
+    let last_sync = ui_rx.borrow().calendar_last_sync;
+    assert!(last_sync.is_some());
     tokio::time::advance(std::time::Duration::from_secs(301)).await;
     for _ in 0..20 {
         tokio::task::yield_now().await;
@@ -106,6 +110,8 @@ async fn actor_refreshes_and_keeps_cached_events_when_offline() {
         tokio::task::yield_now().await;
     }
     assert_eq!(fake.calls.lock().unwrap().len(), 4);
+    assert_eq!(ui_rx.borrow().calendar_online, Some(false));
+    assert!(ui_rx.borrow().calendar_last_sync >= last_sync);
     assert_eq!(ui_rx.borrow().calendar[0].id, "one");
     task.abort();
 }
@@ -118,6 +124,7 @@ impl CalendarSource for FutureEvent {
             Ok(CalendarDelta {
                 events: if token.is_none() {
                     vec![CalendarEvent {
+                        location: None,
                         id: "future".into(),
                         summary: "Future".into(),
                         start: "2027-01-23T10:00:00Z".into(),

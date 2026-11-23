@@ -1,3 +1,4 @@
+#[allow(dead_code)]
 mod support;
 use futures_util::{SinkExt, StreamExt};
 use hub_core::{HomeEntity, HomeEvent, HomeSettings, HomeSource, Io, Ports, Store, UiState, run};
@@ -53,7 +54,7 @@ async fn tool_calls_service_and_tracks_state_and_disconnect() {
     tokio::spawn(async move {
         let (mut c, _) = ota.accept().await.unwrap();
         let mut buf = [0; 4096];
-        c.read(&mut buf).await.unwrap();
+        assert!(c.read(&mut buf).await.unwrap() > 0);
         let body =
             json!({"websocket":{"url":format!("ws://{ws_addr}"),"token":"token"}}).to_string();
         c.write_all(format!("HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",body.len()).as_bytes()).await.unwrap();

@@ -9,6 +9,8 @@ use voice_client::ToolCall;
 
 pub struct Feature {
     events: Vec<CalendarEvent>,
+    last_sync: Option<i64>,
+    online: Option<bool>,
     token: Option<String>,
     next_sync: i64,
     last_full_day: Option<i64>,
@@ -19,6 +21,8 @@ impl Feature {
         let (events, token) = store.calendar_load()?;
         Ok(Self {
             events,
+            last_sync: store.calendar_last_sync()?,
+            online: None,
             token,
             next_sync: 0,
             last_full_day: None,
@@ -27,6 +31,8 @@ impl Feature {
     }
     pub fn reset(&mut self) -> Vec<Effect> {
         self.events.clear();
+        self.last_sync = None;
+        self.online = None;
         self.created.clear();
         self.token = None;
         self.next_sync = 0;
@@ -39,11 +45,18 @@ impl Feature {
     }
     pub fn snapshot(&self) -> Vec<Effect> {
         let events = self.events.clone();
+        let last_sync = self.last_sync;
+        let online = self.online;
         vec![Effect::Ui(Box::new(move |ui| {
-            if ui.calendar == events {
+            if ui.calendar == events
+                && ui.calendar_last_sync == last_sync
+                && ui.calendar_online == online
+            {
                 false
             } else {
                 ui.calendar = events;
+                ui.calendar_last_sync = last_sync;
+                ui.calendar_online = online;
                 true
             }
         }))]
@@ -93,7 +106,7 @@ impl Feature {
         settings: CalendarSettings,
         now: i64,
     ) -> Vec<Effect> {
-        if call.name == "hub_calendar_list" {
+        if call.name == "hub_calendar_get" {
             let args: tools::List = match serde_json::from_value(call.arguments.clone()) {
                 Ok(v) => v,
                 Err(e) => {
@@ -112,7 +125,11 @@ impl Feature {
                 })
                 .cloned()
                 .collect();
-            let mut effects = view.open(crate::Screen::Calendar, None, now);
+            let mut effects = view.open(
+                crate::Screen::Calendar,
+                args.focus.map(crate::Focus::Calendar),
+                now,
+            );
             effects.push(Effect::Reply(
                 call,
                 Ok(serde_json::json!({"events": events})),
@@ -138,7 +155,13 @@ impl Feature {
         };
         let start = args.start.parse::<jiff::Timestamp>();
         let end = args.end.parse::<jiff::Timestamp>();
-        if args.summary.trim().is_empty() || !matches!((start, end), (Ok(a), Ok(b)) if a < b) {
+        let dates = (
+            args.start.parse::<jiff::civil::Date>(),
+            args.end.parse::<jiff::civil::Date>(),
+        );
+        let valid = matches!((start, end), (Ok(a), Ok(b)) if a < b)
+            || matches!(dates, (Ok(a), Ok(b)) if a < b);
+        if args.summary.trim().is_empty() || !valid {
             return vec![Effect::Reply(
                 call,
                 Err(crate::features::timers::tools::error(
@@ -147,6 +170,7 @@ impl Feature {
             )];
         }
         let event = NewCalendarEvent {
+            location: args.location,
             summary: args.summary,
             start: args.start,
             end: args.end,
@@ -159,6 +183,7 @@ impl Feature {
             timeout: Duration::from_secs(30),
         }]
     }
+    #[allow(clippy::too_many_arguments)]
     pub fn on_job(
         &mut self,
         id: &str,
@@ -170,25 +195,28 @@ impl Feature {
         now: i64,
     ) -> Vec<Effect> {
         if id == "calendar-sync" {
-            if let Ok(value) = result {
-                if let Ok(delta) = value.downcast::<(CalendarDelta, bool)>() {
-                    let (delta, full) = *delta;
-                    if full {
-                        self.last_full_day = Some(now.div_euclid(86400));
-                        self.events.retain(|event| self.created.contains(&event.id));
-                    }
-                    self.events
-                        .retain(|event| !delta.removed.contains(&event.id));
-                    for event in delta.events {
-                        self.created.retain(|id| id != &event.id);
-                        self.upsert(event);
-                    }
-                    self.token = delta.sync_token;
-                    self.prune(now);
-                    return self.changed();
+            if let Ok(value) = result
+                && let Ok(delta) = value.downcast::<(CalendarDelta, bool)>()
+            {
+                let (delta, full) = *delta;
+                if full {
+                    self.last_full_day = Some(now.div_euclid(86400));
+                    self.events.retain(|event| self.created.contains(&event.id));
                 }
+                self.events
+                    .retain(|event| !delta.removed.contains(&event.id));
+                for event in delta.events {
+                    self.created.retain(|id| id != &event.id);
+                    self.upsert(event);
+                }
+                self.token = delta.sync_token;
+                self.last_sync = Some(now);
+                self.online = Some(true);
+                self.prune(now);
+                return self.changed();
             }
-            return vec![];
+            self.online = Some(false);
+            return self.snapshot();
         }
         let Some(call) = reply else {
             return vec![];
@@ -247,6 +275,7 @@ impl Feature {
         effects.push(Effect::PersistCalendar(
             self.events.clone(),
             self.token.clone(),
+            self.last_sync,
         ));
         effects
     }

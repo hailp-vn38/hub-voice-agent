@@ -14,10 +14,10 @@ impl Speech {
                 request_id,
                 reason: DirectSpeechError::SessionBusy,
             } => {
-                if let Some((_, id, _, retry)) = &mut self.current {
-                    if id == request_id {
-                        *retry = Some(now + 5);
-                    }
+                if let Some((_, id, _, retry)) = &mut self.current
+                    && id == request_id
+                {
+                    *retry = Some(now + 5);
                 }
             }
             _ => {}

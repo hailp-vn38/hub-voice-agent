@@ -2,7 +2,7 @@ use hub_core::{HttpImageFetcher, ImageFetcher};
 
 #[tokio::test]
 async fn rejects_local_and_private_destinations() {
-    let fetcher = HttpImageFetcher::default();
+    let fetcher = HttpImageFetcher;
     for url in [
         "http://127.0.0.1/a.png",
         "http://192.168.1.2/a.png",

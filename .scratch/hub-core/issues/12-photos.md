@@ -21,3 +21,5 @@ Spec: [../spec.md](../spec.md)
 - Adapter `HttpImageFetcher` đã có giới hạn tải, kiểm tra địa chỉ DNS cho từng bước chuyển hướng, và tạo ảnh/thumbnail PNG đã thu nhỏ.
 - Đã tích hợp `Ports`, cache, ghim và tool; test `run()` với fake và chính sách xoá đã pass.
 - Test transport nội bộ xác minh từ chối `Content-Length` và body streaming vượt 10 MiB, cùng redirect đến localhost; production vẫn kiểm tra DNS ở mỗi bước.
+
+- Review: bổ sung `hub_image_list` và `hub_image_control` (mở, chuyển, ghim, bỏ ghim) trên cache; đã kiểm thử qua `run()`.

@@ -40,7 +40,7 @@ async fn timers_are_saved_reloaded_and_limit_is_reported() {
     tokio::spawn(async move {
         let (mut conn, _) = ota.accept().await.unwrap();
         let mut buf = [0; 4096];
-        conn.read(&mut buf).await.unwrap();
+        assert!(conn.read(&mut buf).await.unwrap() > 0);
         let body =
             json!({"websocket":{"url":format!("ws://{ws_addr}"),"token":"token"}}).to_string();
         conn.write_all(format!("HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}", body.len()).as_bytes()).await.unwrap();

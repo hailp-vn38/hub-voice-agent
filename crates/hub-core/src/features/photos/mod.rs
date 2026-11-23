@@ -35,7 +35,16 @@ impl Feature {
             }
         }))
     }
-    pub fn on_tool(&self, view: &mut crate::view::View, call: ToolCall, now: i64) -> Vec<Effect> {
+    pub fn on_tool(
+        &self,
+        view: &mut crate::view::View,
+        call: ToolCall,
+        now: i64,
+        store: &crate::Store,
+    ) -> Vec<Effect> {
+        if call.name == "hub_image_list" || call.name == "hub_image_control" {
+            return self.cached_tool(view, call, now, store);
+        }
         let args: tools::Show = match serde_json::from_value(call.arguments.clone()) {
             Ok(args) => args,
             Err(_) => return vec![Effect::ReplyError(call, "Invalid image arguments")],
@@ -57,6 +66,74 @@ impl Feature {
                 Ok(Box::new(results) as Box<dyn std::any::Any + Send>)
             }),
         });
+        effects
+    }
+    fn cached_tool(
+        &self,
+        view: &mut crate::view::View,
+        call: ToolCall,
+        now: i64,
+        store: &crate::Store,
+    ) -> Vec<Effect> {
+        let mut effects = view.open(crate::Screen::Photos, view.focus().cloned(), now);
+        let photos = match store.photos_load() {
+            Ok(photos) => photos,
+            Err(_) => {
+                effects.push(Effect::ReplyError(call, "Images unavailable"));
+                return effects;
+            }
+        };
+        if call.name == "hub_image_list" {
+            if serde_json::from_value::<tools::List>(call.arguments.clone()).is_err() {
+                effects.push(Effect::ReplyError(call, "Invalid image arguments"));
+                return effects;
+            }
+            effects.push(Effect::Reply(
+                call,
+                Ok(serde_json::json!({"images": photos})),
+            ));
+            return effects;
+        }
+        let args: tools::Control = match serde_json::from_value(call.arguments.clone()) {
+            Ok(args) => args,
+            Err(_) => {
+                effects.push(Effect::ReplyError(call, "Invalid image arguments"));
+                return effects;
+            }
+        };
+        let selected = args.id.as_deref().or_else(|| match view.focus() {
+            Some(crate::Focus::Photo(id)) => Some(id.as_str()),
+            _ => None,
+        });
+        let index = match selected {
+            Some(id) => photos.iter().position(|p| p.id == id),
+            None if !photos.is_empty() => Some(0),
+            _ => None,
+        };
+        let Some(index) = index else {
+            effects.push(Effect::ReplyError(call, "Image not found"));
+            return effects;
+        };
+        let index = match args.action {
+            tools::Action::Next => (index + 1) % photos.len(),
+            tools::Action::Previous => (index + photos.len() - 1) % photos.len(),
+            _ => index,
+        };
+        let id = photos[index].id.clone();
+        match args.action {
+            tools::Action::Pin => effects.push(Effect::PinPhoto(id.clone(), true)),
+            tools::Action::Unpin => effects.push(Effect::PinPhoto(id.clone(), false)),
+            _ => {}
+        }
+        effects.extend(view.open(
+            crate::Screen::Photos,
+            Some(crate::Focus::Photo(id.clone())),
+            now,
+        ));
+        effects.push(Effect::Reply(
+            call,
+            Ok(serde_json::json!({"ok": true, "id": id})),
+        ));
         effects
     }
     pub fn on_job(

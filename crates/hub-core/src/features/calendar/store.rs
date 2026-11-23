@@ -1,5 +1,24 @@
 use crate::{CalendarEvent, Store};
 impl Store {
+    pub(crate) fn calendar_last_sync(&self) -> anyhow::Result<Option<i64>> {
+        use rusqlite::OptionalExtension;
+        Ok(self
+            .connection
+            .query_row(
+                "SELECT last_sync FROM calendar_sync WHERE id = 1",
+                [],
+                |r| r.get(0),
+            )
+            .optional()?
+            .flatten())
+    }
+    pub(crate) fn calendar_save_sync(&self, last_sync: Option<i64>) -> anyhow::Result<()> {
+        self.connection.execute(
+            "INSERT OR REPLACE INTO calendar_sync (id, last_sync) VALUES (1, ?1)",
+            [last_sync],
+        )?;
+        Ok(())
+    }
     pub(crate) fn calendar_load(&self) -> anyhow::Result<(Vec<CalendarEvent>, Option<String>)> {
         let mut stmt = self
             .connection
