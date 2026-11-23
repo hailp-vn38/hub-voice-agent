@@ -28,13 +28,13 @@ Kịch bản: "Bật đèn phòng khách" (chờ → bật), "Mất kết nối 
 
 ## Map với hub-core
 
-Map: chờ hub-core #11
+Map: done · hub-core #11; hub-mac #05, commit `9c100af`
 
 | Hợp đồng | UiState / UserInput |
 |---|---|
-| `HomeData.tiles` | |
-| `.configured` / `.connected` / `.updated` | |
-| `toggle(key)` | |
+| `HomeData.tiles` | `HubView.home.tiles` |
+| `.configured` / `.connected` / `.updated` | `HubView.home.configured` / `.connected` / `.updated` |
+| `toggle(key)` | `UserInput::ToggleHome(key)` |
 
 ## Answer
 

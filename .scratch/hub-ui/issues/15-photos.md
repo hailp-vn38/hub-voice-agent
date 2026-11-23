@@ -35,15 +35,15 @@ Fixture: 10 ảnh mẫu trong `assets/demo/` (chỉ dùng cho demo, ảnh tự t
 
 ## Map với hub-core
 
-Map: chờ hub-core #12 (ảnh đã thu nhỏ → `image` ở bridge)
+Map: done · hub-core #12; hub-mac #05, commit `9c100af`
 
 | Hợp đồng | UiState / UserInput |
 |---|---|
-| `PhotosData.title` / `.pinned-text` | |
-| `.photos` | |
-| `.viewing` / `.viewer` / `.viewer-index` / `.auto-advance` | |
-| `open` / `next` / `previous` / `close-viewer` | |
-| `toggle-pin` / `remove` | |
+| `PhotosData.title` / `.pinned-text` | `HubView.photos.title` / `HubView.photos.pinned_text` |
+| `.photos` | `HubView.photos.photos`; `thumbnail_path` tạo ảnh lưới, `image_path` tạo ảnh full theo vùng xem |
+| `.viewing` / `.viewer` / `.viewer-index` / `.auto-advance` | `HubView.photos.viewing` / `.viewer` / `.viewer_index`; `auto-advance` là trạng thái bridge, mặc định tắt và bật khi ảnh agent tải xong |
+| `open` / `next` / `previous` / `close-viewer` | `Focus(Some(Focus::Photo(key)))` / `Focus(None)`; next/previous đi vòng theo `viewer` |
+| `toggle-pin` / `remove` | `PinPhoto { id, pinned: !pinned }` / `RemovePhoto { id }` |
 
 ## Answer
 

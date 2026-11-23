@@ -1,6 +1,6 @@
 # 05 — Bridge Nhà và Ảnh
 
-Status: ready-for-agent
+Status: ready-for-human
 Blocked by: 01
 Spec: [../spec.md](../spec.md) · Thiết kế: [../design.md](../design.md) §1.2.6 · UI: hub-ui #15, #16
 
@@ -20,6 +20,6 @@ Spec: [../spec.md](../spec.md) · Thiết kế: [../design.md](../design.md) §1
 
 ## Nghiệm thu
 
-- [ ] Test `images.rs` (phần không cần Slint): chọn đúng các key cần giải mã `full` theo `viewer_index` (đầu, giữa, cuối danh sách).
+- [x] Test `images.rs` (phần không cần Slint): chọn đúng các key cần giải mã `full` theo `viewer_index` (đầu, giữa, cuối danh sách).
 - [ ] Tay: màn Nhà có entity HA; bật/tắt đèn → `pending` rồi trạng thái mới.
 - [ ] Tay: ảnh từ `hub_show_image` hiện trong lưới; mở viewer, tới/lui, đóng; ghim; xoá.
