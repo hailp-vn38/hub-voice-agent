@@ -17,5 +17,5 @@ Spec: [../spec.md](../spec.md) · UI: hub-ui #07, #08
 
 ## Comments
 
-- `present` bổ sung Center và Menu; Center lấy sự kiện hôm nay, Reminder sắp tới, hẹn giờ đang chạy gần hết nhất, mốc gần nhất, tối đa bốn entity Nhà đầu tiên; `home-safe` theo trạng thái kết nối Home Assistant.
+- `present` bổ sung Center và Menu; Center lấy sự kiện hôm nay, Reminder sắp tới, hẹn giờ đang chạy gần hết nhất, mốc gần nhất, tối đa bốn entity Nhà đầu tiên; `home-safe` là `true` khi Home Assistant kết nối.
 - Gates đạt: `scripts/test.sh` (142 passed), `cargo fmt --all -- --check`, `cargo build -p hub`, `git diff --check`.

@@ -1,6 +1,6 @@
 # 20 — Nhà và Ảnh: dữ liệu hiển thị và thao tác chạm
 
-Status: ready-for-human
+Status: completed
 Blocked by: 14
 Spec: [../spec.md](../spec.md) · UI: hub-ui #15, #16
 
@@ -24,3 +24,4 @@ Spec: [../spec.md](../spec.md) · UI: hub-ui #15, #16
 
 - Đã thêm dữ liệu trình bày Nhà/Ảnh, trạng thái tải ảnh và xoá ảnh cùng hai tệp cache. Viewer focus tiếp tục do `hub-core` giữ qua `Focus`; `auto-advance` tiếp tục thuộc UI.
 - Gates sau khi ghép `feat/hub-core` ở `ec46e9d`: `scripts/test.sh -p hub-core` (140 passed), `cargo fmt --all -- --check`, `cargo build -p hub` và `git diff --check` đều đạt.
+- 2026-11-23: Hoàn tất các tiêu chí hub-core. Gate cuối sau tích hợp tickets 14–21: `scripts/test.sh -p hub-core -- --test-threads=1` (143 passed), `cargo fmt --all -- --check`, `cargo build -p hub`, `git diff --check 86fafda..HEAD` đều qua. Map và kiểm tra trực quan tiếp tục thuộc hub-ui #15/#16.
