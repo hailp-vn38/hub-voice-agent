@@ -1,0 +1,39 @@
+// Hợp đồng Calendar. Ticket UI: .scratch/hub-ui/issues/10-calendar.md.
+import { PendingState } from "spawn.slint";
+
+export enum CalKind { event, reminder }
+
+export struct CalDay { key: string, weekday: string, day: string, dots: int, today: bool }
+
+// col/cols: cột và số cột khi các khối trùng giờ (adapter tính, Slint không tính được).
+export struct CalBlock {
+    key: string, kind: CalKind, title: string, time: string,
+    start-min: int, end-min: int, all-day: bool, ongoing: bool, fresh: bool,
+    pending: PendingState, col: int, cols: int,
+}
+
+export struct CalUpcoming { key: string, date: string, time: string, title: string, more: int, fresh: bool }
+
+export struct CalMonthDay { key: string, day: string, dots: int, in-month: bool, today: bool }
+
+export struct CalDetail { visible: bool, title: string, time: string, location: string, description: string }
+
+export global CalendarData {
+    in property <string> month-title;
+    in property <string> synced;
+    in property <bool> stale;
+    in property <[CalDay]> week;
+    in property <string> selected-day;
+    in property <[CalBlock]> blocks;
+    in property <int> now-min;
+    in property <[CalUpcoming]> upcoming;
+    in property <bool> month-view;
+    in property <[CalMonthDay]> month;
+    in property <CalDetail> detail;
+    in property <string> focus;
+    in property <int> focus-serial;
+    callback select-day(string);
+    callback toggle-month();
+    callback open-detail(string);
+    callback close-detail();
+}

@@ -10,6 +10,7 @@ import { Placeholder } from "../screens/placeholder.slint";
 import { Home } from "../screens/home.slint";
 import { FirstBoot } from "../screens/first-boot.slint";
 import { Settings } from "../screens/settings.slint";
+import { Calendar } from "../screens/calendar.slint";
 import { SettingsData } from "../contract/settings.slint";
 import { SpawnDemo, SpawnDemoScreen } from "../screens/spawn-demo.slint";
 import { FloatingCardsView } from "floating-cards.slint";
@@ -79,9 +80,10 @@ export component Shell inherits Rectangle {
                 x: (1 - root.feat-p) * root.w;
                 opacity: root.feat-p;
                 background: Theme.background;
-                if root.shown != Screen.home && root.shown != Screen.settings: Placeholder { title: root.title(root.shown); }
+                if root.shown != Screen.home && root.shown != Screen.settings && root.shown != Screen.calendar: Placeholder { title: root.title(root.shown); }
                 if root.shown == Screen.home: Home { }
                 if root.shown == Screen.settings: Settings { }
+                if root.shown == Screen.calendar: Calendar { }
             }
         }
     }

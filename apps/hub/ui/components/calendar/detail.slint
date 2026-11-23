@@ -1,0 +1,23 @@
+import { Theme } from "../../theme.slint";
+import { CalendarData } from "../../contract/calendar.slint";
+
+// Thẻ chi tiết sự kiện: phủ lên màn, chạm ngoài để đóng.
+export component DetailCard inherits Rectangle {
+    background: #00000099;
+    TouchArea { clicked => { CalendarData.close-detail(); } }
+    Rectangle {
+        width: min(parent.width - 2 * Theme.space-l, 960px);
+        height: 420px;
+        background: Theme.card;
+        border-radius: Theme.radius;
+        TouchArea { }
+        VerticalLayout {
+            padding: Theme.space-l;
+            spacing: Theme.space-s;
+            Text { text: CalendarData.detail.title; color: Theme.text; font-size: Theme.font-title; overflow: elide; }
+            Text { text: CalendarData.detail.time; color: Theme.accent; font-size: Theme.font-body; }
+            Text { text: CalendarData.detail.location != "" ? "📍 " + CalendarData.detail.location : ""; color: Theme.text; font-size: Theme.font-body; }
+            Text { text: CalendarData.detail.description; color: Theme.text-dim; font-size: Theme.font-small; wrap: word-wrap; vertical-stretch: 1; }
+        }
+    }
+}

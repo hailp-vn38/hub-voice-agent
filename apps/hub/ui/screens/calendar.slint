@@ -1,0 +1,52 @@
+import { Theme } from "../theme.slint";
+import { Nav, Screen } from "../contract/nav.slint";
+import { CalendarData } from "../contract/calendar.slint";
+import { StatusBar } from "../contract/status.slint";
+import { WeekStrip } from "../components/calendar/week-strip.slint";
+import { Timeline } from "../components/calendar/timeline.slint";
+import { UpcomingList } from "../components/calendar/upcoming.slint";
+import { MonthGrid } from "../components/calendar/month-grid.slint";
+import { DetailCard } from "../components/calendar/detail.slint";
+
+export component Calendar inherits Rectangle {
+    VerticalLayout {
+        padding: Theme.space-l;
+        spacing: Theme.space-m;
+        Rectangle {
+            height: Theme.touch-min;
+            Text {
+                x: 0;
+                text: "‹ Lịch · " + CalendarData.month-title;
+                color: Theme.text;
+                font-size: Theme.font-title;
+                vertical-alignment: center;
+            }
+            TouchArea { width: 240px; x: 0; clicked => { Nav.navigate(Screen.menu); } }
+            // Chạm tên tháng → lưới tháng.
+            TouchArea { x: 240px; width: 360px; clicked => { CalendarData.toggle-month(); } }
+            Rectangle {
+                x: parent.width - self.width;
+                width: 360px;
+                background: (CalendarData.stale || StatusBar.offline) ? Theme.warm : transparent;
+                border-radius: 16px;
+                Text {
+                    text: (CalendarData.stale || StatusBar.offline ? "Offline · " : "") + "Đồng bộ " + CalendarData.synced;
+                    color: (CalendarData.stale || StatusBar.offline) ? Theme.background : Theme.text-dim;
+                    font-size: Theme.font-small;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+            }
+        }
+        WeekStrip { }
+        if !CalendarData.month-view: HorizontalLayout {
+            spacing: Theme.space-l;
+            vertical-stretch: 1;
+            Timeline { horizontal-stretch: 3; }
+            UpcomingList { horizontal-stretch: 2; }
+        }
+        if CalendarData.month-view: MonthGrid { vertical-stretch: 1; }
+        Rectangle { height: 240px; } // chừa Voice dock
+    }
+    if CalendarData.detail.visible: DetailCard { }
+}

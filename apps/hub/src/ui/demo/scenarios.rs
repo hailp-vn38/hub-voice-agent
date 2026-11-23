@@ -85,6 +85,13 @@ pub fn all() -> Vec<Scenario> {
         ("Lưu → lỗi", super::spawn::save_fail),
         ("Thẻ nổi", super::spawn::floating),
         ("Thẻ nổi mờ", super::spawn::floating_fade),
+        ("Lịch: Hôm nay có gì?", super::fixtures::calendar::scenarios::today),
+        ("Lịch: Thứ Sáu có gì?", super::fixtures::calendar::scenarios::friday),
+        ("Lịch: Lịch tiếp theo", super::fixtures::calendar::scenarios::next),
+        ("Lịch: Tháng sau có gì?", super::fixtures::calendar::scenarios::next_month),
+        ("Lịch: Tạo khám răng → ok", super::fixtures::calendar::scenarios::create_ok),
+        ("Lịch: Tạo → lỗi", super::fixtures::calendar::scenarios::create_fail),
+        ("Lịch: Offline", super::fixtures::calendar::scenarios::offline),
         ("Chữ lớn", |app| app.global::<Theme>().set_text_scale(1.25)),
     ]
 }

@@ -1,0 +1,42 @@
+import { Theme } from "../../theme.slint";
+import { CalendarData, CalUpcoming } from "../../contract/calendar.slint";
+import { SpawnIn } from "../spawn.slint";
+
+component UpcomingRow inherits Rectangle {
+    in property <CalUpcoming> u;
+    private property <int> serial: CalendarData.focus-serial;
+    private property <duration> t0: -10000ms;
+    private property <float> glow: CalendarData.focus == root.u.key && animation-tick() - root.t0 < 1600ms
+        ? 0.5 + 0.5 * sin((animation-tick() - root.t0) / 400ms * 1turn) : 0;
+    changed serial => { if (CalendarData.focus == root.u.key) { root.t0 = animation-tick(); } }
+    SpawnIn {
+        key: root.u.key;
+        Rectangle {
+            border-radius: Theme.radius;
+            background: root.u.fresh ? #1f4a3a : Theme.card;
+            Rectangle { background: Theme.accent; opacity: root.glow * 0.5; border-radius: Theme.radius; }
+            Text {
+                x: 16px; y: 8px; width: parent.width - 32px;
+                text: root.u.date + (root.u.time != "" ? " · " + root.u.time : "") + (root.u.fresh ? " · Mới tạo" : "");
+                color: Theme.text-dim; font-size: 20px * Theme.text-scale; overflow: elide;
+            }
+            Text {
+                x: 16px; y: 40px; width: parent.width - 32px;
+                text: root.u.title + (root.u.more > 0 ? "  +" + root.u.more + " sự kiện" : "");
+                color: Theme.text; font-size: Theme.font-small; overflow: elide;
+            }
+            TouchArea { clicked => { CalendarData.open-detail(root.u.key); } }
+        }
+    }
+}
+
+// Cột "Sắp tới": 5 sự kiện kế tiếp sau ngày chọn; ngày nhiều sự kiện gộp "+N sự kiện".
+export component UpcomingList inherits Rectangle {
+    Text { y: 0; text: "Sắp tới"; color: Theme.text-dim; font-size: Theme.font-body; }
+    for u[i] in CalendarData.upcoming: UpcomingRow {
+        y: 48px + i * (88px + Theme.space-s);
+        height: 88px;
+        width: parent.width;
+        u: u;
+    }
+}

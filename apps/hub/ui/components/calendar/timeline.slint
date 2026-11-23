@@ -1,0 +1,104 @@
+import { Theme } from "../../theme.slint";
+import { CalendarData, CalBlock, CalKind } from "../../contract/calendar.slint";
+import { SpawnIn } from "../spawn.slint";
+
+// Viền đứt nét (Slint không có border dashed): các đoạn ngắn dọc 4 cạnh, bị cắt bởi clip.
+component DashedBorder inherits Rectangle {
+    in property <color> dash;
+    clip: true;
+    for k in 60: Rectangle { x: k * 20px; y: 0; width: 12px; height: 3px; background: root.dash; }
+    for k in 60: Rectangle { x: k * 20px; y: parent.height - 3px; width: 12px; height: 3px; background: root.dash; }
+    for k in 60: Rectangle { x: 0; y: k * 20px; width: 3px; height: 12px; background: root.dash; }
+    for k in 60: Rectangle { x: parent.width - 3px; y: k * 20px; width: 3px; height: 12px; background: root.dash; }
+}
+
+component BlockView inherits Rectangle {
+    in property <CalBlock> b;
+    in property <length> hour-h;
+    in property <length> label-w;
+    in property <length> lane-w;
+    callback scroll-to(length);
+    private property <int> serial: CalendarData.focus-serial;
+    private property <duration> t0: -10000ms;
+    private property <float> glow: CalendarData.focus == root.b.key && animation-tick() - root.t0 < 1600ms
+        ? 0.5 + 0.5 * sin((animation-tick() - root.t0) / 400ms * 1turn) : 0;
+    private property <bool> reminder: root.b.kind == CalKind.reminder;
+    changed serial => {
+        if (CalendarData.focus == root.b.key) {
+            root.t0 = animation-tick();
+            root.scroll-to(root.y);
+        }
+    }
+    x: root.label-w + root.b.col * root.lane-w / root.b.cols;
+    y: root.b.start-min * root.hour-h / 60;
+    width: root.lane-w / root.b.cols - 6px;
+    height: max(root.b.end-min - root.b.start-min, 30) * root.hour-h / 60 - 4px;
+    SpawnIn {
+        key: root.b.key;
+        pending: root.b.pending;
+        Rectangle {
+            border-radius: 12px;
+            background: root.b.fresh ? #1f4a3a : (root.reminder ? #2a2418 : (root.b.ongoing ? #2b6a8f : #1d3a52));
+            Rectangle { background: Theme.accent; opacity: root.glow * 0.5; border-radius: 12px; }
+            if !root.reminder: Rectangle { x: 0; width: 6px; background: root.b.ongoing ? Theme.accent : Theme.text-dim; }
+            if root.reminder: DashedBorder { dash: Theme.warm; }
+            Text {
+                x: 16px; y: 6px; width: parent.width - 24px; height: parent.height - 8px;
+                text: (root.b.fresh ? "Mới tạo · " : "") + root.b.time + "  " + root.b.title;
+                color: Theme.text; font-size: Theme.font-small; overflow: elide; wrap: word-wrap;
+            }
+            TouchArea { clicked => { CalendarData.open-detail(root.b.key); } }
+        }
+    }
+}
+
+export component Timeline inherits Rectangle {
+    private property <length> hour-h: 72px;
+    private property <length> label-w: 80px;
+    VerticalLayout {
+        spacing: Theme.space-s;
+        // Dải "Cả ngày"
+        Rectangle {
+            height: 56px;
+            background: Theme.card;
+            border-radius: 12px;
+            Text { x: 12px; text: "Cả ngày"; color: Theme.text-dim; font-size: Theme.font-small; vertical-alignment: center; }
+            HorizontalLayout {
+                padding-left: 140px; spacing: Theme.space-s; padding-top: 8px; padding-bottom: 8px;
+                alignment: start;
+                for b in CalendarData.blocks: Rectangle {
+                    visible: b.all-day;
+                    width: b.all-day ? 240px : 0px;
+                    background: b.kind == CalKind.reminder ? Theme.warm : Theme.accent;
+                    border-radius: 12px;
+                    Text { text: b.title; color: Theme.background; font-size: Theme.font-small; horizontal-alignment: center; vertical-alignment: center; overflow: elide; }
+                    TouchArea { clicked => { CalendarData.open-detail(b.key); } }
+                }
+            }
+        }
+        flick := Flickable {
+            content-width: self.width;
+            content-height: 24 * root.hour-h;
+            for h in 24: Rectangle {
+                y: h * root.hour-h; height: 1px; width: root.width; background: #ffffff14;
+                Text { y: -14px; text: (h < 10 ? "0" : "") + h + ":00"; color: Theme.text-dim; font-size: 20px * Theme.text-scale; }
+            }
+            for b in CalendarData.blocks: BlockView {
+                visible: !b.all-day;
+                b: b;
+                hour-h: root.hour-h;
+                label-w: root.label-w;
+                lane-w: root.width - root.label-w;
+                scroll-to(y) => { flick.content-y = -max(0px, min(y - 40px, flick.content-height - flick.height)); }
+            }
+            // Vạch "bây giờ": đỏ, nhấp nháy nhẹ.
+            Rectangle {
+                y: CalendarData.now-min * root.hour-h / 60 - 2px;
+                height: 4px; width: root.width;
+                background: #ff5a5a;
+                opacity: 0.75 + 0.25 * sin(animation-tick() / 1000ms * 1turn);
+                Rectangle { x: 0; y: -6px; width: 16px; height: 16px; border-radius: 8px; background: #ff5a5a; }
+            }
+        }
+    }
+}
