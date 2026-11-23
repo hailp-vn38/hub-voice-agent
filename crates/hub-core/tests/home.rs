@@ -73,6 +73,7 @@ async fn tool_calls_service_and_tracks_state_and_disconnect() {
         config,
         Store::in_memory().unwrap(),
         Ports {
+            calendar: Arc::new(hub_core::sources::google_calendar::GoogleCalendar::default()),
             clock: Arc::new(support::TestClock::at(
                 "2026-11-22T12:00:00+07:00[Asia/Ho_Chi_Minh]"
                     .parse()

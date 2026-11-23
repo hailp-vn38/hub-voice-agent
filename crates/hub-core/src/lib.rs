@@ -2,16 +2,17 @@
 
 mod alerts;
 mod audio;
+mod calendar;
 mod config;
 mod conversation;
 mod features;
 pub mod lunar;
 pub mod selector;
+pub mod sources;
 
 mod ports;
 mod runtime;
 pub mod setup_web;
-mod sources;
 mod store;
 mod ui_state;
 mod view;
@@ -21,6 +22,9 @@ use std::sync::Arc;
 
 pub use alerts::Alert;
 pub use audio::{AudioCommand, AudioEvent, Sensitivity, Sound};
+pub use calendar::{
+    CalendarDelta, CalendarEvent, CalendarFuture, CalendarSource, NewCalendarEvent,
+};
 pub use config::{
     CalendarSettings, Config, ConfigStore, HomeSettings, VoiceSettings, WeatherSettings,
 };
@@ -36,6 +40,7 @@ pub use voice_settings::DEFAULT_OTA_URL;
 
 pub struct Ports {
     pub clock: Arc<dyn Clock>,
+    pub calendar: Arc<dyn CalendarSource>,
     pub weather: Arc<dyn WeatherSource>,
     pub home: Arc<dyn HomeSource>,
     pub system: Arc<dyn System>,
@@ -77,6 +82,7 @@ pub fn tool_definitions() -> Vec<voice_client::ToolDef> {
     let mut tools = features::timers::tools::definitions();
     tools.extend(features::countdowns::tools::definitions());
     tools.extend(features::reminders::tools::definitions());
+    tools.extend(features::calendar::tools::definitions());
     tools.extend(features::weather::tools::definitions());
     tools.extend(features::home::tools::definitions());
     tools

@@ -64,6 +64,7 @@ async fn timers_are_saved_reloaded_and_limit_is_reported() {
         Store::open(&dir).unwrap(),
         Ports {
             clock: Arc::new(TestClock::at(start.clone())),
+            calendar: Arc::new(hub_core::sources::google_calendar::GoogleCalendar::default()),
             weather: Arc::new(hub_core::OpenMeteo::default()),
             home: Arc::new(hub_core::HomeAssistant::default()),
             system: system.clone(),
@@ -180,6 +181,7 @@ async fn timers_are_saved_reloaded_and_limit_is_reported() {
         Store::open(&dir).unwrap(),
         Ports {
             clock: Arc::new(TestClock::at(start)),
+            calendar: Arc::new(hub_core::sources::google_calendar::GoogleCalendar::default()),
             weather: Arc::new(hub_core::OpenMeteo::default()),
             home: Arc::new(hub_core::HomeAssistant::default()),
             system: Arc::new(support::Synced),

@@ -20,7 +20,7 @@ fn default_reminder_speech() -> bool {
     true
 }
 
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct CalendarSettings {
     pub client_id: String,
