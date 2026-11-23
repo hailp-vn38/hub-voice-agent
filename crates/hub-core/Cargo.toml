@@ -7,15 +7,17 @@ version.workspace = true
 voice-client = { path = "../voice-client" }
 jiff = { workspace = true }
 anyhow = { workspace = true }
-tokio = { workspace = true, features = ["sync", "time", "macros"] }
-
 serde = { workspace = true }
+toml = "1"
+url = { workspace = true }
+uuid = { version = "1", features = ["v4"] }
+tokio = { workspace = true, features = ["sync", "time", "macros"] }
 serde_json = { workspace = true }
 schemars = "1"
 rusqlite = { version = "0.37", features = ["bundled"] }
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["rt", "test-util"] }
+tempfile = "3"
 futures-util = { workspace = true }
 tokio-tungstenite = { workspace = true }
-url = { workspace = true }

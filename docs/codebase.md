@@ -209,7 +209,7 @@ Integration test dùng server WebSocket giả tại `tests/`; test backoff dùng
 
 #### Interface bên ngoài
 
-Interface bên dưới là thiết kế đích. Hiện `run(store, ports, io)` nhận SQLite Store, `clock`, các channel voice, audio, input và UI. Runtime xử lý hội thoại và các tool hẹn giờ; input chưa có biến thể. Store được mở bằng `Store::open(dir)` hoặc `Store::in_memory()`; `tool_definitions()` cung cấp schema cho bốn tool hẹn giờ. Báo hết giờ thuộc ticket 06.
+Interface bên dưới là thiết kế đích. Hiện `run(config, store, ports, io)` xử lý voice settings, hội thoại và các tool hẹn giờ. `ConfigStore` giữ cấu hình voice; `Store::open(dir)` hoặc `Store::in_memory()` mở SQLite; `tool_definitions()` cung cấp schema cho bốn tool hẹn giờ. Báo hết giờ thuộc ticket 06.
 
 ```rust
 pub async fn run(config: ConfigStore, store: Store, ports: Ports, io: Io) -> anyhow::Result<()>;
@@ -233,7 +233,7 @@ pub struct Ports {
     pub system: Arc<dyn System>,
 }
 
-pub fn tool_definitions() -> Vec<ToolDef>;   // apps/hub đưa vào VoiceConfig
+pub fn tool_definitions() -> Vec<ToolDef>;   // hub-core đưa vào VoiceConfig
 ```
 
 Gần như mọi hành vi của sản phẩm — luồng voice, 21 tool `hub_*`, điều hướng, báo hết giờ, Reminder, cache offline, Setup web — test được qua đúng interface này: gửi `VoiceEvent`/`AudioEvent`/`UserInput`, tiến clock, rồi kiểm `VoiceCommand`/`AudioCommand` đã gửi và `UiState`.

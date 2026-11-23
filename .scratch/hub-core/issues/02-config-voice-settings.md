@@ -1,6 +1,6 @@
 # 02 — ConfigStore + chuyển voice settings vào hub-core
 
-Status: ready-for-agent
+Status: ready-for-human
 Blocked by: 01, voice-client #14
 Spec: [../spec.md](../spec.md)
 
@@ -15,8 +15,12 @@ Spec: [../spec.md](../spec.md)
 
 ## Nghiệm thu
 
-- [ ] Test hub-core: `SaveVoiceUrl` hợp lệ → `voice_config_tx` đổi, file config lưu URL; khởi động lại `ConfigStore` giữ URL, device_id, client_id.
-- [ ] URL sai → `UiState.voice_settings.error`, config không đổi.
-- [ ] `VoiceEvent::Connection(Enrolling)` + `Activation{code}` → `UiState` có mã; `VoiceConnect` → `VoiceCommand::Connect`; `Ready` → mã biến mất.
-- [ ] Các test cũ của `apps/hub/tests/voice_settings.rs` được chuyển hoặc thay bằng test tương đương ở hub-core.
+- [x] Test hub-core: `SaveVoiceUrl` hợp lệ → `voice_config_tx` đổi, file config lưu URL; khởi động lại `ConfigStore` giữ URL, device_id, client_id.
+- [x] URL sai → `UiState.voice_settings.error`, config không đổi.
+- [x] `VoiceEvent::Connection(Enrolling)` + `Activation{code}` → `UiState` có mã; `VoiceConnect` → `VoiceCommand::Connect`; `Ready` → mã biến mất.
+- [x] Các test cũ của `apps/hub/tests/voice_settings.rs` được chuyển hoặc thay bằng test tương đương ở hub-core.
 - [ ] Màn Settings chạy như trước (kiểm tay trên Mac).
+
+## Comments
+
+Đã chuyển logic vào hub-core và kiểm tra qua channel; kiểm tay màn Settings trên Mac còn chờ.

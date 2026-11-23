@@ -12,7 +12,6 @@ use tokio::{
     sync::{mpsc, watch},
 };
 use tokio_tungstenite::{accept_async, tungstenite::Message};
-use voice_client::{DeviceIdentity, VoiceConfig};
 
 #[tokio::test]
 async fn timers_are_saved_reloaded_and_limit_is_reported() {
@@ -33,11 +32,11 @@ async fn timers_are_saved_reloaded_and_limit_is_reported() {
             json!({"websocket":{"url":format!("ws://{ws_addr}"),"token":"token"}}).to_string();
         conn.write_all(format!("HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}", body.len()).as_bytes()).await.unwrap();
     });
-    let (config_tx, config_rx) = watch::channel(Some(VoiceConfig {
-        ota_url: format!("http://{ota_addr}/voice/ota/").parse().unwrap(),
-        device: DeviceIdentity::new("device", "client"),
-        tools: hub_core::tool_definitions(),
-    }));
+    let mut config = hub_core::ConfigStore::open(&dir).unwrap();
+    config
+        .update(|c| c.voice.ota_url = Some(format!("http://{ota_addr}/voice/ota/")))
+        .unwrap();
+    let (config_tx, config_rx) = watch::channel(None);
     let (voice_tx, voice_rx) = voice_client::spawn(config_rx);
     let (audio_tx, _audio_rx) = mpsc::channel(16);
     let (_audio_events, audio_rx) = mpsc::channel(16);
@@ -47,11 +46,13 @@ async fn timers_are_saved_reloaded_and_limit_is_reported() {
         .parse()
         .unwrap();
     let task = tokio::spawn(run(
+        config,
         Store::open(&dir).unwrap(),
         Ports {
             clock: Arc::new(TestClock::at(start.clone())),
         },
         Io {
+            voice_config_tx: config_tx.clone(),
             voice_tx,
             voice_rx,
             audio_tx,
@@ -122,12 +123,15 @@ async fn timers_are_saved_reloaded_and_limit_is_reported() {
     let (_audio_events, audio_rx) = mpsc::channel(1);
     let (_input, input_rx) = mpsc::channel(1);
     let (ui_tx, mut ui_rx) = watch::channel(UiState::default());
+    let config = hub_core::ConfigStore::open(&dir).unwrap();
     let task = tokio::spawn(run(
+        config,
         Store::open(&dir).unwrap(),
         Ports {
             clock: Arc::new(TestClock::at(start)),
         },
         Io {
+            voice_config_tx: config_tx.clone(),
             voice_tx,
             voice_rx,
             audio_tx,
@@ -136,7 +140,9 @@ async fn timers_are_saved_reloaded_and_limit_is_reported() {
             ui_tx,
         },
     ));
-    ui_rx.changed().await.unwrap();
+    while ui_rx.borrow_and_update().timers.len() != 4 {
+        ui_rx.changed().await.unwrap();
+    }
     assert_eq!(ui_rx.borrow().timers.len(), 4);
     assert_eq!(ui_rx.borrow().timers[0].label, "luộc trứng");
     drop(ui_rx);
