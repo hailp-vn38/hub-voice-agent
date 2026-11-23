@@ -30,6 +30,32 @@ impl ImageFetcher for HttpImageFetcher {
 }
 
 async fn download(url: String) -> anyhow::Result<FetchedImage> {
+    download_with(url, |url, addresses| {
+        Box::pin(async move {
+            let host = url
+                .host_str()
+                .context("missing image host")?
+                .trim_matches(['[', ']']);
+            let client = reqwest::Client::builder()
+                .no_proxy()
+                .redirect(reqwest::redirect::Policy::none())
+                .resolve_to_addrs(host, &addresses)
+                .build()?;
+            Ok(client.get(url).send().await?)
+        })
+    })
+    .await
+}
+
+async fn download_with<F>(url: String, request: F) -> anyhow::Result<FetchedImage>
+where
+    F: Fn(
+        Url,
+        Vec<SocketAddr>,
+    ) -> std::pin::Pin<
+        Box<dyn std::future::Future<Output = anyhow::Result<reqwest::Response>> + Send>,
+    >,
+{
     let mut url = Url::parse(&url)?;
     for _ in 0..=MAX_REDIRECTS {
         if !matches!(url.scheme(), "http" | "https")
@@ -47,12 +73,7 @@ async fn download(url: String) -> anyhow::Result<FetchedImage> {
         if addresses.is_empty() || addresses.iter().any(|address| !public(address.ip())) {
             bail!("image host resolves to a non-public address");
         }
-        let client = reqwest::Client::builder()
-            .no_proxy()
-            .redirect(reqwest::redirect::Policy::none())
-            .resolve_to_addrs(host, &addresses)
-            .build()?;
-        let mut response = client.get(url.clone()).send().await?;
+        let mut response = request(url.clone(), addresses).await?;
         if response.status().is_redirection() {
             let location = response
                 .headers()
@@ -132,3 +153,7 @@ fn public(ip: IpAddr) -> bool {
         }
     }
 }
+
+#[cfg(test)]
+#[path = "image_fetch_tests.rs"]
+mod tests;
