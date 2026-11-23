@@ -19,6 +19,8 @@ pub(crate) enum Effect {
         timeout: Duration,
     },
     Persist(Vec<crate::Timer>),
+    PersistWeather(String, i64, serde_json::Value),
+    CancelJob(JobId),
     PersistCountdowns(Vec<crate::Countdown>),
     Reply(ToolCall, Result<serde_json::Value, ToolError>),
     ReplyError(ToolCall, &'static str),
@@ -33,6 +35,12 @@ pub(super) async fn execute(
     store: &mut crate::Store,
 ) -> anyhow::Result<()> {
     match effect {
+        Effect::CancelJob(id) => {
+            if let Some(call) = jobs.cancel(&id) {
+                reply_error(call, "Job cancelled");
+            }
+        }
+        Effect::PersistWeather(key, updated, data) => store.weather_save(&key, updated, &data)?,
         Effect::PersistCountdowns(items) => store.countdowns_save(&items)?,
         Effect::Persist(timers) => store.timers_save(&timers)?,
         Effect::Reply(call, result) => call.reply(result),

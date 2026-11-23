@@ -1,6 +1,6 @@
 mod audio;
 pub(crate) mod effects;
-mod jobs;
+pub(crate) mod jobs;
 mod tick;
 mod tools;
 mod voice;
@@ -22,17 +22,24 @@ pub async fn run(
     effects::execute_settings(effects::SettingsEffect::Initialize, &mut config, &io);
     let mut timers = crate::features::timers::Feature::load(&store)?;
     let mut countdowns = crate::features::countdowns::Feature::load(&store)?;
+    let mut weather = crate::features::weather::Feature::load(
+        ports.weather.clone(),
+        &config.get().weather,
+        &store,
+        ports.clock.now().timestamp().as_second(),
+    )?;
     let mut conversation = Conversation::default();
     let mut alerts = crate::alerts::Alerts::default();
     let mut view = crate::view::View::new(ports.clock.now().timestamp().as_second());
     let mut jobs = jobs::Jobs::new();
     let mut tick = time::interval(Duration::from_secs(1));
     tick.set_missed_tick_behavior(time::MissedTickBehavior::Skip);
-    for effect in timers
-        .snapshot()
-        .into_iter()
-        .chain(countdowns.snapshot(ports.clock.now().date()))
-    {
+    for effect in std::iter::once(weather.snapshot()).chain(
+        timers
+            .snapshot()
+            .into_iter()
+            .chain(countdowns.snapshot(ports.clock.now().date())),
+    ) {
         effects::execute(
             effect,
             &io.ui_tx,
@@ -49,7 +56,10 @@ pub async fn run(
                 let mut pending = tick::tick(ports.clock.as_ref());
                 pending.extend(conversation.on(Input::Tick, ports.clock.now()));
                 pending.extend(countdowns.snapshot(ports.clock.now().date()));
+                let old_screen = view.screen();
                 pending.extend(view.tick(ports.clock.now().timestamp().as_second()));
+                if old_screen == crate::Screen::Weather && view.screen() != crate::Screen::Weather { pending.extend(weather.leave(&store, ports.clock.now().timestamp().as_second())); }
+                pending.extend(weather.tick(ports.clock.now().timestamp().as_second()));
                 let now = ports.clock.now().timestamp().as_second();
                 let due = timers.due(now);
                 alerts.retain_due(&due);
@@ -61,9 +71,13 @@ pub async fn run(
             }
             event = jobs.next() => {
                 match event {
-                    jobs::Internal::Timeout(Some(call)) => effects::execute(effects::Effect::ReplyError(call, "Job timed out"), &io.ui_tx, &io.voice_tx, &io.audio_tx, &mut jobs, &mut store).await?,
-                    jobs::Internal::Timeout(None) => {},
-                    jobs::Internal::JobDone(_id, _result, _reply) => {},
+                    jobs::Internal::Timeout(id, reply) => {
+                        if id == "weather" { for effect in weather.on_job(Err(anyhow::anyhow!("Job timed out")), reply, ports.clock.now().timestamp().as_second()) { effects::execute(effect, &io.ui_tx, &io.voice_tx, &io.audio_tx, &mut jobs, &mut store).await?; } }
+                        else if let Some(call) = reply { effects::execute(effects::Effect::ReplyError(call, "Job timed out"), &io.ui_tx, &io.voice_tx, &io.audio_tx, &mut jobs, &mut store).await?; }
+                    },
+                    jobs::Internal::JobDone(id, result, reply) => {
+                        if id == "weather" { for effect in weather.on_job(result, reply, ports.clock.now().timestamp().as_second()) { effects::execute(effect, &io.ui_tx, &io.voice_tx, &io.audio_tx, &mut jobs, &mut store).await?; } }
+                    },
                 }
             },
             Some(event) = io.voice_rx.recv() => {
@@ -72,10 +86,12 @@ pub async fn run(
                     VoiceEvent::Activation { code } => effects::execute_settings(effects::SettingsEffect::Activation(code.clone()), &mut config, &io),
                     _ => {}
                 }
-                let pending = match event {
-                    VoiceEvent::ToolCall(call) => tools::route(&mut timers, &mut countdowns, &mut view, call, ports.clock.now()),
+                let old_screen = view.screen();
+                let mut pending = match event {
+                    VoiceEvent::ToolCall(call) => tools::route(&mut timers, &mut countdowns, &mut view, &mut weather, &store, call, ports.clock.now()),
                     event => voice::on(event, &mut conversation, ports.clock.now()),
                 };
+                if old_screen == crate::Screen::Weather && view.screen() != crate::Screen::Weather { pending.extend(weather.leave(&store, ports.clock.now().timestamp().as_second())); }
                 for effect in pending { effects::execute(effect, &io.ui_tx, &io.voice_tx, &io.audio_tx, &mut jobs, &mut store).await?; }
             }
             Some(event) = io.audio_rx.recv() => {
@@ -93,6 +109,7 @@ pub async fn run(
                 }
                 UserInput::SaveVoiceUrl(input) => effects::execute_settings(effects::SettingsEffect::SaveUrl(input), &mut config, &io),
                 UserInput::Setup(update, reply) => {
+                    let weather_changed = matches!(&update, crate::setup_web::Update::Weather(_));
                     let result = config.update(|c| match update {
                         crate::setup_web::Update::Voice(url) => c.voice.ota_url = Some(url),
                         crate::setup_web::Update::Home(home) => c.home = home,
@@ -100,13 +117,19 @@ pub async fn run(
                         crate::setup_web::Update::Calendar(calendar) => c.calendar = calendar,
                     });
                     if result.is_ok() {
+                        if weather_changed { for effect in weather.update_home(&config.get().weather, &store, ports.clock.now().timestamp().as_second()) { effects::execute(effect, &io.ui_tx, &io.voice_tx, &io.audio_tx, &mut jobs, &mut store).await?; } }
                         io.voice_config_tx.send_replace(crate::voice_settings::config(&config));
                         io.ui_tx.send_modify(|ui| ui.voice_settings.ota_url = config.get().voice.ota_url.clone().unwrap_or_default());
                     }
                     let _ = reply.send(result.map_err(|e| e.to_string()));
                 }
                 UserInput::VoiceConnect => { effects::execute(effects::Effect::Voice(VoiceCommand::Connect), &io.ui_tx, &io.voice_tx, &io.audio_tx, &mut jobs, &mut store).await?; }
-                input => for effect in view.on_user(input, ports.clock.now().timestamp().as_second()) { effects::execute(effect, &io.ui_tx, &io.voice_tx, &io.audio_tx, &mut jobs, &mut store).await?; }
+                input => {
+                    let old_screen = view.screen();
+                    let mut pending = view.on_user(input, ports.clock.now().timestamp().as_second());
+                    if old_screen == crate::Screen::Weather && view.screen() != crate::Screen::Weather { pending.extend(weather.leave(&store, ports.clock.now().timestamp().as_second())); }
+                    for effect in pending { effects::execute(effect, &io.ui_tx, &io.voice_tx, &io.audio_tx, &mut jobs, &mut store).await?; }
+                }
             },
             _ = io.ui_tx.closed() => return Ok(()),
         }

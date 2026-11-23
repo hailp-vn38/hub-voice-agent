@@ -64,6 +64,7 @@ async fn timers_are_saved_reloaded_and_limit_is_reported() {
         Store::open(&dir).unwrap(),
         Ports {
             clock: Arc::new(TestClock::at(start.clone())),
+            weather: Arc::new(hub_core::OpenMeteo::default()),
             system: system.clone(),
         },
         Io {
@@ -178,6 +179,7 @@ async fn timers_are_saved_reloaded_and_limit_is_reported() {
         Store::open(&dir).unwrap(),
         Ports {
             clock: Arc::new(TestClock::at(start)),
+            weather: Arc::new(hub_core::OpenMeteo::default()),
             system: Arc::new(support::Synced),
         },
         Io {

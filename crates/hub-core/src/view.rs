@@ -20,6 +20,7 @@ pub enum Screen {
 pub enum Focus {
     Timer(i64),
     Countdown(i64),
+    Weather(String),
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -36,6 +37,9 @@ pub(crate) struct View {
 }
 
 impl View {
+    pub fn screen(&self) -> Screen {
+        self.state.screen
+    }
     pub fn new(now: i64) -> Self {
         Self {
             last_activity: Some(now),

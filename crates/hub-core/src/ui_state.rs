@@ -3,6 +3,7 @@
 pub struct UiState {
     /// Local time as `HH:MM:SS`.
     pub clock: String,
+    pub weather: crate::WeatherView,
     pub alert: Option<crate::Alert>,
     pub countdowns: Vec<crate::CountdownView>,
     pub view: crate::ViewState,
