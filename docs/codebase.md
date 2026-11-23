@@ -1,6 +1,6 @@
 # AI Hub — Thiết kế codebase
 
-> Trạng thái: **thiết kế**, repo chưa có code. Cập nhật: 2026-11-22.
+> Trạng thái: **thiết kế**, đang triển khai. Cập nhật: 2026-11-23 (theo [spec hub-core](../.scratch/hub-core/spec.md)).
 >
 > Ý tưởng sản phẩm: [concept.md](concept.md). Phát triển trên Mac: [development.md](development.md). Quyết định đã chốt: [adr/](adr/). Từ vựng: [GLOSSARY.md](../GLOSSARY.md).
 
@@ -46,25 +46,26 @@ ai-hub/
 │   └── hub-core/                 # toàn bộ hành vi của hub
 │       ├── src/
 │       │   ├── lib.rs            # run(), Io, Ports, re-export type công khai
-│       │   ├── runtime.rs        # actor: select! qua mọi input, giữ HubState
+│       │   ├── runtime/          # actor: select! qua mọi input, giữ HubState
+│       │   │   ├── mod.rs        # vòng select!
+│       │   │   ├── voice.rs, audio.rs, input.rs, tick.rs
+│       │   │   ├── tools.rs      # định tuyến ToolCall theo tiền tố tên → tính năng
+│       │   │   ├── effects.rs    # enum Effect + executor duy nhất
+│       │   │   └── jobs.rs       # task mạng: giữ ToolCall, timeout, huỷ job cũ cùng khoá
 │       │   ├── conversation.rs   # Idle / Listening / Thinking / Speaking / Offline
-│       │   ├── view.rs           # điều hướng, focus, tự quay về, Ambient, "tạm xem"
+│       │   ├── view.rs           # điều hướng, focus, tự quay về, Ambient, "tạm xem", tool server → màn
 │       │   ├── alerts.rs         # trạng thái báo toàn màn: hàng đợi, tự tắt, đợi hết lượt nói
 │       │   ├── ui_state.rs       # UiState, UserInput
 │       │   ├── audio.rs          # AudioCommand, AudioEvent (adapter ở apps/hub)
-│       │   ├── tools/
-│       │   │   ├── mod.rs        # definitions(), dispatch
-│       │   │   └── args.rs       # struct tham số từng hub_* (serde + schemars)
-│       │   ├── server_tools.rs   # bảng tên tool phía server → màn
-│       │   ├── features/
-│       │   │   ├── timers.rs
-│       │   │   ├── countdowns.rs
-│       │   │   ├── reminders.rs
-│       │   │   ├── weather.rs    # vị trí nhà / tạm xem, WMO → icon & nền
-│       │   │   ├── calendar.rs   # cache 60 ngày, syncToken, sự kiện mới tạo
-│       │   │   ├── home.rs       # entity demo, trạng thái cũ
-│       │   │   ├── photos.rs     # 100 ảnh / 200 MB, ghim, xoá cũ nhất
-│       │   │   └── selector.rs   # chọn mục theo nhãn → Found / Ambiguous / NotFound
+│       │   ├── features/         # mỗi tính năng một thư mục cùng khuôn (xem 3.2)
+│       │   │   ├── timers/       # mod.rs (điều phối), rules.rs, store.rs, tools.rs, tests.rs
+│       │   │   ├── countdowns/
+│       │   │   ├── reminders/
+│       │   │   ├── weather/      # vị trí nhà / tạm xem, WMO → icon & nền
+│       │   │   ├── calendar/     # cache 60 ngày, syncToken, sự kiện mới tạo
+│       │   │   ├── home/         # entity demo, trạng thái cũ
+│       │   │   └── photos/       # 100 ảnh / 200 MB, ghim, xoá cũ nhất
+│       │   ├── selector.rs       # chọn mục theo nhãn → Found / Ambiguous / NotFound
 │       │   ├── lunar.rs          # âm–dương lịch Việt Nam (UTC+7)
 │       │   ├── ports.rs          # Clock, WeatherSource, CalendarSource, HomeSource, ImageFetcher, System
 │       │   ├── sources/          # adapter thật của port (chạy được cả Mac và Pi)
@@ -73,8 +74,8 @@ ai-hub/
 │       │   │   ├── home_assistant.rs   # WebSocket API
 │       │   │   └── image_fetch.rs      # giới hạn, chặn LAN/localhost, thu nhỏ
 │       │   ├── store/
-│       │   │   ├── mod.rs        # Store::open(dir) / Store::in_memory()
-│       │   │   └── migrations/   # 0001_init.sql, …
+│       │   │   ├── mod.rs        # Store::open(dir) / Store::in_memory(), chạy migration
+│       │   │   └── migrations/   # 0001_init.sql, … (method theo tính năng ở features/*/store.rs)
 │       │   ├── config.rs         # ConfigStore: TOML 0600, watch
 │       │   └── setup_web/
 │       │       ├── mod.rs        # serve(addr, …)
@@ -91,7 +92,8 @@ ai-hub/
 │   │   ├── main.rs               # nối dây (xem 3.3)
 │   │   ├── ui/
 │   │   │   ├── mod.rs            # run_ui(): event loop Slint trên main thread
-│   │   │   └── bridge.rs         # UiState → struct Slint; callback Slint → UserInput
+│   │   │   └── bridge/           # mod.rs đọc watch<UiState>; <screen>.rs: apply cho từng màn;
+│   │   │                         # callback Slint → UserInput
 │   │   ├── audio/
 │   │   │   ├── mod.rs            # spawn() → (Sender<AudioCommand>, Receiver<AudioEvent>, watch<Levels>)
 │   │   │   ├── devices.rs        # cpal: chọn XVF3800 cả vào lẫn ra
@@ -136,7 +138,7 @@ ai-hub/
 Một module sâu: toàn bộ Voice Protocol nằm sau hai channel giới hạn.
 
 ```rust
-pub fn spawn(config: watch::Receiver<VoiceConfig>)
+pub fn spawn(config: watch::Receiver<Option<VoiceConfig>>)   // None = chưa cấu hình
     -> (mpsc::Sender<VoiceCommand>, mpsc::Receiver<VoiceEvent>);
 
 pub struct VoiceConfig {
@@ -159,7 +161,7 @@ pub enum VoiceCommand {
 }
 
 pub enum VoiceEvent {
-    Connection(ConnectionState),  // Connecting | Ready | Offline { retry_in } | Enrolling
+    Connection(ConnectionState),  // Unconfigured | Connecting | Ready | Offline { retry_in } | Enrolling
     Activation { code: String },  // mã activation từ OTA
     Stt { text: String },
     TtsStart { origin: TtsOrigin },
@@ -171,7 +173,7 @@ pub enum VoiceEvent {
     ToolCall(ToolCall),
 }
 
-pub enum ConnectionState { Connecting, Ready, Offline { retry_in: Duration }, Enrolling }
+pub enum ConnectionState { Unconfigured, Connecting, Ready, Offline { retry_in: Duration }, Enrolling }
 pub enum TtsOrigin { Agent, ClientDirect { request_id: String } }
 pub enum TtsStopReason { Completed, Interrupted }
 pub enum DirectSpeechError {
@@ -199,6 +201,7 @@ Features `mcp`, `tool_status`, `direct_tts` và `aec` luôn bật trong ClientHe
 4. Sự kiện theo đúng thứ tự frame server gửi.
 5. Channel giới hạn 64 command và 256 event; audio bị drop trước khi làm nghẽn reader.
 6. Chỉ giá trị `VoiceConfig` thay đổi mới làm kết nối lại.
+7. Task client và hai channel sống tới khi receiver config đóng. `None` → không kết nối, phát `Connection(Unconfigured)`; `Some → None` đóng socket theo bất biến 1. `Unconfigured` xử lý command như trước `Ready`.
 
 Integration test dùng server WebSocket giả tại `tests/`; test backoff dùng tokio time paused.
 
@@ -210,6 +213,7 @@ Integration test dùng server WebSocket giả tại `tests/`; test backoff dùng
 pub async fn run(config: ConfigStore, store: Store, ports: Ports, io: Io) -> anyhow::Result<()>;
 
 pub struct Io {
+    pub voice_config_tx: watch::Sender<Option<VoiceConfig>>, // hub-core dẫn từ ConfigStore + tool_definitions()
     pub voice_tx: mpsc::Sender<VoiceCommand>,
     pub voice_rx: mpsc::Receiver<VoiceEvent>,
     pub audio_tx: mpsc::Sender<AudioCommand>,
@@ -232,7 +236,7 @@ pub fn tool_definitions() -> Vec<ToolDef>;   // apps/hub đưa vào VoiceConfig
 
 Gần như mọi hành vi của sản phẩm — luồng voice, 21 tool `hub_*`, điều hướng, báo hết giờ, Reminder, cache offline, Setup web — test được qua đúng interface này: gửi `VoiceEvent`/`AudioEvent`/`UserInput`, tiến clock, rồi kiểm `VoiceCommand`/`AudioCommand` đã gửi và `UiState`.
 
-`run` tự spawn Setup web, các vòng làm mới dữ liệu (thời tiết 30 phút, lịch 5 phút, kết nối HA) và actor.
+`run` tự spawn Setup web và actor. Làm mới dữ liệu (thời tiết 30 phút, lịch 5 phút) chạy trên tick của actor qua `Effect::Spawn`; HA đẩy event qua `HomeSource::subscribe()`.
 
 #### Kênh audio
 
@@ -256,14 +260,19 @@ Biên độ mic và năng lượng TTS không đi qua `hub-core`: audio ghi th�
 
 #### Module bên trong
 
-Actor (`runtime.rs`) nhận mọi input, gọi các module dưới đây, rồi phát `UiState` mới (`send_if_modified`). Mỗi module có seam nội bộ riêng để unit test, nhưng không phải interface của crate.
+Actor (`runtime/`) nhận mọi input, gọi các module dưới đây, rồi thực thi `Vec<Effect>` chúng trả về trong `runtime/effects.rs` — nơi duy nhất gửi channel, ghi `Store`, spawn job, reply tool và phát `UiState` mới (`send_if_modified`). Mỗi module có seam nội bộ riêng để unit test, nhưng không phải interface của crate.
+
+Hai lớp:
+
+- **Luật** (`features/*/rules.rs`, `lunar`, `selector`): hàm thuần nhận `now`, trả kết quả nghiệp vụ (`Result<TimerId, TimerError>`, `Vec<DueTimer>`…). Không biết `Effect`.
+- **Điều phối** (`conversation`, `view`, `alerts`, `features/*/mod.rs`): nhận input + `now`, trả `Vec<Effect>`. `features/<x>/mod.rs` là chỗ duy nhất dịch kết quả luật sang `Effect`.
 
 | Module | Giữ gì | Interface chính |
 |---|---|---|
-| `conversation` | Trạng thái voice, chờ im lặng 10 s sau TTS, mic tắt | Hàm thuần `on(input, now) -> Vec<Action>`; `turn_active()` |
-| `view` | Màn hiện tại, focus, tự về màn trung tâm sau ~60 s, Ambient, "tạm xem" | `open(screen, focus)`, `on_user(..)`, `tick(now)` |
+| `conversation` | Trạng thái voice, chờ im lặng 10 s sau TTS, mic tắt | `on(input, now) -> Vec<Effect>`; `turn_active()` |
+| `view` | Màn hiện tại, focus, tự về màn trung tâm sau ~60 s, Ambient, "tạm xem", tool phía server → màn | `open(screen, focus)`, `on_user(..)`, `tick(now)`, `screen_for_server_tool(name)` |
+| `runtime::jobs` | Task mạng đang chạy, `ToolCall` đang chờ | `Effect::Spawn { job, work, reply, timeout }` → `Internal::JobDone(id, result)`; hết giờ → reply lỗi; job mới cùng khoá huỷ job cũ |
 | `alerts` | Hàng đợi trạng thái báo (hết giờ, Reminder): lần lượt, tự tắt 2 phút / 60 s, đợi hết lượt nói | `push(alert)`, `dismiss()`, `tick(now, turn_active)` |
-| `tools` | Tên + JSON Schema + parse tham số của từng `hub_*` | `definitions()`, `parse(name, args) -> ToolRequest` |
 | `features::timers` | ≤ 4 hẹn giờ, giờ kết thúc tuyệt đối, tạm dừng | `start`, `adjust`, `cancel`, `due(now)` |
 | `features::countdowns` | ≤ 8 mốc, `none` / `yearly` / `yearly_lunar` | `create`, `remove`, `next_occurrence(now)` |
 | `features::reminders` | `none` / `daily` / `weekly`, đã nhắc, đã lỡ (< 1 giờ thì nhắc một lần) | `create`, `cancel`, `snooze`, `due(now)` |
@@ -272,20 +281,32 @@ Actor (`runtime.rs`) nhận mọi input, gọi các module dưới đây, rồi 
 | `features::photos` | Chỉ mục ảnh, ghim, chính sách xoá | `add`, `pin`, `evict()` |
 | `selector` | Chọn mục theo nhãn (dùng chung cho hẹn giờ, mốc, Reminder) | `select(items, query) -> Found / Ambiguous(Vec) / NotFound` |
 | `lunar` | Thuật toán âm lịch Việt Nam (Hồ Ngọc Đức), múi UTC+7 | `to_solar(lunar_date)`, `to_lunar(date)` |
-| `server_tools` | Tên tool phía server → màn | `screen_for(name) -> Option<Screen>` |
-| `store` | SQLite + thư mục ảnh ([ADR 0012](adr/0012-sqlite-for-local-data.md)) | method theo tính năng, mỗi thao tác một transaction |
+| `store` | SQLite + thư mục ảnh ([ADR 0012](adr/0012-sqlite-for-local-data.md)) | `open`/`in_memory` + migration; method theo tính năng ở `features/*/store.rs`, mỗi thao tác một transaction |
 | `config` | File TOML 0600, thông báo khi đổi | `get()`, `update(f)`, `watch()` |
 
-Tính năng là **logic thuần nhận `now`, trả kết quả**; actor lo ghi `Store` và phát hiệu ứng. Vì vậy test một luật (vd. Reminder `weekly` qua Chủ nhật) không cần actor.
+Luật tính năng là **logic thuần nhận `now`, trả kết quả**; actor lo ghi `Store` và phát hiệu ứng. Vì vậy test một luật (vd. Reminder `weekly` qua Chủ nhật) không cần actor.
+
+**Khuôn thư mục tính năng.** Thêm hoặc sửa một tính năng chỉ chạm thư mục của nó, cộng một dòng định tuyến trong `runtime/tools.rs`:
+
+```
+features/<x>/
+  mod.rs     # điều phối: on_tool, on_job, tick, snapshot → Vec<Effect>
+  rules.rs   # luật thuần
+  store.rs   # impl Store { <x>_* }
+  tools.rs   # struct tham số (serde + schemars), definitions(), parse()
+  tests.rs
+```
+
+Không có enum `ToolRequest` chung: `runtime/tools.rs` định tuyến theo tiền tố tên (`hub_timer_*` → `timers`), `tool_definitions()` nối `definitions()` của từng tính năng. Không có trait `Feature`: các tính năng khác nhau nhiều (mạng, push, file), runtime gọi qua `match`; chỉ rút trait khi đã có 3–4 tính năng thật cùng hình dạng.
 
 #### Seam bên ngoài (port)
 
 | Port | Adapter thật | Adapter khác |
 |---|---|---|
 | `Clock` | `SystemClock` (hub-core) | Clock test theo tokio time paused |
-| `WeatherSource` | `sources::open_meteo` | Fake trong `tests/support` |
+| `WeatherSource` (request/response) | `sources::open_meteo` | Fake trong `tests/support` |
 | `CalendarSource` | `sources::google_calendar` | Fake |
-| `HomeSource` | `sources::home_assistant` | Fake |
+| `HomeSource` (`subscribe() -> Receiver<HomeEvent>` + `call_service`; adapter tự reconnect) | `sources::home_assistant` | Fake |
 | `ImageFetcher` | `sources::image_fetch` | Fake |
 | `System` (độ sáng, Wi-Fi, AP setup, khởi động lại/tắt máy) | `apps/hub/system/pi.rs` | `system/desktop.rs`, fake |
 
@@ -296,13 +317,13 @@ Không phải seam (một adapter): `Store` (test dùng `Store::in_memory()`), `
 `main.rs` chỉ nối dây:
 
 1. Đọc thư mục dữ liệu, mở `ConfigStore` và `Store`.
-2. `voice_client::spawn(...)` với `VoiceConfig` dẫn từ `config.watch()` và `hub_core::tool_definitions()`.
+2. `voice_client::spawn(voice_config_rx)` đúng một lần; hub-core phát `VoiceConfig` (từ `ConfigStore` + `tool_definitions()`) qua `Io.voice_config_tx`. Không spawn lại, không relay.
 3. `audio::spawn(...)` trên thread riêng.
 4. Dựng `Ports` (adapter `sources::*` của hub-core, `system` theo feature).
 5. Chạy tokio runtime ở thread phụ với `hub_core::run(...)`.
 6. Chạy `ui::run_ui(ui_rx, levels_rx, input_tx)` trên main thread (Slint `linuxkms` cần main thread).
 
-**UI bridge:** `bridge.rs` đổi `UiState` sang struct Slint qua `slint::invoke_from_event_loop`, và callback Slint sang `UserInput`. Logic không nằm ở đây; nếu bridge cần một nhánh `if` theo nghiệp vụ thì nhánh đó thuộc `hub-core`.
+**UI bridge:** `bridge/mod.rs` đọc `watch<UiState>` và qua `slint::invoke_from_event_loop` gọi `bridge/<screen>.rs::apply(&app, &state.<screen>)` cho từng màn; callback Slint đổi sang `UserInput`. Logic không nằm ở đây; nếu bridge cần một nhánh `if` theo nghiệp vụ thì nhánh đó thuộc `hub-core`.
 
 **Audio:** một luồng PCM 16 kHz mono từ XVF3800 chia hai: khối 80 ms cho openWakeWord (melspectrogram → embedding → `hey_jarvis`) và khối 60 ms cho Opus encode. `preroll` giữ ~1–2 s gần nhất để xả khi `Mic { on: true }`. `playback` trộn TTS với chuông (chuông nhỏ hơn khi đang có TTS), mọi âm ra đều qua cổng ra của mic array ([ADR 0005](adr/0005-local-wake-word-hardware-aec.md)).
 
@@ -323,10 +344,11 @@ voice: TtsStart / TtsAudio / TtsStop → AudioCommand::PlayTts …; UiState.voic
 
 ```
 voice: VoiceEvent::ToolCall
-  → tools::parse → ToolRequest (lỗi tham số → reply lỗi ngay)
-  → phần đồng bộ: view.open(screen, focus), cập nhật tính năng, ghi Store, thêm spawn vào UiState
-  → phần cần mạng (calendar_create, weather location khác, show_image): spawn task dùng port,
-    kết quả quay về actor như một message nội bộ → hoàn tất trạng thái → ToolCall::reply
+  → runtime/tools: định tuyến theo tiền tố → features/<x>/tools::parse (lỗi tham số → reply lỗi ngay)
+  → features/<x>::on_tool → Vec<Effect>: view.open(screen, focus), Persist, Ui, Reply
+  → phần cần mạng (calendar_create, weather location khác, show_image): Effect::Spawn kèm ToolCall,
+    runtime/jobs chờ → Internal::JobDone → features/<x>::on_job → hoàn tất trạng thái → Reply
+    (quá timeout → jobs reply lỗi)
 ```
 
 **Reminder đến hạn:**
@@ -340,7 +362,7 @@ tick 1 Hz → reminders.due(now) → alerts.push(Reminder)
   → ~60 s → alert vào "Đã nhắc gần đây"
 ```
 
-Actor tick 1 Hz cho mọi thứ theo giờ (hẹn giờ, Reminder, tự quay về, chữ số đếm ngược); vòng tròn hẹn giờ mượt nhờ Slint `animate` tuyến tính 1 s giữa hai tick.
+Actor tick 1 Hz cho mọi thứ theo giờ (hẹn giờ, Reminder, tự quay về, chữ số đếm ngược, làm mới thời tiết/lịch); vòng tròn hẹn giờ mượt nhờ Slint `animate` tuyến tính 1 s giữa hai tick. Tick chỉ là nhịp: luật luôn so sánh với giờ tuyệt đối từ `Clock`, không đếm tick.
 
 ## 5. Dữ liệu trên thiết bị
 
@@ -362,7 +384,8 @@ Model wake word: `models/` cạnh binary (Pi: `/opt/ai-hub/models/`).
 
 | Tầng | Cách test | Chạy ở |
 |---|---|---|
-| Hàm thuần (`lunar`, `selector`, luật lặp, `conversation`, `view`) | Unit test, truyền `now` | `cargo test -p hub-core` |
+| Luật (`lunar`, `selector`, `features/*/rules.rs`) | Unit test, truyền `now`, kiểm kết quả nghiệp vụ | `cargo test -p hub-core` |
+| Điều phối (`conversation`, `view`, `alerts`, `features/*/mod.rs`) | Unit test, truyền input + `now`, kiểm `Vec<Effect>` | `cargo test -p hub-core` |
 | Hành vi hub | `tests/` của hub-core: harness dựng `run()` với channel, fake port, `Store::in_memory()`, tokio time paused | Mac |
 | Adapter `sources::*` | Parse fixture JSON thật; không gọi mạng trong CI | Mac |
 | `voice-client` | Server WS giả | Mac |

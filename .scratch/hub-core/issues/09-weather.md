@@ -7,8 +7,8 @@ Spec: [../spec.md](../spec.md)
 ## Việc
 
 - Port `WeatherSource`; adapter `sources/open_meteo.rs` (forecast, air quality, geocoding); fake trong `tests/support`; fixture JSON thật ở `tests/fixtures/`.
-- `src/features/weather.rs`: vị trí nhà, thành phố tạm xem (giữ ~30 phút), WMO → icon/nền, `snapshot(focus)`, `apply(forecast)`; cache trong `Store` để hiển thị khi offline.
-- Vòng làm mới 30 phút. Tool thời tiết ở thành phố khác: `Effect::Spawn` task mạng, kết quả quay về actor rồi mới reply.
+- `src/features/weather/` (khuôn ticket 04): vị trí nhà, thành phố tạm xem (giữ ~30 phút), WMO → icon/nền, `snapshot(focus)`, `apply(forecast)`; cache trong `Store` để hiển thị khi offline.
+- Làm mới 30 phút trên tick của actor (`Effect::Spawn`, không spawn vòng riêng). Tool thời tiết ở thành phố khác: `Effect::Spawn` kèm `ToolCall`, khoá job theo tính năng để câu hỏi mới huỷ câu cũ; `JobDone` → cập nhật state rồi mới reply.
 
 ## Nghiệm thu
 
