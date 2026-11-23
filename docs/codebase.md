@@ -240,6 +240,8 @@ Gần như mọi hành vi của sản phẩm — luồng voice, 21 tool `hub_*`,
 
 Ứng dụng mở Setup web trên `0.0.0.0:8080` và gửi thay đổi tới actor; OAuth dùng redirect loopback, có thể dán URL từ điện thoại. Làm mới dữ liệu (thời tiết 30 phút, lịch 5 phút) chạy trên tick của actor qua `Effect::Spawn`; HA đẩy event qua `HomeSource::subscribe()`.
 
+Calendar dùng `CalendarSource` và adapter `sources::google_calendar::GoogleCalendar`: actor làm mới mỗi năm phút, lưu cache cùng sync token trong SQLite, đồng bộ lại đầy đủ khi Google trả 410 và dùng cache khi offline. Setup web lưu refresh token trong `ConfigStore`; tạo sự kiện chờ kết quả nguồn rồi mở Lịch và focus sự kiện đó.
+
 #### Kênh audio
 
 ```rust

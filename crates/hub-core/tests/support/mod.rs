@@ -64,6 +64,7 @@ impl Hub {
             hub_core::Store::in_memory().unwrap(),
             Ports {
                 clock: Arc::new(TestClock::at(start)),
+                calendar: Arc::new(hub_core::sources::google_calendar::GoogleCalendar::default()),
             },
             Io {
                 voice_config_tx,

@@ -22,6 +22,7 @@ pub async fn run(
     effects::execute_settings(effects::SettingsEffect::Initialize, &mut config, &io);
     let mut timers = crate::features::timers::Feature::load(&store)?;
     let mut countdowns = crate::features::countdowns::Feature::load(&store)?;
+    let mut calendar = crate::features::calendar::Feature::load(&store)?;
     let mut conversation = Conversation::default();
     let mut view = crate::view::View::new(ports.clock.now().timestamp().as_second());
     let mut jobs = jobs::Jobs::new();
@@ -31,6 +32,7 @@ pub async fn run(
         .snapshot()
         .into_iter()
         .chain(countdowns.snapshot(ports.clock.now().date()))
+        .chain(calendar.snapshot())
     {
         effects::execute(
             effect,
@@ -50,13 +52,16 @@ pub async fn run(
                 pending.extend(countdowns.snapshot(ports.clock.now().date()));
                 pending.extend(view.tick(ports.clock.now().timestamp().as_second()));
                 pending.extend(timers.tick(ports.clock.now().timestamp().as_second()));
+                pending.extend(calendar.tick(ports.calendar.clone(), config.get().calendar.clone(), ports.clock.now().timestamp().as_second()));
                 for effect in pending { effects::execute(effect, &io.ui_tx, &io.voice_tx, &io.audio_tx, &mut jobs, &mut store).await?; }
             }
             event = jobs.next() => {
                 match event {
                     jobs::Internal::Timeout(Some(call)) => effects::execute(effects::Effect::ReplyError(call, "Job timed out"), &io.ui_tx, &io.voice_tx, &io.audio_tx, &mut jobs, &mut store).await?,
                     jobs::Internal::Timeout(None) => {},
-                    jobs::Internal::JobDone(_id, _result, _reply) => {},
+                    jobs::Internal::JobDone(id, result, reply) => {
+                        for effect in calendar.on_job(&id, result, reply, &mut view, ports.calendar.clone(), config.get().calendar.clone(), ports.clock.now().timestamp().as_second()) { effects::execute(effect, &io.ui_tx, &io.voice_tx, &io.audio_tx, &mut jobs, &mut store).await?; }
+                    },
                 }
             },
             Some(event) = io.voice_rx.recv() => {
@@ -66,6 +71,7 @@ pub async fn run(
                     _ => {}
                 }
                 let pending = match event {
+                    VoiceEvent::ToolCall(call) if call.name.starts_with("hub_calendar_") => calendar.on_tool(&mut view, call, ports.calendar.clone(), config.get().calendar.clone(), ports.clock.now().timestamp().as_second()),
                     VoiceEvent::ToolCall(call) => tools::route(&mut timers, &mut countdowns, &mut view, call, ports.clock.now()),
                     event => voice::on(event, &mut conversation, ports.clock.now()),
                 };
@@ -80,6 +86,7 @@ pub async fn run(
             Some(input) = io.input_rx.recv() => match input {
                 UserInput::SaveVoiceUrl(input) => effects::execute_settings(effects::SettingsEffect::SaveUrl(input), &mut config, &io),
                 UserInput::Setup(update, reply) => {
+                    let calendar_changed = matches!(&update, crate::setup_web::Update::Calendar(value) if *value != config.get().calendar);
                     let result = config.update(|c| match update {
                         crate::setup_web::Update::Voice(url) => c.voice.ota_url = Some(url),
                         crate::setup_web::Update::Home(home) => c.home = home,
@@ -87,6 +94,11 @@ pub async fn run(
                         crate::setup_web::Update::Calendar(calendar) => c.calendar = calendar,
                     });
                     if result.is_ok() {
+                        if calendar_changed {
+                            let mut pending = calendar.reset();
+                            pending.extend(calendar.tick(ports.calendar.clone(), config.get().calendar.clone(), ports.clock.now().timestamp().as_second()));
+                            for effect in pending { effects::execute(effect, &io.ui_tx, &io.voice_tx, &io.audio_tx, &mut jobs, &mut store).await?; }
+                        }
                         io.voice_config_tx.send_replace(crate::voice_settings::config(&config));
                         io.ui_tx.send_modify(|ui| ui.voice_settings.ota_url = config.get().voice.ota_url.clone().unwrap_or_default());
                     }

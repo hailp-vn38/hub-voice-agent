@@ -19,6 +19,7 @@ pub enum Screen {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Focus {
     Timer(i64),
+    Calendar(String),
     Countdown(i64),
 }
 

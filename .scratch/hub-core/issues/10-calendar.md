@@ -13,6 +13,10 @@ Spec: [../spec.md](../spec.md)
 
 ## Nghiệm thu
 
-- [ ] Adapter parse fixture list/insert/410.
-- [ ] Test qua `run()`: tạo sự kiện → reply sau khi fake trả OK, màn Lịch focus sự kiện mới.
-- [ ] Offline → hiển thị cache.
+- [x] Adapter parse fixture list/insert/410.
+- [x] Test qua `run()`: tạo sự kiện → reply sau khi fake trả OK, màn Lịch focus sự kiện mới.
+- [x] Offline → hiển thị cache.
+
+## Comments
+
+Đã triển khai CalendarSource, Google adapter, cache SQLite và đồng bộ qua actor; test adapter, đồng bộ 410/offline và tạo sự kiện qua run. Chưa kiểm tra Google OAuth/API thực tế.

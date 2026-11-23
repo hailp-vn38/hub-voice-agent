@@ -20,6 +20,7 @@ pub(crate) enum Effect {
     },
     Persist(Vec<crate::Timer>),
     PersistCountdowns(Vec<crate::Countdown>),
+    PersistCalendar(Vec<crate::CalendarEvent>, Option<String>),
     Reply(ToolCall, Result<serde_json::Value, ToolError>),
     ReplyError(ToolCall, &'static str),
 }
@@ -33,6 +34,7 @@ pub(super) async fn execute(
     store: &mut crate::Store,
 ) -> anyhow::Result<()> {
     match effect {
+        Effect::PersistCalendar(events, token) => store.calendar_save(&events, &token)?,
         Effect::PersistCountdowns(items) => store.countdowns_save(&items)?,
         Effect::Persist(timers) => store.timers_save(&timers)?,
         Effect::Reply(call, result) => call.reply(result),

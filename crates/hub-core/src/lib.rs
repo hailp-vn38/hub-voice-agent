@@ -1,11 +1,13 @@
 //! Hub core: the actor that owns state and drives the UI snapshot. Depends on `voice-client`.
 
 mod audio;
+mod calendar;
 mod config;
 mod conversation;
 mod features;
 pub mod lunar;
 pub mod selector;
+pub mod sources;
 
 mod ports;
 mod runtime;
@@ -18,6 +20,9 @@ mod voice_settings;
 use std::sync::Arc;
 
 pub use audio::{AudioCommand, AudioEvent, Sensitivity, Sound};
+pub use calendar::{
+    CalendarDelta, CalendarEvent, CalendarFuture, CalendarSource, NewCalendarEvent,
+};
 pub use config::{
     CalendarSettings, Config, ConfigStore, HomeSettings, VoiceSettings, WeatherSettings,
 };
@@ -31,6 +36,7 @@ pub use voice_settings::DEFAULT_OTA_URL;
 
 pub struct Ports {
     pub clock: Arc<dyn Clock>,
+    pub calendar: Arc<dyn CalendarSource>,
 }
 
 pub enum UserInput {
@@ -62,5 +68,6 @@ pub use store::Store;
 pub fn tool_definitions() -> Vec<voice_client::ToolDef> {
     let mut tools = features::timers::tools::definitions();
     tools.extend(features::countdowns::tools::definitions());
+    tools.extend(features::calendar::tools::definitions());
     tools
 }

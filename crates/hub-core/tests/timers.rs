@@ -50,6 +50,7 @@ async fn timers_are_saved_reloaded_and_limit_is_reported() {
         Store::open(&dir).unwrap(),
         Ports {
             clock: Arc::new(TestClock::at(start.clone())),
+            calendar: Arc::new(hub_core::sources::google_calendar::GoogleCalendar::default()),
         },
         Io {
             voice_config_tx: config_tx.clone(),
@@ -129,6 +130,7 @@ async fn timers_are_saved_reloaded_and_limit_is_reported() {
         Store::open(&dir).unwrap(),
         Ports {
             clock: Arc::new(TestClock::at(start)),
+            calendar: Arc::new(hub_core::sources::google_calendar::GoogleCalendar::default()),
         },
         Io {
             voice_config_tx: config_tx.clone(),
