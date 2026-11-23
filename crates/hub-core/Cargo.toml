@@ -9,5 +9,10 @@ jiff = { workspace = true }
 anyhow = { workspace = true }
 tokio = { workspace = true, features = ["sync", "time", "macros"] }
 
+serde = { workspace = true }
+serde_json = { workspace = true }
+schemars = "1"
+rusqlite = { version = "0.37", features = ["bundled"] }
+
 [dev-dependencies]
 tokio = { workspace = true, features = ["rt", "test-util"] }

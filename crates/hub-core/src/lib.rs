@@ -1,7 +1,9 @@
 //! Hub core: the actor that owns state and drives the UI snapshot. Depends on `voice-client`.
 
+mod features;
 mod ports;
 mod runtime;
+mod store;
 mod ui_state;
 
 use std::sync::Arc;
@@ -28,4 +30,11 @@ pub struct Io {
     pub audio_tx: mpsc::Sender<AudioCommand>,
     pub input_rx: mpsc::Receiver<UserInput>,
     pub ui_tx: watch::Sender<UiState>,
+}
+
+pub use features::timers::Timer;
+pub use store::Store;
+
+pub fn tool_definitions() -> Vec<voice_client::ToolDef> {
+    features::timers::tools::definitions()
 }

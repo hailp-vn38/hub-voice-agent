@@ -8,7 +8,7 @@ use crate::{AudioCommand, UiState};
 
 // Variants are introduced here for the subsequent voice and audio slices.
 #[allow(dead_code)]
-pub(super) enum Effect {
+pub(crate) enum Effect {
     Ui(Box<dyn FnOnce(&mut UiState) -> bool + Send>),
     Voice(VoiceCommand),
     Audio(AudioCommand),
@@ -18,6 +18,8 @@ pub(super) enum Effect {
         reply: Option<ToolCall>,
         timeout: Duration,
     },
+    Persist(Vec<crate::Timer>),
+    Reply(ToolCall, Result<serde_json::Value, ToolError>),
     ReplyError(ToolCall, &'static str),
 }
 
@@ -27,8 +29,11 @@ pub(super) async fn execute(
     voice_tx: &mpsc::Sender<VoiceCommand>,
     audio_tx: &mpsc::Sender<AudioCommand>,
     jobs: &mut Jobs,
-) {
+    store: &mut crate::Store,
+) -> anyhow::Result<()> {
     match effect {
+        Effect::Persist(timers) => store.timers_save(&timers)?,
+        Effect::Reply(call, result) => call.reply(result),
         Effect::Ui(patch) => {
             ui_tx.send_if_modified(patch);
         }
@@ -50,6 +55,7 @@ pub(super) async fn execute(
             let _ = audio_tx.send(command).await;
         }
     }
+    Ok(())
 }
 
 fn reply_error(call: ToolCall, message: &str) {

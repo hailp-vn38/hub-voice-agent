@@ -3,4 +3,5 @@
 pub struct UiState {
     /// Local time as `HH:MM:SS`.
     pub clock: String,
+    pub timers: Vec<crate::Timer>,
 }
