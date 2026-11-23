@@ -2,6 +2,7 @@
 mod countdowns;
 mod inputs;
 mod reminders;
+mod timers;
 mod voice;
 
 pub use inputs::connect_inputs;
@@ -12,3 +13,7 @@ pub use voice::spawn_bridge;
 pub struct BridgeState {
     countdowns: Arc<Mutex<countdowns::Presentation>>,
 }
+
+#[cfg(test)]
+#[path = "timers_tests.rs"]
+mod timers_tests;

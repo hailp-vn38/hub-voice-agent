@@ -30,7 +30,7 @@ Kịch bản: "Nhắc uống thuốc 21:00" (spawn), "Mỗi sáng 7 giờ tập 
 
 ## Map với hub-core
 
-Map: chờ hub-core #08
+Map: done — hub-mac #03 @ f2509e7
 
 | Hợp đồng | UiState / UserInput |
 |---|---|
@@ -40,8 +40,6 @@ Map: chờ hub-core #08
 | `.recent` | `HubView.reminders.recent` |
 | `.focus` / `.focus-serial` | `RemindersView` chưa có; bridge giữ mặc định Slint |
 | `ReminderItem.fading` | `ReminderItemView` chưa có; bridge đặt `false` |
-
-Map: done — hub-mac #03 @ f2509e7
 
 ## Answer
 

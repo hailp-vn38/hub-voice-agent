@@ -40,15 +40,15 @@ Kịch bản: "Hẹn giờ luộc trứng 7 phút" (spawn), thêm tới 4 cái (
 
 ## Map với hub-core
 
-Map: chờ hub-core #04 (hẹn giờ), #06 (hết giờ)
+Map: done · hub-mac #02, commit `93214e4`
 
 | Hợp đồng | UiState / UserInput |
 |---|---|
-| `TimersData.title` | |
-| `.timers` | |
-| `.focus` / `.focus-serial` | |
-| `quick-start(minutes)` | |
-| `toggle-pause(key)` / `add-minute(key)` / `cancel(key)` | |
+| `TimersData.title` | `HubView.timers.title` |
+| `.timers` | `HubView.timers.items` → `TimerCard` (các trường và phase) |
+| `.focus` / `.focus-serial` | `HubView.timers.focus.unwrap_or("")` / `.serial` |
+| `quick-start(minutes)` | `UserInput::Timer(TimerInput::QuickStart(minutes))` |
+| `toggle-pause(key)` / `add-minute(key)` / `cancel(key)` | parse `key` thành `i64`, lần lượt gửi `TogglePause` / `AddMinute` / `Cancel`; id sai được log và bỏ qua |
 
 ## Answer
 
