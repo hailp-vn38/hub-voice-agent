@@ -1,3 +1,4 @@
+use super::BridgeState;
 use crate::{
     App, ConnectionSettings, Response, SettingsData, Speaker, StatusBar, StepState, ToolStep,
     ToolTrail, Voice, VoiceState, Word,
@@ -118,7 +119,7 @@ pub(super) fn apply_changed(
     }
 }
 
-pub fn spawn_bridge(app: Weak<App>, mut rx: watch::Receiver<UiState>) {
+pub fn spawn_bridge(app: Weak<App>, mut rx: watch::Receiver<UiState>, bridge_state: BridgeState) {
     tokio::spawn(async move {
         let mut shown: Option<hub_core::HubView> = None;
         let mut shown_voice_settings: Option<VoiceSettingsState> = None;
@@ -137,6 +138,11 @@ pub fn spawn_bridge(app: Weak<App>, mut rx: watch::Receiver<UiState>) {
             let tool_trail = (previous
                 .is_none_or(|previous| previous.tool_trail != view.tool_trail))
             .then(|| view.tool_trail.clone());
+            let countdowns = (previous
+                .is_none_or(|previous| previous.countdowns != view.countdowns))
+            .then(|| view.countdowns.clone());
+            let reminders = (previous.is_none_or(|previous| previous.reminders != view.reminders))
+                .then(|| view.reminders.clone());
             let settings_changed = shown_voice_settings.as_ref() != Some(&state.voice_settings);
             let url_changed = shown_voice_settings
                 .as_ref()
@@ -151,14 +157,28 @@ pub fn spawn_bridge(app: Weak<App>, mut rx: watch::Receiver<UiState>) {
                 && voice.is_none()
                 && response.is_none()
                 && tool_trail.is_none()
+                && countdowns.is_none()
+                && reminders.is_none()
                 && voice_settings.is_none()
             {
                 continue;
             }
 
             let app = app.clone();
+            let bridge_state = bridge_state.clone();
             if slint::invoke_from_event_loop(move || {
                 if let Some(app) = app.upgrade() {
+                    if let Some(countdowns) = countdowns.as_ref() {
+                        let display = bridge_state
+                            .countdowns
+                            .lock()
+                            .expect("countdown bridge state poisoned")
+                            .update(countdowns);
+                        super::countdowns::apply(&app, &display);
+                    }
+                    if let Some(reminders) = reminders.as_ref() {
+                        super::reminders::apply(&app, reminders);
+                    }
                     apply_changed(
                         &app,
                         nav,
