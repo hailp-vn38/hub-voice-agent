@@ -1,1 +1,3 @@
 pub mod google_calendar;
+mod open_meteo;
+pub use open_meteo::OpenMeteo;

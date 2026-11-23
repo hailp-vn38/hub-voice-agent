@@ -14,6 +14,22 @@ impl Clock for SystemClock {
     }
 }
 
+/// A weather request resolves a named city or the configured coordinates.
+#[derive(Clone, Debug)]
+pub enum WeatherLocation {
+    City(String),
+    Coordinates { latitude: f64, longitude: f64 },
+}
+
+pub trait WeatherSource: Send + Sync {
+    fn forecast(
+        &self,
+        location: WeatherLocation,
+    ) -> std::pin::Pin<
+        Box<dyn std::future::Future<Output = anyhow::Result<serde_json::Value>> + Send + '_>,
+    >;
+}
+
 /// Reports whether wall time is reliable.
 pub trait System: Send + Sync {
     fn time_synced(&self) -> bool;

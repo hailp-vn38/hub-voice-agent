@@ -75,6 +75,7 @@ async fn creating_event_replies_after_source_and_focuses_event() {
             )),
             calendar: Arc::new(Fake),
             system: Arc::new(support::Synced),
+            weather: Arc::new(hub_core::OpenMeteo::default()),
         },
         Io {
             voice_config_tx: config_tx,

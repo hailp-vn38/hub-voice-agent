@@ -4,7 +4,7 @@ use tokio::{sync::mpsc, task::JoinHandle};
 use voice_client::ToolCall;
 
 pub(super) type JobId = String;
-pub(super) type JobResult = anyhow::Result<Box<dyn Any + Send>>;
+pub(crate) type JobResult = anyhow::Result<Box<dyn Any + Send>>;
 pub(super) type Work = Pin<Box<dyn Future<Output = JobResult> + Send>>;
 
 type Completion = (JobId, u64, Result<JobResult, tokio::time::error::Elapsed>);
@@ -17,7 +17,7 @@ struct Running {
 
 pub(super) enum Internal {
     JobDone(JobId, JobResult, Option<ToolCall>),
-    Timeout(Option<ToolCall>),
+    Timeout(JobId, Option<ToolCall>),
 }
 
 pub(super) struct Jobs {
@@ -36,6 +36,13 @@ impl Jobs {
             rx,
             generation: 0,
         }
+    }
+
+    pub(super) fn cancel(&mut self, id: &str) -> Option<ToolCall> {
+        self.running.remove(id).and_then(|job| {
+            job.task.abort();
+            job.reply
+        })
     }
 
     pub(super) fn spawn(
@@ -85,7 +92,7 @@ impl Jobs {
             let running = self.running.remove(&id).expect("matching job exists");
             return match result {
                 Ok(result) => Internal::JobDone(id, result, running.reply),
-                Err(_) => Internal::Timeout(running.reply),
+                Err(_) => Internal::Timeout(id, running.reply),
             };
         }
     }

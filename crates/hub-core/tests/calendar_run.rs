@@ -74,6 +74,7 @@ async fn actor_refreshes_and_keeps_cached_events_when_offline() {
             )),
             calendar: fake.clone(),
             system: Arc::new(support::Synced),
+            weather: Arc::new(hub_core::OpenMeteo::default()),
         },
         Io {
             voice_config_tx,

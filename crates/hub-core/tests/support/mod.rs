@@ -1,3 +1,8 @@
+#[allow(dead_code)]
+mod weather;
+#[allow(unused_imports)]
+pub use weather::FakeWeather;
+
 use hub_core::Clock;
 use jiff::{Span, Zoned};
 use tokio::time::Instant;
@@ -69,6 +74,7 @@ impl Hub {
             Ports {
                 clock: Arc::new(TestClock::at(start)),
                 calendar: Arc::new(hub_core::sources::google_calendar::GoogleCalendar::default()),
+                weather: Arc::new(hub_core::OpenMeteo::default()),
                 system: Arc::new(Synced),
             },
             Io {

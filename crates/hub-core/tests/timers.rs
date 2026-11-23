@@ -65,6 +65,7 @@ async fn timers_are_saved_reloaded_and_limit_is_reported() {
         Ports {
             clock: Arc::new(TestClock::at(start.clone())),
             calendar: Arc::new(hub_core::sources::google_calendar::GoogleCalendar::default()),
+            weather: Arc::new(hub_core::OpenMeteo::default()),
             system: system.clone(),
         },
         Io {
@@ -180,6 +181,7 @@ async fn timers_are_saved_reloaded_and_limit_is_reported() {
         Ports {
             clock: Arc::new(TestClock::at(start)),
             calendar: Arc::new(hub_core::sources::google_calendar::GoogleCalendar::default()),
+            weather: Arc::new(hub_core::OpenMeteo::default()),
             system: Arc::new(support::Synced),
         },
         Io {

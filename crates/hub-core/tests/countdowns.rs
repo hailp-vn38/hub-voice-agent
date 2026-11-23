@@ -51,6 +51,7 @@ async fn countdown_updates_at_midnight_through_run() {
         Ports {
             clock: Arc::new(TestClock::at(start.clone())),
             calendar: Arc::new(hub_core::sources::google_calendar::GoogleCalendar::default()),
+            weather: Arc::new(hub_core::OpenMeteo::default()),
             system: Arc::new(support::Synced),
         },
         Io {
@@ -139,6 +140,7 @@ async fn countdown_updates_at_midnight_through_run() {
         Ports {
             clock: Arc::new(TestClock::at(start)),
             calendar: Arc::new(hub_core::sources::google_calendar::GoogleCalendar::default()),
+            weather: Arc::new(hub_core::OpenMeteo::default()),
             system: Arc::new(support::Synced),
         },
         Io {

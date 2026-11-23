@@ -28,7 +28,11 @@ impl Feature {
         self.created.clear();
         self.token = None;
         self.next_sync = 0;
-        self.changed()
+        {
+            let mut effects = vec![Effect::CancelJob("calendar-sync".into())];
+            effects.extend(self.changed());
+            effects
+        }
     }
     pub fn snapshot(&self) -> Vec<Effect> {
         let events = self.events.clone();
