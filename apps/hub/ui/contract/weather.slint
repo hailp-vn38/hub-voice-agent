@@ -1,0 +1,55 @@
+// Hợp đồng Thời tiết. Ticket UI: .scratch/hub-ui/issues/09-weather.md.
+export enum WeatherBg { clear, cloudy, rain, storm, fog }
+
+export struct WeatherNow {
+    icon: string,
+    temp: string,
+    summary: string,
+    feels: string,
+    humidity: string,
+    wind: string,
+    uv: string,
+    aqi: string,
+    aqi-level: string,
+    aqi-color: color,
+    sunrise: string,
+    sunset: string,
+}
+
+export struct WeatherHour {
+    key: string,
+    label: string,
+    temp: float,
+    rain: float, // 0..1
+    wind: string,
+    icon: string,
+}
+
+export struct WeatherDay {
+    key: string,
+    label: string,
+    icon: string,
+    low: float,
+    high: float,
+    low-text: string,
+    high-text: string,
+    is-tomorrow: bool,
+}
+
+export global WeatherData {
+    in property <string> location;
+    in property <bool> preview; // đang xem nơi khác ("tạm xem")
+    in property <string> updated; // "HH:MM"
+    in property <bool> stale;
+    in property <WeatherBg> background;
+    in property <bool> is-day: true;
+    in property <WeatherNow> now;
+    in property <[WeatherHour]> hours; // 24 giờ của selected-day
+    in property <string> selected-day;
+    in property <[WeatherDay]> days;
+    in property <float> week-min;
+    in property <float> week-max;
+    in property <string> focus; // key ngày, key giờ hoặc "aqi"
+    in property <int> focus-serial;
+    callback select-day(string);
+}

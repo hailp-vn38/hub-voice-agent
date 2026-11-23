@@ -6,11 +6,13 @@ pub use menu::idle as menu_idle;
 use crate::App;
 
 pub mod home;
+pub mod weather;
 
 pub fn init(app: &App) {
     super::settings::init(app);
     menu::init(app);
     home::init(app);
+    weather::init(app);
     first_boot::init(app);
 }
 

@@ -1,0 +1,56 @@
+import { WeatherBg } from "../../contract/weather.slint";
+
+// Nền động: chỉ đổi vị trí/opacity, số hạt cố định (<= 40).
+export component WeatherBackdrop inherits Rectangle {
+    in property <WeatherBg> bg;
+    in property <bool> is-day: true;
+    private property <float> s: animation-tick() / 1ms;
+    private property <float> w: self.width / 1px;
+    private property <float> h: self.height / 1px;
+    private property <bool> rainy: bg == WeatherBg.rain || bg == WeatherBg.storm;
+    private property <bool> clouds: bg != WeatherBg.clear && bg != WeatherBg.fog;
+    clip: true;
+    background: is-day
+        ? (bg == WeatherBg.clear ? #1d4f7a : bg == WeatherBg.cloudy ? #3a4f63 : bg == WeatherBg.fog ? #4b5a66 : #2a3a4a)
+        : (bg == WeatherBg.clear ? #070d1f : bg == WeatherBg.cloudy ? #11171f : bg == WeatherBg.fog ? #1a2128 : #0c1118);
+
+    // Quang: vầng sáng ban ngày
+    if bg == WeatherBg.clear && is-day: Rectangle {
+        x: parent.width - 640px; y: -260px; width: 800px; height: 800px; border-radius: 400px;
+        background: @radial-gradient(circle, #ffd27a66 0%, #ffd27a00 70%);
+        opacity: 0.75 + 0.25 * sin(s / 40 * 1deg);
+        transform-scale: 1 + 0.04 * sin(s / 25 * 1deg);
+    }
+    // Quang: sao nhấp nháy ban đêm
+    if bg == WeatherBg.clear && !is-day: Rectangle { for i in 28: Rectangle {
+        x: mod(i * 211, 997) / 997 * parent.width;
+        y: mod(i * 137, 389) / 389 * parent.height * 0.7;
+        width: mod(i, 3) == 0 ? 6px : 4px; height: self.width; border-radius: self.width / 2;
+        background: #ffffff;
+        opacity: 0.25 + 0.75 * abs(sin((s / 12 + i * 37) * 1deg));
+    } }
+    // Mây trôi lệch tốc
+    if clouds: Rectangle { for i in 3: Rectangle {
+        x: mod(s * (0.02 + i * 0.012) + i * 700, w + 800) * 1px - 400px;
+        y: 60px + i * 150px; width: 380px + i * 80px; height: 110px + i * 20px; border-radius: self.height / 2;
+        background: rainy ? #5d6f80 : #cfd9e2;
+        opacity: rainy ? 0.35 : 0.2;
+    } }
+    // Mưa xiên
+    if rainy: Rectangle { for i in 36: Rectangle {
+        x: mod(i * 53, 101) / 101 * parent.width + mod(s * 0.12 + i * 40, h) * 0.25px;
+        y: mod(s * (0.5 + mod(i, 4) * 0.12) + i * 83, h) * 1px;
+        width: 3px; height: 28px; background: #9ec9ee; opacity: 0.4; transform-rotation: 14deg;
+    } }
+    // Chớp thưa
+    if bg == WeatherBg.storm: Rectangle {
+        background: #ffffff;
+        opacity: mod(s, 7000) < 90 ? 0.28 : (mod(s, 7000) > 200 && mod(s, 7000) < 280 ? 0.15 : 0);
+    }
+    // Sương mù: lớp mờ trôi
+    if bg == WeatherBg.fog: Rectangle { for i in 3: Rectangle {
+        x: mod(s * (0.01 + i * 0.006) + i * 500, w + 900) * 1px - 900px;
+        y: 120px + i * 220px; width: 900px; height: 160px; border-radius: 80px;
+        background: #cfd8dc; opacity: 0.12;
+    } }
+}
