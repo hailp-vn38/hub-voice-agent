@@ -42,6 +42,7 @@ pub fn spawn(_config: AudioConfig) -> Result<AudioHandle> {
     let _thread = thread::Builder::new()
         .name("hub-audio".into())
         .spawn(move || {
+            let mut capture = capture::Capture::new(wake::load_default());
             let setup = (|| -> Result<_> {
                 let (pcm_tx, pcm_rx) = RingBuffer::new(PCM_RING_SAMPLES);
                 let (input_pcm_tx, input_pcm_rx) = RingBuffer::new(INPUT_PCM_RING_SAMPLES);
@@ -76,7 +77,6 @@ pub fn spawn(_config: AudioConfig) -> Result<AudioHandle> {
                     return;
                 }
             };
-            let mut capture = capture::Capture::new(None);
             run_worker(
                 command_rx,
                 event_tx,
@@ -181,3 +181,7 @@ fn run_worker(
         }
     }
 }
+
+#[cfg(test)]
+#[path = "tests.rs"]
+mod tests;
