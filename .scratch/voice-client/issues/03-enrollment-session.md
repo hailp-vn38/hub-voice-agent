@@ -33,13 +33,15 @@ Server giả OTA trả kịch bản theo lượt: `activation`, rồi `websocket
 
 ## Nghiệm thu
 
-- [ ] Test: OTA trả `activation` → `Enrolling`, `Activation { code }` đúng mã, không mở WS, không gọi OTA lần hai (`tokio::time::pause`, chờ 60 s).
-- [ ] Test: đang `Enrolling`, gửi `Connect`, OTA trả `websocket` → `Ready`.
-- [ ] Test: đang `Enrolling`, gửi `Connect`, OTA vẫn trả `activation` → vẫn `Enrolling`, phát lại `Activation { code }`.
-- [ ] Test: `Connect` khi `Ready` → không gọi OTA.
-- [ ] Test: `DirectSpeech` khi `Enrolling` → `DirectSpeechRejected { reason: Offline }`.
-- [ ] Test: đổi `VoiceConfig` khi `Enrolling` → gọi OTA với config mới.
+- [x] Test: OTA trả `activation` → `Enrolling`, `Activation { code }` đúng mã, không mở WS, không gọi OTA lần hai (`tokio::time::pause`, chờ 60 s).
+- [x] Test: đang `Enrolling`, gửi `Connect`, OTA trả `websocket` → `Ready`.
+- [x] Test: đang `Enrolling`, gửi `Connect`, OTA vẫn trả `activation` → vẫn `Enrolling`, phát lại `Activation { code }`.
+- [x] Test: `Connect` khi `Ready` → không gọi OTA.
+- [x] Test: `DirectSpeech` khi `Enrolling` → `DirectSpeechRejected { reason: Offline }`.
+- [x] Test: đổi `VoiceConfig` khi `Enrolling` → gọi OTA với config mới.
 
 ## Comments
 
 Bản trước của ticket theo Enrollment Session qua WebSocket (ADR 0074) và bị chặn ở `needs-info`: ServerHello không có trường phân biệt loại session, mã chỉ nằm trong `stt.text`, và close `1000` không phân biệt claim với timeout. Đã chuyển sang chế độ OTA, server có sẵn, không cần đổi wire contract.
+
+- Đã triển khai OTA activation và `Connect`; Settings và kiểm thử với vela-server thật thuộc các bước tiếp theo. Kiểm tra: `cargo check --workspace`, `cargo clippy -p voice-client --all-targets -- -D warnings`, `scripts/test.sh` (51 test) đều đạt.

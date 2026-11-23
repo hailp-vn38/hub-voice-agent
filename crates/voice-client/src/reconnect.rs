@@ -68,11 +68,25 @@ async fn client_loop(mut client: Client, mut jitter: impl FnMut(Duration) -> Dur
             ),
         );
         let end = match client.operation(discover).await {
-            Ok((url, token)) => connection::connect_and_wait(&mut client, url, token).await,
+            Ok(ota::Discovery::Websocket(url, token)) => {
+                connection::connect_and_wait(&mut client, url, token).await
+            }
+            Ok(ota::Discovery::Activation(code)) => {
+                if client
+                    .emit(VoiceEvent::Connection(ConnectionState::Enrolling))
+                    .await
+                    .is_err()
+                    || client.emit(VoiceEvent::Activation { code }).await.is_err()
+                {
+                    return;
+                }
+                client.wait_for_enrollment().await
+            }
             Err(end) => end,
         };
         let cause = match end {
             ConnectionEnd::Stopped => return,
+            ConnectionEnd::RetryEnrollment => continue,
             ConnectionEnd::Reconfigured(updated) => {
                 client.active_config = *updated;
                 backoff = MIN_BACKOFF;

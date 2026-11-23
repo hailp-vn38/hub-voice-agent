@@ -38,7 +38,7 @@ ai-hub/
 │   │   │   │   └── voice.rs      # vòng Ready: command, frame, lifecycle TTS, reply MCP
 │   │   │   ├── mcp.rs            # JSON-RPC: initialize, tools/list, tools/call
 │   │   │   └── *_tests.rs, */    # test của từng module (connection_tests, mcp_tests/, reconnect_tests/…)
-│   │   │                         # enrollment chưa có: xem ticket 03
+│   │   │                         # enrollment qua OTA activation
 │   │   └── tests/
 │   │       ├── support/fake_server.rs   # server WS giả, kịch bản message
 │   │       └── *.rs
@@ -150,6 +150,7 @@ pub struct ToolDef { pub name: String, pub description: String, pub input_schema
 pub struct OpusFrame(pub Vec<u8>);
 
 pub enum VoiceCommand {
+    Connect,                      // thử lại OTA khi đang Enrolling
     ListenStart,                  // listen:start, mode realtime
     ListenStop,
     Abort,                        // abort phiên hiện tại
@@ -159,7 +160,7 @@ pub enum VoiceCommand {
 
 pub enum VoiceEvent {
     Connection(ConnectionState),  // Connecting | Ready | Offline { retry_in } | Enrolling
-    Activation { code: String },  // API khai báo; server hiện không phát event activation có cấu trúc
+    Activation { code: String },  // mã activation từ OTA
     Stt { text: String },
     TtsStart { origin: TtsOrigin },
     TtsText { text: String },      // sentence_start
@@ -188,7 +189,7 @@ Features `mcp`, `tool_status`, `direct_tts` và `aec` luôn bật trong ClientHe
 
 **Giấu bên trong:** `reconnect.rs` sở hữu task client, hai channel, backoff (trần 60 s sau jitter, chỉ reset khi kết nối giữ Ready ≥ 30 s) và reconnect khi config đổi, kèm log nguyên nhân (`connection::Failure`); `ota.rs` làm OTA discovery; `connection.rs` thực hiện WebSocket, xác thực và ClientHello/ServerHello trong giới hạn `Timeouts`; `connection/voice.rs` chạy vòng Ready: ánh xạ command, text/binary frame, Ping định kỳ + idle timeout và lifecycle TTS; `protocol.rs` giữ toàn bộ wire format (hello, frame uplink, parse downlink) private; `mcp.rs` xử lý Device MCP, phân trang `tools/list`, gọi tool (tối đa 16 đang chạy) và reply theo JSON-RPC id số hoặc chuỗi. `ToolCall` bị drop chưa `reply` → gửi lỗi JSON-RPC nội bộ. Socket đóng trong lượt TTS → phát đúng một `TtsStop { reason: Interrupted }` trước `Connection(Offline)`; `tts stop` từ server, kể cả sau `Abort`, phát `Completed`. Đổi `VoiceConfig` chỉ reconnect khi giá trị khác.
 
-**Enrollment:** `ConnectionState::Enrolling` và `VoiceEvent::Activation` đã khai báo trong API nhưng hiện chưa được phát. Server chưa có discriminant Voice/Enrollment trong OTA hay `ServerHello`, và mã activation chỉ nằm trong văn bản `stt`; client không đoán loại phiên bằng cách dò văn bản. Ticket [03](../.scratch/voice-client/issues/03-enrollment-session.md) đang `needs-info` chờ wire contract phía server.
+**Enrollment:** vela-server phải cấu hình `devices.enrollment.transport = "ota"`. Khi OTA trả `activation`, client phát `Enrolling` và mã, rồi chờ `Connect` hoặc cấu hình thay đổi trước khi gọi OTA lại. Nếu response có cả `websocket` và `activation`, client ưu tiên WebSocket. Enrollment qua WebSocket không được hỗ trợ.
 
 **Bất biến qua API công khai:**
 

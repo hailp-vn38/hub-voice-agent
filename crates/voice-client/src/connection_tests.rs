@@ -84,8 +84,7 @@ async fn ota_http_error_emits_offline_without_opening_websocket() {
 
 #[tokio::test]
 async fn ota_response_without_websocket_emits_offline() {
-    let ota =
-        FakeOtaServer::start(200, serde_json::json!({ "activation": { "code": "123" } })).await;
+    let ota = FakeOtaServer::start(200, serde_json::json!({})).await;
     let config = VoiceConfig {
         ota_url: Url::parse(&ota.url).unwrap(),
         device: DeviceIdentity::new("pending-device", "ota-client"),

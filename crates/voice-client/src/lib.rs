@@ -56,6 +56,7 @@ pub struct OpusFrame(pub Vec<u8>);
 
 #[derive(Debug)]
 pub enum VoiceCommand {
+    Connect,
     ListenStart,
     ListenStop,
     Abort,

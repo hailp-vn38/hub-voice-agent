@@ -86,6 +86,7 @@ pub(crate) enum ConnectionEnd {
         was_stable: bool,
     },
     Reconfigured(Box<VoiceConfig>),
+    RetryEnrollment,
     Stopped,
 }
 
@@ -153,11 +154,34 @@ impl Client {
     where
         F: Future<Output = Result<T, Failure>>,
     {
+        self.operation_inner(future, false).await
+    }
+
+    pub(crate) async fn wait_for_enrollment(&mut self) -> ConnectionEnd {
+        match self
+            .operation_inner(std::future::pending::<Result<(), Failure>>(), true)
+            .await
+        {
+            Err(end) => end,
+            Ok(()) => unreachable!(),
+        }
+    }
+
+    async fn operation_inner<F, T>(
+        &mut self,
+        future: F,
+        enrolling: bool,
+    ) -> Result<T, ConnectionEnd>
+    where
+        F: Future<Output = Result<T, Failure>>,
+    {
         tokio::pin!(future);
         loop {
             tokio::select! {
                 biased;
                 command = self.commands.recv() => match command {
+                    Some(VoiceCommand::Connect) if enrolling => return Err(ConnectionEnd::RetryEnrollment),
+                    Some(VoiceCommand::Connect) => {},
                     Some(VoiceCommand::DirectSpeech { request_id, .. }) => {
                         self.emit(VoiceEvent::DirectSpeechRejected {
                             request_id,

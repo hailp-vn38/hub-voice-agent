@@ -176,6 +176,7 @@ impl Session {
         };
         let id = &self.session_id;
         let frame = match command {
+            VoiceCommand::Connect => return Ok(()),
             VoiceCommand::ListenStart => protocol::listen_start(id),
             VoiceCommand::ListenStop => protocol::listen_stop(id),
             VoiceCommand::Abort => protocol::abort(id),
