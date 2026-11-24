@@ -42,23 +42,10 @@ fn wake_detection_uses_complete_80_ms_blocks_without_sending_mic_while_off() {
 
 #[test]
 fn enabling_mic_sends_decodable_preroll_before_live_60_ms_frames() {
-    let detector = FakeWakeDetector {
-        detect_on_block: 1,
-        blocks_seen: 0,
-    };
-    let mut capture = Capture::new(Some(Box::new(detector)));
+    let mut capture = Capture::new(None);
 
-    let wake_events = capture.push(&vec![0; PREROLL_SAMPLES]);
-    assert!(
-        wake_events
-            .iter()
-            .any(|event| matches!(event, AudioEvent::WakeWord))
-    );
-    assert!(
-        wake_events
-            .iter()
-            .all(|event| !matches!(event, AudioEvent::MicFrame(_)))
-    );
+    let idle_events = capture.push(&vec![0; PREROLL_SAMPLES]);
+    assert!(idle_events.is_empty());
 
     capture.apply(&AudioCommand::Mic { on: true });
     let preroll_events = capture.push(&[]);
@@ -79,6 +66,42 @@ fn enabling_mic_sends_decodable_preroll_before_live_60_ms_frames() {
     assert_eq!(decoded_live.len(), MIC_FRAME_SAMPLES);
     assert!(rms(&decoded_preroll) < 100.0);
     assert!(rms(&decoded_live) > 1_000.0);
+}
+
+#[test]
+fn preroll_after_wake_word_drops_the_wake_word_audio() {
+    let detector = FakeWakeDetector {
+        detect_on_block: 1,
+        blocks_seen: 0,
+    };
+    let mut capture = Capture::new(Some(Box::new(detector)));
+
+    // Block đầu là "wake word" (to), sau đó là lời nói nhỏ trong lúc kết nối.
+    let wake_events = capture.push(&vec![8_000; WAKE_BLOCK_SAMPLES]);
+    assert!(
+        wake_events
+            .iter()
+            .any(|event| matches!(event, AudioEvent::WakeWord))
+    );
+    capture.push(&vec![0; MIC_FRAME_SAMPLES * 4]);
+
+    capture.apply(&AudioCommand::Mic { on: true });
+    let frames: Vec<_> = capture
+        .push(&[])
+        .into_iter()
+        .filter_map(|event| match event {
+            AudioEvent::MicFrame(frame) => Some(frame),
+            AudioEvent::WakeWord | AudioEvent::TtsPlaybackFinished => None,
+        })
+        .collect();
+
+    assert_eq!(frames.len(), 4);
+    let mut decoder = Decoder::new(16_000, Channels::Mono).unwrap();
+    for frame in &frames {
+        let mut pcm = vec![0; 1_920];
+        let samples = decoder.decode(&frame.0, &mut pcm, false).unwrap();
+        assert!(rms(&pcm[..samples]) < 100.0);
+    }
 }
 
 #[test]

@@ -99,6 +99,8 @@ impl Capture {
                         .as_mut()
                         .is_some_and(|detector| detector.push(&self.wake_block))
                 {
+                    // Bỏ âm thanh chứa wake word để preroll chỉ còn lời nói sau nó.
+                    self.preroll.clear();
                     events.push(AudioEvent::WakeWord);
                 }
                 self.wake_block_len = 0;
