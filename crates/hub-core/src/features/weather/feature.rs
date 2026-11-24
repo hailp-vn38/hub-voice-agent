@@ -67,14 +67,11 @@ impl Feature {
     }
     fn apply(&mut self, data: Value, stale: bool, updated: i64) {
         self.view = WeatherView {
-            location: data["location"]
-                .as_str()
-                .map(str::to_owned)
-                .or_else(|| {
-                    (!self.active.starts_with("city:"))
-                        .then(|| self.home_name.clone())
-                        .flatten()
-                }),
+            location: data["location"].as_str().map(str::to_owned).or_else(|| {
+                (!self.active.starts_with("city:"))
+                    .then(|| self.home_name.clone())
+                    .flatten()
+            }),
             preview: self.active.starts_with("city:"),
             updated: Some(updated),
             forecast: Some(WeatherForecast::from_open_meteo(&data)),

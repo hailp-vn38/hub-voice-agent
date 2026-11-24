@@ -1,4 +1,7 @@
-use crate::{App, ConnectionSettings, SettingsData, WeatherBg, WeatherData, WeatherDay, WeatherHour, WeatherNow};
+use crate::{
+    App, ConnectionSettings, SettingsData, WeatherBg, WeatherData, WeatherDay, WeatherHour,
+    WeatherNow,
+};
 use hub_core::present::{WeatherBackground, WeatherDataView, WeatherDayView, WeatherHourView};
 use slint::{Color, ComponentHandle, ModelRc, VecModel};
 use std::rc::Rc;

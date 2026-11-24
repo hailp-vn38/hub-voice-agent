@@ -10,7 +10,9 @@ fn now() -> jiff::Zoned {
 }
 
 fn after(seconds: i64) -> jiff::Zoned {
-    now().checked_add(jiff::Span::new().seconds(seconds)).unwrap()
+    now()
+        .checked_add(jiff::Span::new().seconds(seconds))
+        .unwrap()
 }
 
 #[test]
@@ -63,10 +65,11 @@ fn listening_without_speech_closes_after_five_minutes() {
     assert_eq!(c.state, VoiceState::Listening);
     let effects = c.on(Input::Tick, after(300));
     assert_eq!(c.state, VoiceState::Idle);
-    assert!(effects.iter().any(|effect| matches!(
-        effect,
-        Effect::Voice(VoiceCommand::ListenStop)
-    )));
+    assert!(
+        effects
+            .iter()
+            .any(|effect| matches!(effect, Effect::Voice(VoiceCommand::ListenStop)))
+    );
 }
 
 #[test]
@@ -77,10 +80,11 @@ fn orb_tap_ends_the_conversation_at_once() {
     c.on(Input::TtsStop, now());
     let effects = c.on(Input::OrbTapped, after(1));
     assert_eq!(c.state, VoiceState::Idle);
-    assert!(effects.iter().any(|effect| matches!(
-        effect,
-        Effect::Voice(VoiceCommand::Abort)
-    )));
+    assert!(
+        effects
+            .iter()
+            .any(|effect| matches!(effect, Effect::Voice(VoiceCommand::Abort)))
+    );
 }
 
 #[test]
