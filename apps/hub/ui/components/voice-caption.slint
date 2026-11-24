@@ -19,7 +19,7 @@ export component VoiceCaption inherits Rectangle {
     private property <string> status: root.offline ? "Mất kết nối với trợ lý"
         : root.muted ? "Mic đang tắt · chạm orb để bật"
         : root.has-words ? ""
-        : root.st == VoiceState.listening ? "Đang nghe…"
+        : root.st == VoiceState.listening && !Response.fading ? "Đang nghe…"
         : root.st == VoiceState.thinking ? "Đang nghĩ…" : "";
     private property <bool> shown: !root.disabled && (root.status != "" || root.has-words);
     private property <length> trail-w: root.has-trail ? 64 * root.u + Theme.pad-len : 0px;

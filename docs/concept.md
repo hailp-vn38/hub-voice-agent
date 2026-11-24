@@ -101,7 +101,7 @@ Idle
       → listen:start (realtime) — không gửi listen:detect (xem dưới)
       → stream Opus 60 ms liên tục; server VAD cắt câu → ASR → LLM → TTS
       → người dùng nói chen khi Speaking → server barge-in
- └─ im lặng 10 giây sau TTS kết thúc → ngừng gửi mic → Idle
+ └─ chạm Orb, hoặc đang nghe mà im lặng 5 phút → ngừng gửi mic → Idle
 ```
 
 - **VAD do server làm.** Client không chạy VAD; chỉ có wake word.
@@ -111,7 +111,7 @@ Idle
 - **Giữ WS ở Ready** khi Idle để tránh độ trễ admission mỗi lần đánh thức.
 - **Barge-in:** dùng `realtime` mode (VAD giữ armed qua Speaking). Client khai báo `features.aec=true`; server cần bật `barge_in.enabled=true` và `barge_in.trust_client_aec_feature=true`.
 - Wake word chỉ dùng để thoát Idle; trong hội thoại nói chen là ngắt được.
-- **Kết thúc hội thoại:** sau 10 giây không có lời nói kể từ khi TTS kết thúc, client ngừng stream mic và về Idle, để không gửi âm thanh phòng lên server vô thời hạn.
+- **Kết thúc hội thoại:** người dùng chạm Orb, hoặc đang nghe (sau wake word hay sau khi TTS kết thúc) mà 5 phút không có lời nói; client ngừng stream mic và về Idle. Thao tác trên hub không ngắt hội thoại. Giới hạn 5 phút để không gửi âm thanh phòng lên server vô thời hạn.
 
 ### Kết nối server
 
@@ -539,7 +539,7 @@ Orb vẽ bằng vài hình tròn chồng nhau với scale/opacity/rotation — r
 - Từ cũ bị đẩy dần sang trái và mờ ở mép trái (mask gradient); dòng chỉ giữ phần mới nhất, không xuống dòng.
 - Nhịp hiện từ theo nhịp TTS; transcript của người dùng (`stt`) hiện cùng kiểu nhưng màu nhạt hơn để phân biệt ai đang nói.
 - Phần quan trọng (thời gian, tên, con số) tô màu nhấn — như "luộc trứng **7 phút**".
-- Sau 10 giây im lặng, chữ mờ dần và Orb về Idle.
+- Đang nghe mà im lặng 10 giây thì phụ đề ẩn đi, hội thoại vẫn mở (Orb vẫn nghe). Khi hội thoại kết thúc (chạm Orb hoặc 5 phút im lặng), chữ mờ dần và Orb về Idle.
 - Với FemtoVG: mỗi từ là một `Text` có transform/opacity riêng; chỉ animate vài từ mới nhất cùng lúc để giữ fps.
 
 **3. Dải bước tool (tool trail)**

@@ -6,7 +6,7 @@ status: accepted
 
 Hub không chạy VAD; sau wake word hoặc chạm Orb nó gửi `listen:start` ở chế độ `realtime` và stream Opus 60 ms liên tục, server cắt câu và xử lý barge-in. Hub **không** gửi `listen:detect` khi nghe wake word, vì server coi `text` của `listen:detect` là một lượt nói đã gõ và chạy LLM ngay ("hey jarvis" sẽ thành câu hỏi thật).
 
-Khi Idle, WebSocket vẫn giữ ở Ready (kết nối, không gửi mic) để tránh trễ admission mỗi lần đánh thức. Hội thoại kết thúc khi 10 giây không có lời nói kể từ lúc TTS dừng: hub ngừng gửi mic và về Idle.
+Khi Idle, WebSocket vẫn giữ ở Ready (kết nối, không gửi mic) để tránh trễ admission mỗi lần đánh thức. Hội thoại kết thúc khi người dùng chạm Orb, hoặc khi đang nghe mà 5 phút không có lời nói (tính từ wake word hoặc lúc TTS dừng): hub ngừng gửi mic và về Idle. Trước đây là 10 giây sau TTS, nhưng như vậy hội thoại bị đóng khi người dùng đang thao tác trên hub.
 
 ## Consequences
 

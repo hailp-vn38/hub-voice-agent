@@ -14,10 +14,31 @@ pub(crate) enum Input {
     Tick,
 }
 
+/// Đang nghe mà không có lời nói trong khoảng này thì lượt hội thoại tự đóng.
+const SILENCE_LIMIT_SECS: i64 = 5 * 60;
+
+/// Đang nghe mà im lặng chừng này thì ẩn phụ đề, vẫn giữ hội thoại.
+const CAPTION_HIDE_SECS: i64 = 10;
+
+fn after(now: &Zoned, seconds: i64) -> Option<Zoned> {
+    Some(
+        now.checked_add(Span::new().seconds(seconds))
+            .expect("valid deadline"),
+    )
+}
+
+fn due(deadline: &Option<Zoned>, now: &Zoned) -> bool {
+    deadline.as_ref().is_some_and(|deadline| now >= deadline)
+}
+
 #[derive(Default)]
 pub(crate) struct Conversation {
     state: VoiceState,
     deadline: Option<Zoned>,
+    /// Lúc ẩn phụ đề khi đang nghe.
+    hide_at: Option<Zoned>,
+    /// Đang nghe tiếp sau khi agent nói xong; alert được phép chen vào.
+    follow_up: bool,
 }
 
 impl Conversation {
@@ -29,7 +50,7 @@ impl Conversation {
     }
 
     pub(crate) fn alert_blocked(&self) -> bool {
-        self.turn_active() && self.deadline.is_none()
+        self.turn_active() && !self.follow_up
     }
 
     pub(crate) fn on(&mut self, input: Input, now: Zoned) -> Vec<Effect> {
@@ -56,9 +77,13 @@ impl Conversation {
                 fading = self.turn_active().then_some(true);
                 self.state = VoiceState::Offline;
                 self.deadline = None;
+                self.hide_at = None;
+                self.follow_up = false;
             }
             Input::WakeWord | Input::OrbTapped if self.state == VoiceState::Idle => {
                 self.state = VoiceState::Listening;
+                self.deadline = after(&now, SILENCE_LIMIT_SECS);
+                self.hide_at = after(&now, CAPTION_HIDE_SECS);
                 stt = Some(String::new());
                 response = Some(String::new());
                 fading = Some(false);
@@ -70,6 +95,8 @@ impl Conversation {
             Input::Stt(text) if self.turn_active() => {
                 self.state = VoiceState::Thinking;
                 self.deadline = None;
+                self.hide_at = None;
+                self.follow_up = false;
                 stt = Some(text.clone());
                 response = Some(text);
                 speaker = Some(ResponseSpeaker::User);
@@ -79,6 +106,8 @@ impl Conversation {
             Input::TtsStart if self.turn_active() => {
                 self.state = VoiceState::Speaking;
                 self.deadline = None;
+                self.hide_at = None;
+                self.follow_up = false;
             }
             Input::TtsText(text) if self.turn_active() => {
                 response = Some(text);
@@ -88,15 +117,16 @@ impl Conversation {
             }
             Input::TtsStop if self.turn_active() => {
                 self.state = VoiceState::Listening;
-                self.deadline = Some(
-                    now.checked_add(Span::new().seconds(10))
-                        .expect("valid deadline"),
-                );
+                self.deadline = after(&now, SILENCE_LIMIT_SECS);
+                self.hide_at = after(&now, CAPTION_HIDE_SECS);
+                self.follow_up = true;
             }
             Input::OrbTapped if self.turn_active() => {
                 let was_speaking = self.state == VoiceState::Speaking;
                 self.state = VoiceState::Idle;
                 self.deadline = None;
+                self.hide_at = None;
+                self.follow_up = false;
                 fading = Some(true);
                 effects.push(Effect::Voice(VoiceCommand::Abort));
                 if was_speaking {
@@ -104,17 +134,18 @@ impl Conversation {
                 }
                 effects.push(Effect::Audio(AudioCommand::Mic { on: false }));
             }
-            Input::Tick
-                if self
-                    .deadline
-                    .as_ref()
-                    .is_some_and(|deadline| now >= *deadline) =>
-            {
+            Input::Tick if due(&self.deadline, &now) => {
                 self.state = VoiceState::Idle;
                 self.deadline = None;
+                self.hide_at = None;
+                self.follow_up = false;
                 fading = Some(true);
                 effects.push(Effect::Voice(VoiceCommand::ListenStop));
                 effects.push(Effect::Audio(AudioCommand::Mic { on: false }));
+            }
+            Input::Tick if due(&self.hide_at, &now) => {
+                self.hide_at = None;
+                fading = Some(true);
             }
             _ => {}
         }

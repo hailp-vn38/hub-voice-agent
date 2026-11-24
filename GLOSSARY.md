@@ -22,7 +22,7 @@ _Avoid_: pairing, đăng nhập
 ## Voice
 
 **Hội thoại** (`conversation`):
-Khoảng từ lúc wake word hoặc chạm Orb tới khi 10 giây im lặng sau TTS; trong đó mic được stream lên server.
+Khoảng từ lúc wake word hoặc chạm Orb tới khi chạm Orb lần nữa hoặc đang nghe mà im lặng 5 phút; trong đó mic được stream lên server.
 _Avoid_: session (trùng Voice Session phía server)
 
 **Lượt nói** (`turn`):
