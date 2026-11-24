@@ -24,12 +24,16 @@ pub enum Update {
 pub struct OAuthEndpoints {
     pub authorize: String,
     pub token: String,
+    pub client_id: String,
+    pub client_secret: String,
 }
 impl Default for OAuthEndpoints {
     fn default() -> Self {
         Self {
             authorize: "https://accounts.google.com/o/oauth2/v2/auth".into(),
             token: "https://oauth2.googleapis.com/token".into(),
+            client_id: std::env::var("AI_HUB_GOOGLE_CLIENT_ID").unwrap_or_default(),
+            client_secret: std::env::var("AI_HUB_GOOGLE_CLIENT_SECRET").unwrap_or_default(),
         }
     }
 }
@@ -60,9 +64,10 @@ pub async fn serve_with_oauth(
         .route("/voice", post(voice))
         .route("/home", post(home))
         .route("/weather", post(weather))
-        .route("/oauth/start", post(oauth::start))
+        .route("/oauth/start", get(oauth::start))
         .route("/oauth/callback", get(oauth::callback))
         .route("/oauth/paste", post(oauth::paste))
+        .route("/oauth/disconnect", post(oauth::disconnect))
         .with_state(state);
     axum::serve(listener, app).await
 }

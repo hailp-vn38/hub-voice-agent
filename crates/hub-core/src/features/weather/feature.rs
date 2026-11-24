@@ -46,6 +46,14 @@ impl Feature {
         feature.restore(store, now)?;
         Ok(feature)
     }
+    /// True when a spoken city is just the hub's default location.
+    fn is_home_name(&self, city: &str) -> bool {
+        let city = city.trim().to_lowercase();
+        self.home_name.as_ref().is_some_and(|name| {
+            let name = name.to_lowercase();
+            name.contains(&city) || city.contains(&name)
+        })
+    }
     fn home_key(home: Option<(f64, f64)>) -> String {
         home.map(|(a, b)| format!("home:{a},{b}"))
             .unwrap_or_default()
@@ -79,7 +87,8 @@ impl Feature {
         };
     }
     /// Adds the location name to a reply so the model knows which place it is.
-    fn named(&self, mut data: Value) -> Value {
+    fn named(&self, data: Value) -> Value {
+        let mut data = super::reply::compact(&data);
         if data.get("location").is_none()
             && let (Some(map), Some(name)) = (data.as_object_mut(), self.view.location.clone())
         {
@@ -143,7 +152,10 @@ impl Feature {
             Ok(args) => args,
             Err(e) => return vec![Effect::Reply(call, Err(e))],
         };
-        let city = args.location.filter(|s| !s.trim().is_empty());
+        let city = args
+            .location
+            .filter(|s| !s.trim().is_empty())
+            .filter(|s| !self.is_home_name(s));
         self.active = city
             .as_ref()
             .map(|s| format!("city:{}", s.trim()))

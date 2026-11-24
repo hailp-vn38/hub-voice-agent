@@ -70,19 +70,7 @@ pub(in crate::present) fn icon(code: Option<i64>) -> &'static str {
 }
 
 pub(super) fn summary(code: Option<i64>) -> &'static str {
-    match code {
-        Some(0) => "Trời quang",
-        Some(1) => "Ít mây",
-        Some(2) => "Có mây rải rác",
-        Some(3) => "Nhiều mây",
-        Some(45 | 48) => "Sương mù",
-        Some(51..=57) => "Mưa phùn",
-        Some(61..=67) => "Mưa",
-        Some(71..=77 | 85..=86) => "Tuyết",
-        Some(80..=82) => "Mưa rào",
-        Some(95..=99) => "Giông",
-        _ => "Không rõ",
-    }
+    crate::features::weather::condition(code)
 }
 
 pub(super) fn aqi_view(aqi: f32) -> (String, String, String) {

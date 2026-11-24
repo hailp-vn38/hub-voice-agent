@@ -2,5 +2,6 @@
 <h2>Voice</h2><form action="/voice" method="post"><label>OTA URL <input name="ota_url" type="url" required></label><button>Lưu</button></form>
 <h2>Vị trí nhà</h2><form action="/weather" method="post"><label>Vĩ độ <input name="latitude" type="number" step="any" required></label><label>Kinh độ <input name="longitude" type="number" step="any" required></label><button>Lưu</button></form>
 <h2>Home Assistant</h2><form action="/home" method="post"><label>URL <input name="url" type="url" required></label><label>Token <input name="token" type="password" required></label><button>Lưu</button></form>
-<h2>Google Calendar</h2><form action="/oauth/start" method="post"><label>Client ID <input name="client_id" required></label><label>Client secret <input name="client_secret" type="password" required></label><button>Kết nối</button></form>
-<form action="/oauth/paste" method="post"><label>URL chuyển hướng <input name="url" type="url" required></label><button>Hoàn tất kết nối</button></form></html>
+<h2>Google Calendar</h2><p><a href="/oauth/start">Đăng nhập Google</a></p>
+<form action="/oauth/paste" method="post"><label>URL chuyển hướng hoặc mã <input name="url" required></label><button>Hoàn tất kết nối</button></form>
+<form action="/oauth/disconnect" method="post"><button>Ngắt kết nối Google</button></form></html>

@@ -133,3 +133,19 @@ fn string(value: &Value, key: &str) -> Option<String> {
 fn string_at(value: &Value, index: usize) -> Option<String> {
     rows(value).get(index)?.as_str().map(str::to_owned)
 }
+
+pub(crate) fn condition(code: Option<i64>) -> &'static str {
+    match code {
+        Some(0) => "Trời quang",
+        Some(1) => "Ít mây",
+        Some(2) => "Có mây rải rác",
+        Some(3) => "Nhiều mây",
+        Some(45 | 48) => "Sương mù",
+        Some(51..=57) => "Mưa phùn",
+        Some(61..=67) => "Mưa",
+        Some(71..=77 | 85..=86) => "Tuyết",
+        Some(80..=82) => "Mưa rào",
+        Some(95..=99) => "Giông",
+        _ => "Không rõ",
+    }
+}

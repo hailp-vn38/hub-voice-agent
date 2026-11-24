@@ -15,4 +15,5 @@ cmd="${1:-run}"
 [ $# -gt 0 ] && shift
 
 cd "$root"
+if [ -f .env ]; then set -a; . ./.env; set +a; fi
 exec cargo "$cmd" -p hub "$@"
