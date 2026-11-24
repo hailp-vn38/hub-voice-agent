@@ -17,7 +17,18 @@ export component Orb inherits Rectangle {
     in property <length> u: 1px;
     width: 52 * root.u;
     height: self.width;
-    private property <duration> now: animation-tick();
+    // Chỉ đọc animation-tick() khi có hiệu ứng (nghe/nói/nghĩ, xung wake/tool/lỗi, alert);
+    // đứng yên thì giữ `rest` để không có binding nào xin vẽ lại khung hình.
+    private property <bool> pulsing;
+    private property <bool> active: root.listening || root.speaking || root.thinking || root.pulsing || AlertData.kind != AlertKind.none;
+    private property <duration> rest;
+    private property <duration> now: root.active ? animation-tick() : root.rest;
+    changed active => { if (!root.active) { root.rest = animation-tick(); } }
+    pulse-end := Timer {
+        interval: 750ms;
+        running: false;
+        triggered => { root.pulsing = false; self.running = false; }
+    }
     private property <float> t: root.now / 1000ms;
     private property <int> wake: Voice.wake-serial;
     private property <int> tool: Voice.tool-serial;
@@ -25,9 +36,9 @@ export component Orb inherits Rectangle {
     private property <duration> wake-t: -10000ms;
     private property <duration> tool-t: -10000ms;
     private property <duration> err-t: -10000ms;
-    changed wake => { root.wake-t = animation-tick(); }
-    changed tool => { root.tool-t = animation-tick(); }
-    changed err => { root.err-t = animation-tick(); }
+    changed wake => { root.wake-t = animation-tick(); root.pulsing = true; pulse-end.running = false; pulse-end.running = true; }
+    changed tool => { root.tool-t = animation-tick(); root.pulsing = true; pulse-end.running = false; pulse-end.running = true; }
+    changed err => { root.err-t = animation-tick(); root.pulsing = true; pulse-end.running = false; pulse-end.running = true; }
     private property <float> wp: clamp((root.now - root.wake-t) / 700ms, 0, 1);
     private property <float> tp: clamp((root.now - root.tool-t) / 600ms, 0, 1);
     private property <float> ep: clamp((root.now - root.err-t) / 450ms, 0, 1);
@@ -42,7 +53,7 @@ export component Orb inherits Rectangle {
     private property <float> level: root.listening ? VoiceLevels.mic : root.speaking ? VoiceLevels.tts : 0;
     private property <float> lv: root.level;
     animate lv { duration: 90ms; }
-    private property <float> breath: 0.5 + 0.5 * sin(root.now / 3200ms * 1turn);
+    private property <float> breath: 0.5;
 
     // Blob: 4 điểm quanh tâm, bán kính lệch theo hai sóng sin, nối bằng cubic gần tròn.
     private property <float> br: root.speaking ? 13 + root.lv * 2 : 14 + root.lv * 3;
