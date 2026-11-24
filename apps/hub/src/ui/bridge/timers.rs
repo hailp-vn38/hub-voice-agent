@@ -5,6 +5,10 @@ use hub_core::present::{
 use slint::{ComponentHandle, Model, ModelRc, VecModel};
 use std::rc::Rc;
 
+#[cfg(test)]
+#[path = "timers_tests.rs"]
+mod tests;
+
 thread_local! {
     static TIMER_CARDS: Rc<VecModel<TimerCard>> = Rc::new(VecModel::default());
 }

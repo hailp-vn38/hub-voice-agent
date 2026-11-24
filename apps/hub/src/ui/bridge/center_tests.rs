@@ -100,9 +100,9 @@ fn center_menu_and_ambient_views_populate_their_contracts() {
         night: false,
     };
 
-    super::center::apply_center(&app, &center);
-    super::center::apply_menu(&app, &menu);
-    super::center::apply_ambient(&app, &ambient);
+    super::apply_center(&app, &center);
+    super::apply_menu(&app, &menu);
+    super::apply_ambient(&app, &ambient);
 
     let center_ui = app.global::<crate::Center>();
     assert_eq!(center_ui.get_time(), "14:32");
@@ -143,7 +143,7 @@ fn center_menu_and_ambient_views_populate_their_contracts() {
 fn center_and_ambient_callbacks_send_core_inputs_and_activity() {
     let app = app();
     let (tx, mut rx) = tokio::sync::mpsc::channel(16);
-    super::connect_inputs(&app, tx, crate::ui::bridge::BridgeState::default());
+    crate::ui::bridge::connect_inputs(&app, tx, crate::ui::bridge::BridgeState::default());
 
     app.global::<crate::Center>()
         .invoke_open(crate::Screen::Weather);

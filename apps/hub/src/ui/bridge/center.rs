@@ -9,6 +9,10 @@ use hub_core::{
 use slint::{ComponentHandle, ModelRc, VecModel};
 use std::{cell::RefCell, rc::Rc};
 
+#[cfg(test)]
+#[path = "center_tests.rs"]
+mod tests;
+
 use super::inputs::{Inputs, to_core_screen};
 
 pub(super) fn apply_center(app: &App, center: &CenterView) {

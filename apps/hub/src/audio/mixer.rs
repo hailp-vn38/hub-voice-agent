@@ -1,13 +1,10 @@
 use hub_core::{AudioCommand, Sound};
 use opus::{Channels, Decoder};
-use rubato::{
-    Async, FixedAsync, Resampler, SincInterpolationParameters, SincInterpolationType,
-    WindowFunction,
-};
+use rubato::{Async, Resampler};
 use std::{collections::VecDeque, sync::Arc};
 use voice_client::OpusFrame;
 
-use super::sounds::Sounds;
+use super::{resample, sounds::Sounds};
 
 const TTS_RATE: u32 = 24_000;
 const MAX_OPUS_SAMPLES: usize = TTS_RATE as usize * 120 / 1000;
@@ -182,19 +179,9 @@ fn make_resampler(rate: u32) -> Option<Async<f32>> {
     if rate == TTS_RATE {
         return None;
     }
-    let parameters = SincInterpolationParameters::new(64, WindowFunction::Blackman2)
-        .oversampling_factor(64)
-        .interpolation(SincInterpolationType::Quadratic);
     Some(
-        Async::<f32>::new_sinc(
-            rate as f64 / TTS_RATE as f64,
-            1.0,
-            &parameters,
-            TTS_CHUNK_SAMPLES,
-            1,
-            FixedAsync::Input,
-        )
-        .expect("device rate must be resampleable from 24 kHz"),
+        resample::sinc(rate as f64 / TTS_RATE as f64, TTS_CHUNK_SAMPLES)
+            .expect("device rate must be resampleable from 24 kHz"),
     )
 }
 

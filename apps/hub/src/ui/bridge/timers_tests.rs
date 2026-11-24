@@ -44,7 +44,7 @@ fn timers_view_populates_contract_and_focus() {
         serial: 7,
     };
 
-    super::timers::apply_timers(&app, &view);
+    super::apply_timers(&app, &view);
 
     let timers = app.global::<crate::TimersData>();
     assert_eq!(timers.get_title(), "Hẹn giờ · 1 đang chạy");
@@ -71,7 +71,7 @@ fn alert_view_maps_and_none_hides_without_clearing_fade_data() {
         serial: 9,
     };
 
-    super::timers::apply_alert(&app, Some(&alert));
+    super::apply_alert(&app, Some(&alert));
     let data = app.global::<crate::AlertData>();
     assert_eq!(data.get_kind(), crate::AlertKind::Timer);
     assert_eq!(data.get_serial(), 9);
@@ -79,7 +79,7 @@ fn alert_view_maps_and_none_hides_without_clearing_fade_data() {
     assert_eq!(data.get_time(), "14:32");
     assert_eq!(data.get_body(), "Trứng");
 
-    super::timers::apply_alert(&app, None);
+    super::apply_alert(&app, None);
     assert_eq!(data.get_kind(), crate::AlertKind::None);
     assert_eq!(data.get_serial(), 9);
     assert_eq!(data.get_body(), "Trứng");
@@ -89,7 +89,7 @@ fn alert_view_maps_and_none_hides_without_clearing_fade_data() {
 fn timer_and_alert_callbacks_map_to_core_inputs_and_ignore_invalid_ids() {
     let app = app();
     let (tx, mut rx) = tokio::sync::mpsc::channel(16);
-    super::connect_inputs(&app, tx, super::BridgeState::default());
+    crate::ui::bridge::connect_inputs(&app, tx, crate::ui::bridge::BridgeState::default());
 
     let timers = app.global::<crate::TimersData>();
     timers.invoke_quick_start(1);
