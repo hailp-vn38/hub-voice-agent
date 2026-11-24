@@ -95,8 +95,11 @@ ai-hub/
 │   │   ├── main.rs               # nối dây (xem 3.3)
 │   │   ├── ui/
 │   │   │   ├── mod.rs            # chọn adapter: demo (feature `demo`) hoặc bridge
-│   │   │   ├── bridge.rs         # watch<UiState> → global hợp đồng; callback hợp đồng → UserInput
-│   │   │   │                     # (tách thành bridge/<feature>.rs khi map thêm tính năng)
+│   │   │   ├── bridge/           # adapter thật: watch<UiState> → global hợp đồng; callback → UserInput
+│   │   │   │   ├── mod.rs        # khai báo module, re-export spawn_bridge / connect_inputs
+│   │   │   │   ├── update.rs     # diff HubView, chỉ ghi phần đổi; chuyển Levels lên VoiceLevels
+│   │   │   │   ├── inputs.rs     # Inputs (Activity ≤ 1/s) và callback chung
+│   │   │   │   └── <feature>.rs  # voice, timers, countdowns, reminders, weather, calendar, home, photos, images, center
 │   │   │   └── demo/             # feature `demo`, không biên dịch cho Pi
 │   │   │       ├── mod.rs        # khai báo module, re-export start()
 │   │   │       ├── start.rs      # Nav cục bộ, tick 1 Hz, Demo panel
@@ -104,12 +107,15 @@ ai-hub/
 │   │   │       ├── clock.rs, levels.rs, qr.rs   # giờ, mức mic/TTS giả, sinh QR
 │   │   │       └── fixtures/     # một module mỗi tính năng (fixture + kịch bản); wiring.rs nạp/tick tất cả
 │   │   ├── audio/
-│   │   │   ├── mod.rs            # spawn() → (Sender<AudioCommand>, Receiver<AudioEvent>, watch<Levels>)
+│   │   │   ├── mod.rs            # AudioHandle { commands, events, levels }; re-export spawn() / disabled()
+│   │   │   ├── worker.rs         # thread audio: mở stream, vòng lặp lệnh → Mixer, mic → Capture
 │   │   │   ├── devices.rs        # cpal: Pi chọn XVF3800 vào/ra; Mac dùng thiết bị mặc định
 │   │   │   ├── capture.rs        # mic → wake word + preroll + Opus encode
 │   │   │   ├── wake.rs           # openWakeWord qua ort
-│   │   │   ├── preroll.rs        # ring buffer sau wake word
-│   │   │   └── playback.rs       # Opus decode + mixer (TTS, chuông, âm giao diện)
+│   │   │   ├── mixer.rs          # Opus decode TTS + trộn chuông
+│   │   │   ├── sounds.rs         # nạp ping.mp3 / reminder.mp3 theo tần số thiết bị
+│   │   │   ├── resample.rs       # sinc rubato dùng chung (mic → 16 kHz, TTS → thiết bị)
+│   │   │   └── levels.rs         # Levels: RMS → thang dB 0..1 cho Orb
 │   │   └── system/
 │   │       ├── mod.rs            # chọn adapter theo feature
 │   │       ├── pi.rs             # backlight sysfs, nmcli, systemctl

@@ -131,7 +131,7 @@ apps/hub/src/audio/
 - `cpal::Stream` không `Send` trên macOS: tạo stream và giữ sống trên **thread audio riêng** do `spawn` dựng; không đưa sang tokio.
 - Callback cpal không cấp phát, không khoá:
   - vào: ghi mẫu vào ring SPSC (`rtrb`); thread audio đọc, gọi `Capture::push`, gửi `AudioEvent` bằng `blocking_send`.
-  - ra: callback gọi `Mixer::pull` trên một `Mixer` riêng của callback; thread audio chuyển lệnh qua ring SPSC thứ hai. Decode Opus làm ở thread audio trước khi đưa vào ring, không trong callback.
+  - ra: thread audio gọi `Mixer::pull` và đẩy PCM mono vào ring SPSC (~43 ms ở 48 kHz); callback chỉ đọc ring và nhân kênh. (Khác bản thiết kế đầu — `Mixer` riêng trong callback — vì `Mixer` decode Opus và cấp phát, không an toàn cho callback thời gian thực.)
 - `levels`: thread audio `send_replace` mỗi ~33 ms.
 - Tần số: yêu cầu thiết bị vào 16 kHz mono; không được thì nhận tần số gốc và resample xuống 16 kHz (`rubato`). Ra: theo tần số thiết bị, `Mixer` resample TTS (24 kHz) và chuông.
 

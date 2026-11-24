@@ -85,7 +85,7 @@ Chọn bằng feature của crate `apps/hub` (dự kiến `desktop` mặc địn
 - Trong worktree ticket/integration hiện tại, chạy app với bộ model đã có ở checkout chính:
 
   ```sh
-  AI_HUB_MODELS_DIR=/Users/lamphuchai/Desktop/project_rust/ai-hub/models scripts/run.sh run
+  AI_HUB_MODELS_DIR="$(git rev-parse --path-format=absolute --git-common-dir)/../models" scripts/run.sh run
   ```
 
 ### Dịch vụ bên ngoài

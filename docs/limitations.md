@@ -1,21 +1,19 @@
 # AI Hub — Hạn chế hiện tại
 
-Cập nhật: 2026-11-23, theo `main` @ 1d3bad9 và spec [hub-mac](../.scratch/hub-mac/spec.md).
+Cập nhật: 2026-11-24, theo nhánh `feat/hub-mac` và spec [hub-mac](../.scratch/hub-mac/spec.md).
 
 Tài liệu này nói thẳng những gì hub **chưa** làm được, để người dùng và người phát triển không phải đoán. Ticket nào gỡ một hạn chế thì sửa tài liệu này trong cùng commit.
 
-Mục 1 là tình trạng hôm nay. Mục 2 là những gì vẫn còn sau khi spec hub-mac xong (hub dùng cơ bản trên Mac). Mục 3 là những gì chỉ liên quan tới Pi.
+Mục 1 là tình trạng hôm nay trên nhánh. Mục 2 là những gì vẫn còn sau khi spec hub-mac xong (hub dùng cơ bản trên Mac). Mục 3 là những gì chỉ liên quan tới Pi.
 
-## 1. Hôm nay trên `main`
+## 1. Hôm nay trên `feat/hub-mac`
 
-App thật (`scripts/run.sh run`, không `demo`) **chưa dùng được** cho việc hằng ngày.
+Ticket hub-mac 01–10 đã map xong: bridge ghi mọi màn từ hub-core, chuyển màn đi qua hub-core, chạm gửi `Activity`, có mic, loa, wake word và mức âm cho Orb. Các mục nghiệm thu **thủ công** trong từng ticket vẫn chờ người kiểm trên Mac.
 
 | Hạn chế | Ảnh hưởng | Gỡ ở |
 |---|---|---|
-| Bridge chỉ map giờ và phần Kết nối voice | Các màn Aurora mở được nhưng trống hoặc chỉ có giá trị mặc định | hub-mac 01–06 |
-| Chuyển màn làm ngay trong Slint, không qua hub-core | Tool giọng nói, tự về trung tâm và Ambient không đổi được màn đang hiện | hub-mac 01 |
-| Không có âm thanh: mic, loa, wake word, chuông đều chưa có | Không nói chuyện được; hẹn giờ và Reminder báo không có tiếng | hub-mac 07–09 |
-| Chạm không đặt lại hạn 60 s (không có `Activity`) | Sau khi map Nav: đang thao tác trên một màn vẫn bị đưa về trung tâm | hub-mac 01 |
+| Chưa kiểm tay: nói chuyện, chuông, wake word, Orb nhịp theo giọng, CPU lúc rảnh | Có thể còn lỗi chỉ lộ ra trên máy thật | Nghiệm thu tay hub-mac 01–10 |
+| Không mở được thiết bị âm thanh thì app chạy **không tiếng** (log `Chạy không có âm thanh: …`) | Màn hình vẫn dùng được; không nói chuyện, chuông không kêu | Cắm loa/mic rồi mở lại app |
 
 Xem toàn bộ giao diện với dữ liệu giả: `scripts/run.sh run --features demo`.
 
@@ -35,7 +33,7 @@ Xem toàn bộ giao diện với dữ liệu giả: `scripts/run.sh run --featur
 | Thời gian chờ nói tiếp 10 s tính từ lúc server báo TTS xong, không phải lúc loa phát xong | Câu trả lời dài có thể làm khoảng chờ thực tế ngắn hơn | Nói tiếp ngay | hub-core: dùng `TtsPlaybackFinished`, chưa có ticket |
 | Chữ phản hồi không có nhấn (`Word.emphasis` luôn `false`) | Chỉ ảnh hưởng hiển thị | — | hub-core #15, chờ protocol |
 | Tool phía server được nhận ra theo từ khoá trong tên (`calendar`, `weather`, `light`…) | Tool có tên lạ không mở màn nào | — | `view::screen_for_server_tool` |
-| Nguồn và giấy phép của `ping.mp3`, `reminder.mp3` chưa ghi | Chưa commit được hai file | — | hub-mac 07 |
+| Nguồn và giấy phép của `ping.mp3`, `reminder.mp3` chưa ghi | Hai file đã nằm trong nhánh (commit `ba704ae`) nhưng chưa rõ được phép phân phối | Thay bằng file có giấy phép rõ trước khi phát hành | hub-mac 07 (`needs-info`) |
 
 ### Màn hình và tính năng
 
