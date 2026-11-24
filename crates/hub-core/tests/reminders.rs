@@ -81,7 +81,7 @@ async fn reminder_create_through_run() {
         if let Message::Text(text) = message {
             let value: Value = serde_json::from_str(&text).unwrap();
             if value["payload"]["id"] == 1 {
-                assert!(value["payload"]["result"].is_object(), "{value}");
+                assert!(value["payload"]["result"]["structuredContent"].is_object(), "{value}");
                 break;
             }
         }
@@ -103,7 +103,7 @@ async fn reminder_create_through_run() {
             if let Message::Text(text) = socket.next().await.unwrap().unwrap() {
                 let value: Value = serde_json::from_str(&text).unwrap();
                 if value["payload"]["id"] == id {
-                    assert!(value["payload"]["result"].is_object(), "{value}");
+                    assert!(value["payload"]["result"]["structuredContent"].is_object(), "{value}");
                     break;
                 }
             }
@@ -135,7 +135,7 @@ async fn reminder_create_through_run() {
             if let Message::Text(text) = socket.next().await.unwrap().unwrap() {
                 let value: Value = serde_json::from_str(&text).unwrap();
                 if value["payload"]["id"] == id {
-                    assert!(value["payload"]["result"].is_object(), "{value}");
+                    assert!(value["payload"]["result"]["structuredContent"].is_object(), "{value}");
                     break;
                 }
             }

@@ -168,7 +168,7 @@ async fn mixed_public_events_preserve_server_order_and_abort_stop_completes_tts(
         .unwrap()
         .unwrap();
     assert_eq!(reply["payload"]["id"], 42);
-    assert_eq!(reply["payload"]["result"], json!({"ok":true}));
+    assert_eq!(reply["payload"]["result"]["structuredContent"], json!({"ok":true}));
     assert!(
         matches!(next_event(&mut events).await, VoiceEvent::ServerTool { name, state: ToolState::Completed } if name == "server_search")
     );

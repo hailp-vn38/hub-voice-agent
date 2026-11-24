@@ -121,7 +121,9 @@ pub(crate) async fn handle(
                 // Held until the reply is queued, so in-flight plus queued stays bounded.
                 let _slot = slot;
                 let response = match reply_rx.await {
-                    Ok(Ok(result)) => json!({ "jsonrpc": "2.0", "id": id, "result": result }),
+                    Ok(Ok(result)) => {
+                        json!({ "jsonrpc": "2.0", "id": id, "result": call_tool_result(result) })
+                    }
                     Ok(Err(tool_error)) => {
                         let mut error =
                             json!({ "code": tool_error.code, "message": tool_error.message });
@@ -149,6 +151,14 @@ pub(crate) async fn handle(
         }
         _ => Some(error(&id, -32601, "Method not found")),
     }
+}
+
+/// MCP `CallToolResult`: the server reads `content` text; `structuredContent` keeps the JSON.
+fn call_tool_result(result: Value) -> Value {
+    json!({
+        "content": [{ "type": "text", "text": result.to_string() }],
+        "structuredContent": result,
+    })
 }
 
 fn error(id: &Value, code: i32, message: &str) -> Value {

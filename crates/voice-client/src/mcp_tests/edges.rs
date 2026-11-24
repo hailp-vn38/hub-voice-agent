@@ -52,7 +52,7 @@ async fn string_request_ids_are_echoed() {
     call.reply(Ok(json!({ "ok": true })));
     let reply = next(&mut connection).await;
     assert_eq!(reply["payload"]["id"], "call-1");
-    assert_eq!(reply["payload"]["result"], json!({ "ok": true }));
+    assert_eq!(reply["payload"]["result"]["structuredContent"], json!({ "ok": true }));
 }
 
 #[tokio::test]
@@ -106,7 +106,7 @@ async fn tool_calls_beyond_the_in_flight_limit_are_refused() {
 
     // A finished call frees its slot.
     pending.pop().unwrap().reply(Ok(json!({})));
-    assert!(next(&mut connection).await["payload"]["result"].is_object());
+    assert!(next(&mut connection).await["payload"]["result"]["structuredContent"].is_object());
     connection.outgoing.send(mcp(json!({ "jsonrpc": "2.0", "id": "again", "method": "tools/call", "params": { "name": "hold" } }))).await.unwrap();
     assert!(matches!(
         timeout(Duration::from_secs(2), events.recv())

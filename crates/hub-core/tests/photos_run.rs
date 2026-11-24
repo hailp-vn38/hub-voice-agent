@@ -107,7 +107,7 @@ async fn show_image_displays_downloaded_photo() {
             }
         }
     };
-    assert_eq!(reply["payload"]["result"]["loaded"], 2);
+    assert_eq!(reply["payload"]["result"]["structuredContent"]["loaded"], 2);
     assert_eq!(ui_rx.borrow().view.screen, Screen::Photos);
     assert_eq!(ui_rx.borrow().photos.len(), 2);
     let photos_view = hub_core::present(&ui_rx.borrow()).photos;
@@ -158,7 +158,7 @@ async fn show_image_displays_downloaded_photo() {
         }
     };
     assert_eq!(
-        list["payload"]["result"]["images"][0]["caption"],
+        list["payload"]["result"]["structuredContent"]["images"][0]["caption"],
         "Mountain"
     );
     socket.send(Message::Text(json!({"type":"mcp","payload":{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"hub_image_control","arguments":{"action":"unpin","id":id}}}}).to_string().into())).await.unwrap();
@@ -175,7 +175,7 @@ async fn show_image_displays_downloaded_photo() {
             }
         }
     };
-    assert_eq!(control["payload"]["result"]["ok"], true);
+    assert_eq!(control["payload"]["result"]["structuredContent"]["ok"], true);
     assert!(!ui_rx.borrow().photos[0].pinned);
 
     let photo_to_remove = ui_rx.borrow().photos[1].clone();
@@ -193,7 +193,7 @@ async fn show_image_displays_downloaded_photo() {
             }
         }
     };
-    assert_eq!(next["payload"]["result"]["id"], photo_to_remove.id);
+    assert_eq!(next["payload"]["result"]["structuredContent"]["id"], photo_to_remove.id);
     assert!(hub_core::present(&ui_rx.borrow()).photos.viewing);
     assert_eq!(hub_core::present(&ui_rx.borrow()).photos.viewer_index, 1);
     input_tx
