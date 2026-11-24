@@ -2,24 +2,20 @@ import { Theme } from "../theme.slint";
 import { Nav, Screen } from "../contract/nav.slint";
 import { PageDots } from "page-dots.slint";
 import { StatusBarView } from "status-bar.slint";
-import { IdleBackground } from "idle-background.slint";
 import { Alert } from "../overlays/alert.slint";
 import { VoiceSliderOverlay } from "../overlays/voice-slider.slint";
 import { Dock } from "orb.slint";
 import { VoiceBar } from "voice-bar.slint";
-import { Ambient } from "../screens/ambient.slint";
-import { MenuScreen } from "../screens/menu.slint";
 import { SettingsData } from "../contract/settings.slint";
 import { PhotosData } from "../contract/photos.slint";
 import { FloatingCardsView } from "floating-cards.slint";
-import { BackNav, ZoomOrigin } from "back-nav.slint";
+import { BackNav } from "back-nav.slint";
 import { SpawnClock } from "spawn.slint";
-import { CenterScreen } from "../screens/center.slint";
 import { NavRail } from "home/nav-rail.slint";
-import { FeatureView } from "feature-view.slint";
+import { ScreenFade } from "screen-fade.slint";
 
-// Khung app: tầng trung tâm ⇄ menu (vuốt theo ngón tay), tầng màn tính năng,
-// lớp phủ ở trên cùng. Màn phủ kín cửa sổ; thanh Voice (nút mic trái, chữ phản hồi) nổi trên đáy màn.
+// Khung app: mọi chuyển màn đều mờ dần (ScreenFade). Thanh điều hướng, trạng thái, Voice đứng yên.
+// Vuốt chỉ để quyết định chuyển màn, không kéo theo ngón tay.
 export component Shell inherits Rectangle {
     // Đơn vị thiết kế: 1 px canvas 1280×600, co đều theo cửa sổ; canvas giãn thành cw × ch.
     private property <length> u: 1px * min(self.width / 1280px, self.height / 600px);
@@ -27,22 +23,18 @@ export component Shell inherits Rectangle {
     private property <float> ch: self.height / root.u;
     // Chiều cao hàng Voice (thanh Voice + lề) theo cùng đơn vị.
     private property <length> dock-height: 88 * root.u;
-    // Màn đang hiển thị: theo Nav.screen, nhưng chuyển ngay khi người dùng vuốt xong.
+    // Màn đang hiển thị: theo Nav.screen.
     private property <Screen> shown: Nav.screen;
     private property <bool> is-feature: shown != Screen.center && shown != Screen.menu;
-    private property <length> w: swipe.width;
-    private property <length> dx: swipe.current-position.x - swipe.pressed-position.x;
-    private property <duration> t0;
-    private property <float> menu-target: (shown == Screen.menu || (is-feature && BackNav.origin == Screen.menu)) ? 1 : 0;
-    private property <float> feat-target: is-feature ? 1 : 0;
-    private property <float> menu-p: swipe.swiping && !is-feature ? clamp(menu-target - dx / w, 0, 1) : menu-target;
-    private property <float> feat-p: swipe.swiping && is-feature ? clamp(1 - dx / w, 0, 1) : feat-target;
-    private property <float> away: max(menu-p, feat-p);
-    // Thanh điều hướng trái dùng chung, đứng yên khi chuyển giữa các màn có nó.
+    // Thanh điều hướng trái dùng chung: hiện/ẩn mờ dần, vị trí không đổi.
     private property <bool> has-rail: shown == Screen.center || shown == Screen.menu || shown == Screen.timers || shown == Screen.reminders || shown == Screen.calendar;
     private property <float> rail-p: has-rail ? 1 : 0;
     animate rail-p { duration: Theme.anim-screen; easing: ease-out; }
-    animate menu-p, feat-p { duration: swipe.swiping ? 0ms : Theme.anim-screen; easing: ease-out; }
+    // Chấm trang và độ đậm chấm theo màn, cũng mờ dần.
+    private property <float> menu-p: shown == Screen.menu ? 1 : 0;
+    animate menu-p { duration: Theme.anim-screen; easing: ease-out; }
+    private property <float> feat-p: is-feature ? 1 : 0;
+    animate feat-p { duration: Theme.anim-screen; easing: ease-out; }
 
     // Màn tính năng đọc Dock.height để chừa hàng Voice ở đáy.
     init => {
@@ -52,37 +44,16 @@ export component Shell inherits Rectangle {
     changed dock-height => { Dock.height = root.dock-height; }
     changed u => { Theme.unit = root.u; }
 
-    // Màn tính năng đang vẽ: giữ màn vừa rời cho tới khi trượt ra xong. Chuyển thẳng giữa hai màn
-    // tính năng thì fade chéo từ `from-view` sang `view` trong anim-screen.
-    private property <Screen> view: Screen.home;
-    private property <Screen> from-view: Screen.home;
-    private property <duration> now: animation-tick();
-    private property <duration> sw-t0: -10000ms;
-    private property <float> sw-p: clamp((root.now - root.sw-t0) / Theme.anim-state, 0, 1);
-    private property <length> zx: self.width / 2;
-    private property <length> zy: self.height / 2;
-    private property <bool> was-feature: false;
     changed shown => {
         if (!root.is-feature) { BackNav.origin = root.shown; }
-        else {
-            if (!root.was-feature) {
-                // Mở từ Menu: nở ra từ ô vừa chạm; từ nơi khác: nở từ giữa màn.
-                root.zx = BackNav.origin == Screen.menu && ZoomOrigin.x >= 0px ? ZoomOrigin.x - root.absolute-position.x : root.width / 2;
-                root.zy = BackNav.origin == Screen.menu && ZoomOrigin.y >= 0px ? ZoomOrigin.y - root.absolute-position.y : root.height / 2;
-            }
-            if (root.feat-p > 0 && root.view != root.shown) {
-                root.from-view = root.view;
-                root.sw-t0 = animation-tick();
-            }
-            root.view = root.shown;
-        }
-        root.was-feature = root.is-feature;
     }
     private property <Screen> nav-screen: Nav.screen;
     changed nav-screen => { root.shown = root.nav-screen; }
 
-
-    // Tầng nội dung (vuốt được), phủ kín cửa sổ. Orb nằm trên nên chạm Orb không thành vuốt.
+    // Vuốt: sang trái ở trung tâm để mở Menu; các màn khác vuốt phải để quay lại.
+    private property <length> w: swipe.width;
+    private property <length> dx: swipe.current-position.x - swipe.pressed-position.x;
+    private property <duration> t0;
     swipe := SwipeGestureHandler {
         y: 0;
         height: parent.height;
@@ -91,47 +62,23 @@ export component Shell inherits Rectangle {
         changed swiping => { if (self.swiping) { root.t0 = animation-tick(); } }
         changed pressed-position => { Nav.activity(); }
         swiped => {
-            // Đủ xa (> 30% chiều rộng) hoặc vuốt nhanh thì hoàn tất.
+            // Đủ xa (> 30% chiều rộng) hoặc vuốt nhanh thì chuyển màn.
             if (abs(root.dx) > root.w * 0.3 || (abs(root.dx) > 120px && animation-tick() - root.t0 < 250ms)) {
                 Nav.navigate(root.shown == Screen.center ? Screen.menu : (root.shown == Screen.menu ? Screen.center : BackNav.origin));
             }
         }
 
-        Rectangle {
-            clip: true;
-            Rectangle {
-                opacity: 1 - root.away;
-                y: 0;
-                background: transparent;
-                IdleBackground { }
-                CenterScreen { u: root.u; cw: root.cw; ch: root.ch; }
-                transform-scale: 1 - 0.08 * root.away;
-            }
-            Rectangle {
-                x: (1 - root.menu-p) * root.w;
-                // Đặc sớm (trước nửa đường) để màn bên dưới không lộ qua khi đang trượt.
-                opacity: clamp(root.menu-p * 2, 0, 1);
-                background: Theme.background;
-                // Chặn chạm xuyên xuống màn trung tâm bên dưới (opacity 0 vẫn nhận chuột).
-                TouchArea { }
-                MenuScreen { u: root.u; cw: root.cw; ch: root.ch; }
-            }
-            if root.feat-p > 0 && root.view != Screen.ambient: Rectangle {
-                // Nở ra từ ô Menu vừa chạm (zx, zy), đóng thì thu về đúng chỗ đó.
-                transform-origin: { x: root.zx, y: root.zy };
-                transform-scale: 0.3 + 0.7 * root.feat-p;
-                opacity: clamp(root.feat-p * 2, 0, 1);
-                background: Theme.background;
-                // Chặn chạm xuyên xuống menu / màn trung tâm bên dưới.
-                TouchArea { }
-                if root.sw-p < 1: FeatureView { screen: root.from-view; opacity: 1 - root.sw-p; }
-                // Chuyển giữa hai màn tính năng: fade chéo, màn mới nâng nhẹ lên.
-                FeatureView { screen: root.view; opacity: root.sw-p; y: (1 - root.sw-p) * 16 * root.u; }
-            }
+        ScreenFade {
+            width: parent.width;
+            height: parent.height;
+            screen: root.shown;
+            u: root.u;
+            cw: root.cw;
+            ch: root.ch;
         }
     }
 
-    // Thanh điều hướng: nằm trên tầng nội dung nên không trượt theo màn, chỉ view đổi.
+    // Thanh điều hướng: nằm trên tầng nội dung, không tham gia chuyển màn.
     if root.rail-p > 0: NavRail {
         x: 14 * root.u;
         y: 42 * root.u;
@@ -140,11 +87,6 @@ export component Shell inherits Rectangle {
         current: root.shown;
         opacity: root.rail-p;
     }
-
-    // Ambient: fade vào/ra, phủ nội dung; chạm để thoát (AmbientData.wake).
-    private property <float> amb-p: shown == Screen.ambient ? 1 : 0;
-    animate amb-p { duration: Theme.anim-screen; easing: ease-out; }
-    if amb-p > 0: Ambient { opacity: root.amb-p; }
 
     // Lớp trên cùng cố định: thanh trạng thái, chấm trang. Không nhận chuột.
     StatusBarView { y: 0; width: parent.width; }

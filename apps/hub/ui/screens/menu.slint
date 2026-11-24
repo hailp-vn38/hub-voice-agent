@@ -1,7 +1,6 @@
 import { Theme } from "../theme.slint";
 import { Nav, Screen } from "../contract/nav.slint";
 import { Menu } from "../contract/menu.slint";
-import { ZoomOrigin } from "../components/back-nav.slint";
 import { Backdrop } from "../components/home/backdrop.slint";
 import { TileFrame } from "../components/home/quick-tile.slint";
 
@@ -9,11 +8,7 @@ struct AppTile { icon: image, name: string, info: string, screen: Screen }
 
 component AppTileView inherits TileFrame {
     in property <AppTile> app;
-    tapped => {
-        ZoomOrigin.x = root.absolute-position.x + root.width / 2;
-        ZoomOrigin.y = root.absolute-position.y + root.height / 2;
-        Nav.navigate(root.app.screen);
-    }
+    tapped => { Nav.navigate(root.app.screen); }
     Rectangle {
         x: 20 * root.u;
         y: 20 * root.u;

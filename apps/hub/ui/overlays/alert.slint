@@ -1,7 +1,7 @@
 import { Theme } from "../theme.slint";
 import { AlertData, AlertKind } from "../contract/alert.slint";
-import { Dock } from "../components/orb.slint";
 import { Icon } from "../components/icon.slint";
+import { Backdrop } from "../components/home/backdrop.slint";
 
 // Báo toàn màn (hết giờ / Reminder). Chạm bất kỳ đâu để tắt; chừa hàng dock cho Orb.
 // Khi đóng: hẹn giờ mờ đi; Reminder thu nhỏ về góc trái dưới ("Đã nhắc gần đây").
@@ -18,6 +18,7 @@ export component Alert inherits Rectangle {
     // 0 khi đang hiện, 1 khi Reminder đã thu hẳn về góc.
     private property <float> shrink: !root.on && !root.is-timer ? 1 - root.vis : 0;
     private property <color> tone: root.is-timer ? Theme.warm : Theme.accent;
+    private property <length> u: Theme.unit;
     private property <duration> now: animation-tick();
     private property <duration> t0: -10000ms;
     private property <int> serial: AlertData.serial;
@@ -27,55 +28,96 @@ export component Alert inherits Rectangle {
     private property <float> enter: clamp((root.now - root.t0) / 500ms, 0, 1);
 
     opacity: root.vis;
-    background: root.vis > 0 ? (root.is-timer ? #2a1d0c : #0c2230) : transparent;
 
     if root.on: TouchArea { clicked => { AlertData.dismiss(); } }
+
+    if root.vis > 0: Backdrop { dim: 0.35; }
+    if root.vis > 0: Rectangle { background: root.tone.with-alpha(0.08); }
 
     if root.vis > 0: Rectangle {
         x: -root.shrink * parent.width * 0.4;
         y: root.shrink * (parent.height - root.dock-height) * 0.4;
         height: parent.height - root.dock-height;
         transform-scale: 1 - 0.8 * root.shrink;
-        // Vòng lan theo nhịp chuông.
+        // Thẻ kính Aurora, viền và bóng theo tông báo.
         Rectangle {
+            width: min(460 * root.u, parent.width - 40 * root.u);
+            height: min(320 * root.u, parent.height - 24 * root.u);
             x: (parent.width - self.width) / 2;
-            y: parent.height / 2 - 200px;
-            width: 200px;
-            height: 200px;
-            border-radius: 100px;
-            border-width: 6px;
+            y: (parent.height - self.height) / 2;
+            border-radius: Theme.radius-panel;
+            background: root.is-timer ? Theme.warm.with-alpha(0.2) : Theme.glass;
+            border-width: 1 * root.u;
             border-color: root.tone;
-            opacity: 1 - root.beat;
-            transform-scale: 1 + root.beat * 1.2;
-        }
-        Icon {
-            x: (parent.width - self.width) / 2 - sin(root.beat * 2turn) * 6px;
-            y: parent.height / 2 - 200px + 76px;
-            name: "bell";
-            size: 48px;
-            color: root.tone;
-            transform-scale: 2;
-        }
-        Text {
-            x: 0;
-            width: parent.width;
-            y: parent.height / 2 + 40px;
-            text: root.is-timer ? AlertData.title + " · hết giờ" : AlertData.time;
-            color: Theme.text;
-            font-size: root.is-timer ? Theme.font-title : Theme.font-hero * 0.5;
-            horizontal-alignment: center;
-        }
-        // Nội dung Reminder chạy ra từ Orb.
-        Text {
-            x: 0;
-            width: parent.width;
-            y: parent.height / 2 + 160px + (1 - root.enter) * (Dock.orb-y - parent.height / 2);
-            text: AlertData.body;
-            visible: !root.is-timer;
-            opacity: root.enter;
-            color: Theme.text-dim;
-            font-size: Theme.font-title;
-            horizontal-alignment: center;
+            drop-shadow-blur: 24 * root.u;
+            drop-shadow-color: root.tone.with-alpha(0.38);
+            VerticalLayout {
+                alignment: center;
+                spacing: 10 * root.u;
+                // Chuông trong vòng lan theo nhịp.
+                Rectangle {
+                    height: 112 * root.u;
+                    Rectangle {
+                        x: (parent.width - self.width) / 2;
+                        y: (parent.height - self.height) / 2;
+                        width: 96 * root.u;
+                        height: self.width;
+                        border-radius: self.width / 2;
+                        border-width: 4 * root.u;
+                        border-color: root.tone;
+                        opacity: 1 - root.beat;
+                        transform-scale: 1 + root.beat * 0.5;
+                    }
+                    Rectangle {
+                        x: (parent.width - self.width) / 2;
+                        y: (parent.height - self.height) / 2;
+                        width: 96 * root.u;
+                        height: self.width;
+                        border-radius: self.width / 2;
+                        background: Theme.card.with-alpha(0.6);
+                        border-width: 1 * root.u;
+                        border-color: Theme.border;
+                    }
+                    Icon {
+                        x: (parent.width - self.width) / 2 - sin(root.beat * 2turn) * 4 * root.u;
+                        y: (parent.height - self.height) / 2;
+                        name: "bell";
+                        size: 44 * root.u;
+                        color: root.tone;
+                    }
+                }
+                Text {
+                    text: root.is-timer ? AlertData.title : AlertData.time;
+                    color: Theme.text;
+                    font-size: root.is-timer ? Theme.type-page-title : Theme.type-clock * 0.6;
+                    font-weight: root.is-timer ? 600 : 300;
+                    horizontal-alignment: center;
+                }
+                // Hẹn giờ: tên + "hết giờ"; Reminder: nội dung chạy ra từ Orb.
+                Text {
+                    text: AlertData.body;
+                    visible: !root.is-timer;
+                    opacity: root.enter;
+                    color: Theme.text;
+                    font-size: Theme.type-section;
+                    font-weight: 600;
+                    horizontal-alignment: center;
+                    overflow: elide;
+                }
+                Text {
+                    text: root.is-timer ? "Hết giờ" : "";
+                    visible: root.is-timer;
+                    color: Theme.warm;
+                    font-size: Theme.type-section;
+                    horizontal-alignment: center;
+                }
+                Text {
+                    text: "Chạm để tắt";
+                    color: Theme.text-dim;
+                    font-size: Theme.type-caption;
+                    horizontal-alignment: center;
+                }
+            }
         }
     }
 }

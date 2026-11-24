@@ -1,0 +1,78 @@
+import { Theme } from "../theme.slint";
+import { Screen } from "../contract/nav.slint";
+import { IdleBackground } from "idle-background.slint";
+import { Ambient } from "../screens/ambient.slint";
+import { MenuScreen } from "../screens/menu.slint";
+import { CenterScreen } from "../screens/center.slint";
+import { Home } from "../screens/home.slint";
+import { Weather } from "../screens/weather.slint";
+import { FirstBoot } from "../screens/first-boot.slint";
+import { Settings } from "../screens/settings.slint";
+import { Calendar } from "../screens/calendar.slint";
+import { Photos } from "../screens/photos.slint";
+import { Countdowns } from "../screens/countdowns.slint";
+import { Reminders } from "../screens/reminders.slint";
+import { Timers } from "../screens/timers.slint";
+
+// Nội dung của một màn theo `screen`. TouchArea đầu tiên chặn chạm xuyên xuống lớp bên dưới.
+component ScreenContent inherits Rectangle {
+    in property <Screen> screen;
+    in property <length> u;
+    in property <float> cw;
+    in property <float> ch;
+    background: Theme.background;
+    TouchArea { }
+    if root.screen == Screen.center: IdleBackground { }
+    if root.screen == Screen.center: CenterScreen { u: root.u; cw: root.cw; ch: root.ch; }
+    if root.screen == Screen.menu: MenuScreen { u: root.u; cw: root.cw; ch: root.ch; }
+    if root.screen == Screen.ambient: Ambient { }
+    if root.screen == Screen.home: Home { }
+    if root.screen == Screen.weather: Weather { }
+    if root.screen == Screen.settings: Settings { }
+    if root.screen == Screen.reminders: Reminders { }
+    if root.screen == Screen.timers: Timers { }
+    if root.screen == Screen.photos: Photos { }
+    if root.screen == Screen.calendar: Calendar { }
+    if root.screen == Screen.countdowns: Countdowns { }
+    if root.screen == Screen.first-boot: FirstBoot { }
+}
+
+// Chuyển màn bằng mờ dần: màn cũ mờ đi trong khi màn mới hiện dần, cùng `Theme.anim-screen`.
+// Không trượt, không zoom. Đổi `screen` là đủ; không cần biết màn đi đâu.
+export component ScreenFade inherits Rectangle {
+    in property <Screen> screen;
+    in property <length> u;
+    in property <float> cw;
+    in property <float> ch;
+    private property <Screen> from-screen: Screen.center;
+    private property <Screen> to-screen: Screen.center;
+    private property <duration> now: animation-tick();
+    private property <duration> t0: -10000ms;
+    private property <float> p: clamp((root.now - root.t0) / Theme.anim-screen, 0, 1);
+
+    init => { root.to-screen = root.screen; }
+    changed screen => {
+        root.from-screen = root.to-screen;
+        root.to-screen = root.screen;
+        root.t0 = animation-tick();
+    }
+
+    if root.p < 1: ScreenContent {
+        screen: root.from-screen;
+        u: root.u;
+        cw: root.cw;
+        ch: root.ch;
+        width: parent.width;
+        height: parent.height;
+        opacity: 1 - root.p;
+    }
+    ScreenContent {
+        screen: root.to-screen;
+        u: root.u;
+        cw: root.cw;
+        ch: root.ch;
+        width: parent.width;
+        height: parent.height;
+        opacity: root.p;
+    }
+}
