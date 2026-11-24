@@ -61,6 +61,7 @@ pub async fn connected_hub() -> (ConnectedHub, WebSocketStream<TcpStream>, JoinH
         config,
         hub_core::Store::in_memory().unwrap(),
         hub_core::Ports {
+            device: std::sync::Arc::new(hub_core::NoDevice),
             clock: Arc::new(crate::support::TestClock::at(start)),
             calendar: Arc::new(hub_core::GoogleCalendar::default()),
             weather: Arc::new(hub_core::OpenMeteo::default()),

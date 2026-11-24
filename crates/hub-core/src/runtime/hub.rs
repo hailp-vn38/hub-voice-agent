@@ -99,7 +99,10 @@ impl Hub {
         let mut effects = tick::tick(&now);
         effects.extend(self.conversation.on(Input::Tick, now.clone()));
         effects.extend(self.countdowns.snapshot(now.date()));
-        effects.extend(self.track_view(store, |hub| hub.view.tick(seconds)));
+        effects.extend(self.track_view(store, |hub| {
+            hub.view
+                .tick(seconds, config.device.ambient_after.seconds())
+        }));
         effects.extend(self.weather.tick(seconds));
         let due_timers = self.timers.due(seconds);
         let due_reminders = self.reminders.due(&now);
@@ -114,7 +117,7 @@ impl Hub {
             self.alerts.push_reminder(reminder);
         }
         let blocked = self.conversation.alert_blocked();
-        let (dismissed, alert_effects) = self.alerts.tick(seconds, blocked, synced);
+        let (dismissed, alert_effects) = self.alerts.tick(seconds, blocked, synced, &config.device);
         effects.extend(alert_effects);
         let speak = config.voice.reminder_speech;
         effects.extend(self.speech.tick(self.alerts.active(), seconds, speak));

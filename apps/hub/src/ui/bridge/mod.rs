@@ -9,6 +9,7 @@ mod location;
 mod network;
 mod photos;
 mod reminders;
+mod settings;
 mod timers;
 mod update;
 mod voice;

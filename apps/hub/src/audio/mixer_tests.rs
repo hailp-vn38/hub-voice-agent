@@ -158,3 +158,35 @@ fn peak(samples: &[f32]) -> f32 {
         .map(|sample| sample.abs())
         .fold(0.0, f32::max)
 }
+
+#[test]
+fn volume_scales_the_output_and_zero_is_silent() {
+    let peak = |percent: u8| {
+        let mut mixer = Mixer::new(Sounds::load(RATE).unwrap(), RATE).unwrap();
+        mixer.apply(AudioCommand::SetVolume(percent));
+        mixer.apply(AudioCommand::Play(Sound::Ding));
+        let mut output = vec![0.0; RATE as usize];
+        mixer.pull(&mut output);
+        output.iter().fold(0.0_f32, |peak, s| peak.max(s.abs()))
+    };
+    let (full, half) = (peak(100), peak(50));
+    assert!(full > 0.0);
+    assert!((half - full / 2.0).abs() < 1e-4);
+    assert_eq!(peak(0), 0.0);
+}
+
+#[test]
+fn previews_play_once_and_ping_chime_repeats() {
+    for (sound, repeats) in [
+        (Sound::Preview(hub_core::Tone::Reminder), false),
+        (Sound::Preview(hub_core::Tone::Ping), false),
+        (Sound::PingChime, true),
+    ] {
+        let mut mixer = Mixer::new(Sounds::load(RATE).unwrap(), RATE).unwrap();
+        mixer.apply(AudioCommand::Play(sound));
+        let mut output = vec![0.0; RATE as usize * 12];
+        mixer.pull(&mut output);
+        let tail_active = output[RATE as usize * 10..].iter().any(|s| *s != 0.0);
+        assert_eq!(tail_active, repeats);
+    }
+}

@@ -46,6 +46,7 @@ pub struct Config {
     pub calendar: CalendarSettings,
     pub home: HomeSettings,
     pub weather: WeatherSettings,
+    pub device: crate::DeviceSettings,
 }
 
 pub struct ConfigStore {
@@ -84,6 +85,12 @@ impl ConfigStore {
             weather: document
                 .get("weather")
                 .filter(|v| v.is_table())
+                .cloned()
+                .map(toml::Value::try_into)
+                .transpose()?
+                .unwrap_or_default(),
+            device: document
+                .get("device")
                 .cloned()
                 .map(toml::Value::try_into)
                 .transpose()?
@@ -133,6 +140,7 @@ impl ConfigStore {
             ("calendar", toml::Value::try_from(&value.calendar)?),
             ("home", toml::Value::try_from(&value.home)?),
             ("weather", toml::Value::try_from(&value.weather)?),
+            ("device", toml::Value::try_from(&value.device)?),
         ] {
             if let Some(table) = doc.get_mut(key).and_then(toml::Value::as_table_mut) {
                 table.extend(settings.as_table().unwrap().clone());

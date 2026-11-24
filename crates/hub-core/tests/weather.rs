@@ -56,6 +56,7 @@ async fn weather_preview_returns_home_and_uses_cache() {
         config,
         Store::open(&dir).unwrap(),
         Ports {
+            device: std::sync::Arc::new(hub_core::NoDevice),
             clock: Arc::new(TestClock::at(start.clone())),
             weather: source.clone(),
             calendar: Arc::new(hub_core::GoogleCalendar::default()),

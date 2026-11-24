@@ -1,5 +1,5 @@
 use anyhow::{Context, Result, bail};
-use hub_core::Sound;
+use hub_core::{Sound, Tone};
 use rubato::{
     Async, FixedAsync, Resampler, SincInterpolationParameters, SincInterpolationType,
     WindowFunction,
@@ -34,8 +34,12 @@ impl Sounds {
 
     pub(super) fn samples(&self, sound: &Sound) -> Option<Arc<[f32]>> {
         match sound {
-            Sound::Ding => Some(Arc::clone(&self.ding)),
-            Sound::TimerChime | Sound::ReminderChime => Some(Arc::clone(&self.reminder)),
+            Sound::Ding | Sound::PingChime | Sound::Preview(Tone::Ping) => {
+                Some(Arc::clone(&self.ding))
+            }
+            Sound::TimerChime | Sound::ReminderChime | Sound::Preview(Tone::Reminder) => {
+                Some(Arc::clone(&self.reminder))
+            }
             Sound::ToolDone => None,
         }
     }

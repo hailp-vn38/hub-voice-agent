@@ -105,6 +105,10 @@ impl View {
             | UserInput::RemoveCountdown(_)
             | UserInput::SaveVoiceUrl(_)
             | UserInput::VoiceConnect
+            | UserInput::Setting(_)
+            | UserInput::KeepResolution
+            | UserInput::PreviewSound(_)
+            | UserInput::ReminderSpeech(_)
             | UserInput::OrbTapped
             | UserInput::Setup(_, _)
             | UserInput::Timer(_)
@@ -116,10 +120,13 @@ impl View {
         }
     }
 
-    pub fn tick(&mut self, now: i64) -> Vec<Effect> {
+    /// `ambient_after`: số giây không chạm để vào Ambient, `None` = không vào.
+    pub fn tick(&mut self, now: i64, ambient_after: Option<i64>) -> Vec<Effect> {
         if let Some(last) = self.last_activity {
             let idle = now.saturating_sub(last);
-            if idle >= 300 && self.state.screen != Screen::Ambient {
+            if ambient_after.is_some_and(|after| idle >= after)
+                && self.state.screen != Screen::Ambient
+            {
                 self.state = ViewState {
                     screen: Screen::Ambient,
                     focus: None,

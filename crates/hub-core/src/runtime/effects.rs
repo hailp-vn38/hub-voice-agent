@@ -140,7 +140,11 @@ pub(super) async fn execute(
         }
         Effect::ReplyError(call, message) => reply_error(call, message),
         Effect::Audio(command) => {
-            let _ = audio_tx.send(command).await;
+            let muted_ui = matches!(&command, AudioCommand::Play(sound) if sound.is_ui())
+                && !ui_tx.borrow().settings.ui_sounds;
+            if !muted_ui {
+                let _ = audio_tx.send(command).await;
+            }
         }
     }
     Ok(())
@@ -162,6 +166,8 @@ mod tests;
 pub(super) enum SettingsEffect {
     Initialize,
     SaveUrl(String),
+    Apply(crate::SettingChange),
+    ReminderSpeech(bool),
     Connection(voice_client::ConnectionState),
     Activation(String),
 }
@@ -174,8 +180,11 @@ pub(super) fn execute_settings(
     use crate::voice_settings;
     match effect {
         SettingsEffect::Initialize => {
-            io.ui_tx
-                .send_modify(|ui| ui.voice_settings = voice_settings::initial(config));
+            let device = config.get().device.clone();
+            io.ui_tx.send_modify(|ui| {
+                ui.voice_settings = voice_settings::initial(config);
+                ui.settings = device;
+            });
             io.voice_config_tx
                 .send_replace(voice_settings::config(config));
         }
@@ -198,6 +207,20 @@ pub(super) fn execute_settings(
                     .ui_tx
                     .send_modify(|ui| ui.voice_settings.error = Some(error.to_string())),
             }
+        }
+        SettingsEffect::Apply(change) => {
+            if let Err(error) = config.update(|c| c.device.apply(change)) {
+                eprintln!("không lưu được cài đặt thiết bị: {error}");
+            }
+            let device = config.get().device.clone();
+            io.ui_tx.send_modify(|ui| ui.settings = device);
+        }
+        SettingsEffect::ReminderSpeech(on) => {
+            if let Err(error) = config.update(|c| c.voice.reminder_speech = on) {
+                eprintln!("không lưu được cài đặt đọc Reminder: {error}");
+            }
+            io.ui_tx
+                .send_modify(|ui| ui.voice_settings.reminder_speech = on);
         }
         SettingsEffect::Connection(connection) => io
             .ui_tx

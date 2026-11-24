@@ -107,6 +107,7 @@ async fn creating_event_replies_after_source_and_focuses_event() {
         config,
         Store::in_memory().unwrap(),
         Ports {
+            device: std::sync::Arc::new(hub_core::NoDevice),
             home: Arc::new(hub_core::HomeAssistant::default()),
             images: Arc::new(hub_core::HttpImageFetcher),
             clock: Arc::new(TestClock::at(

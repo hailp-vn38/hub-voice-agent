@@ -1,7 +1,9 @@
-use super::{calendar, center, countdowns, home, photos, reminders, timers, voice, weather};
+use super::{
+    calendar, center, countdowns, home, photos, reminders, settings, timers, voice, weather,
+};
 use crate::App;
 use crate::audio::Levels;
-use hub_core::{HubView, PhotoState, UiState, VoiceSettingsState};
+use hub_core::{DeviceSettings, DisplayState, HubView, PhotoState, UiState, VoiceSettingsState};
 use slint::Weak;
 use tokio::sync::watch;
 
@@ -118,6 +120,7 @@ pub fn spawn_bridge(
     tokio::spawn(async move {
         let mut shown: Option<HubView> = None;
         let mut shown_voice_settings: Option<VoiceSettingsState> = None;
+        let mut shown_device: Option<(DeviceSettings, DisplayState)> = None;
         while rx.changed().await.is_ok() {
             let state = rx.borrow_and_update().clone();
             let view = hub_core::present(&state);
@@ -128,7 +131,14 @@ pub fn spawn_bridge(
                         .is_none_or(|previous| previous.ota_url != state.voice_settings.ota_url);
                     (state.voice_settings.clone(), url_changed)
                 });
-            let updates = diff(shown.as_ref(), &view, voice_settings);
+            let mut updates = diff(shown.as_ref(), &view, voice_settings);
+            let device = (state.settings.clone(), state.display.clone());
+            if shown_device.as_ref() != Some(&device) {
+                shown_device = Some(device.clone());
+                updates.push(Box::new(move |app| {
+                    settings::apply(app, &device.0, &device.1)
+                }));
+            }
             shown = Some(view);
             shown_voice_settings = Some(state.voice_settings);
             if updates.is_empty() {

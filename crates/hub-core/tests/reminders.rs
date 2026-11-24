@@ -49,6 +49,7 @@ async fn reminder_create_through_run() {
         config,
         Store::open(&dir).unwrap(),
         Ports {
+            device: std::sync::Arc::new(hub_core::NoDevice),
             images: Arc::new(hub_core::HttpImageFetcher),
             clock: Arc::new(TestClock::at(start.clone())),
             system: Arc::new(support::Synced),

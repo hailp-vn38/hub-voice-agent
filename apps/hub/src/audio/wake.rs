@@ -5,6 +5,7 @@ use std::{
 };
 
 use anyhow::{Context, Result, anyhow, ensure};
+use hub_core::Sensitivity;
 use ort::{session::Session, value::Tensor};
 
 const MODEL_BLOCK_SAMPLES: usize = 1_280;
@@ -18,6 +19,16 @@ const WAKE_SUPPRESSION: Duration = Duration::from_secs(2);
 
 pub(super) trait WakeDetector {
     fn push(&mut self, pcm: &[i16]) -> bool;
+    /// Độ nhạy càng cao thì ngưỡng điểm càng thấp. Mặc định không làm gì.
+    fn set_sensitivity(&mut self, _sensitivity: Sensitivity) {}
+}
+
+fn threshold(sensitivity: Sensitivity) -> f32 {
+    match sensitivity {
+        Sensitivity::Low => 0.7,
+        Sensitivity::Medium => WAKE_THRESHOLD,
+        Sensitivity::High => 0.3,
+    }
 }
 
 pub(super) fn load_default() -> Option<Box<dyn WakeDetector>> {
@@ -169,16 +180,29 @@ impl WakeDetector for OpenWakeWord {
             }
         }
     }
+
+    fn set_sensitivity(&mut self, sensitivity: Sensitivity) {
+        self.debouncer.threshold = threshold(sensitivity);
+    }
 }
 
-#[derive(Default)]
 struct WakeDebouncer {
     last_wake: Option<Instant>,
+    threshold: f32,
+}
+
+impl Default for WakeDebouncer {
+    fn default() -> Self {
+        Self {
+            last_wake: None,
+            threshold: WAKE_THRESHOLD,
+        }
+    }
 }
 
 impl WakeDebouncer {
     fn accept(&mut self, score: f32, now: Instant) -> bool {
-        if score < WAKE_THRESHOLD
+        if score < self.threshold
             || self
                 .last_wake
                 .is_some_and(|last_wake| now.duration_since(last_wake) < WAKE_SUPPRESSION)

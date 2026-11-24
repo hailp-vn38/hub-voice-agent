@@ -67,6 +67,7 @@ async fn timed_out_calendar_job_replies_to_real_tool_call() {
         config,
         Store::in_memory().unwrap(),
         Ports {
+            device: std::sync::Arc::new(hub_core::NoDevice),
             images: Arc::new(hub_core::HttpImageFetcher),
             home: Arc::new(hub_core::HomeAssistant::default()),
             clock: Arc::new(TestClock::at(

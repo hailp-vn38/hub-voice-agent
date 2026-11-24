@@ -60,6 +60,7 @@ impl Hub {
             hub_core::Store::in_memory().unwrap(),
             Arc::new(hub_core::OpenMeteo::default()),
             false,
+            Arc::new(hub_core::NoDevice),
         )
     }
 
@@ -69,12 +70,30 @@ impl Hub {
             store,
             Arc::new(hub_core::OpenMeteo::default()),
             false,
+            Arc::new(hub_core::NoDevice),
         )
     }
 
     #[allow(dead_code)]
     pub fn start_with_weather(start: Zoned, weather: Arc<dyn hub_core::WeatherSource>) -> Self {
-        Self::start_inner(start, hub_core::Store::in_memory().unwrap(), weather, true)
+        Self::start_inner(
+            start,
+            hub_core::Store::in_memory().unwrap(),
+            weather,
+            true,
+            Arc::new(hub_core::NoDevice),
+        )
+    }
+
+    #[allow(dead_code)]
+    pub fn start_with_device(start: Zoned, device: Arc<dyn hub_core::Device>) -> Self {
+        Self::start_inner(
+            start,
+            hub_core::Store::in_memory().unwrap(),
+            Arc::new(hub_core::OpenMeteo::default()),
+            false,
+            device,
+        )
     }
 
     fn start_inner(
@@ -82,6 +101,7 @@ impl Hub {
         store: hub_core::Store,
         weather: Arc<dyn hub_core::WeatherSource>,
         configure_weather: bool,
+        device: Arc<dyn hub_core::Device>,
     ) -> Self {
         let (voice_tx, voice_rx) = mpsc::channel(16);
         let (voice_event_tx, voice_event_rx) = mpsc::channel(16);
@@ -104,6 +124,7 @@ impl Hub {
             config,
             store,
             Ports {
+                device,
                 clock: Arc::new(TestClock::at(start)),
                 calendar: Arc::new(hub_core::GoogleCalendar::default()),
                 weather,

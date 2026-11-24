@@ -54,6 +54,7 @@ async fn repeated_timer_start_advances_focus_serial_for_each_focus() {
         config,
         hub_core::Store::in_memory().unwrap(),
         hub_core::Ports {
+            device: std::sync::Arc::new(hub_core::NoDevice),
             clock: Arc::new(crate::support::TestClock::at(start)),
             calendar: Arc::new(hub_core::GoogleCalendar::default()),
             weather: Arc::new(hub_core::OpenMeteo::default()),

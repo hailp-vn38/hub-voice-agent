@@ -1,7 +1,7 @@
 use crate::audio::Levels;
 use crate::{
     App, ConnectionSettings, Response, SettingsData, Speaker, StatusBar, StepState, ToolStep,
-    ToolTrail, Voice, VoiceState, Word,
+    ToolTrail, Voice, VoiceSettingsView, VoiceState, Word,
 };
 use hub_core::{
     ResponseSpeaker, ToolTrailState, VoiceSettingsState, VoiceState as CoreVoiceState,
@@ -91,6 +91,10 @@ pub(super) fn apply_voice_settings(app: &App, voice: &VoiceSettingsState, url_ch
         enrolled: !voice.enrolling,
         enrollment_code: voice.activation.as_deref().unwrap_or("").into(),
         ..settings.get_connection()
+    });
+    settings.set_voice(VoiceSettingsView {
+        read_reminder: voice.reminder_speech,
+        ..settings.get_voice()
     });
 }
 

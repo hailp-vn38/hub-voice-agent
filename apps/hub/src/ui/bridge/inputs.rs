@@ -223,5 +223,6 @@ pub fn connect_inputs(app: &App, input_tx: mpsc::Sender<UserInput>) {
     super::countdowns::connect_inputs(app, inputs.clone());
     super::home::connect_inputs(app, inputs.clone());
     super::photos::connect_inputs(app, inputs.clone());
+    super::settings::connect_inputs(app, inputs.clone());
     super::center::connect_inputs(app, inputs);
 }

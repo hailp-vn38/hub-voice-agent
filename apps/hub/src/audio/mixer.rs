@@ -1,5 +1,13 @@
 use anyhow::{Context, Result};
 use hub_core::{AudioCommand, Sound};
+
+/// Chuông lặp cho tới khi bị dừng; nghe thử và Ding phát một lần.
+fn repeats(sound: &Sound) -> bool {
+    matches!(
+        sound,
+        Sound::TimerChime | Sound::ReminderChime | Sound::PingChime
+    )
+}
 use opus::{Channels, Decoder};
 use rubato::{Async, Resampler};
 use std::{collections::VecDeque, sync::Arc};
@@ -23,6 +31,8 @@ pub(super) struct Mixer {
     alert: Option<SoundPlayback>,
     ding: Option<SoundPlayback>,
     level: f32,
+    /// Âm lượng chung 0..=1.
+    volume: f32,
 }
 
 impl Mixer {
@@ -39,6 +49,7 @@ impl Mixer {
             alert: None,
             ding: None,
             level: 0.0,
+            volume: 1.0,
         })
     }
 
@@ -55,9 +66,8 @@ impl Mixer {
             }
             AudioCommand::Play(sound) => self.play(sound),
             AudioCommand::StopSound(sound) => self.stop_sound(sound),
-            AudioCommand::Mic { .. }
-            | AudioCommand::SetVolume(_)
-            | AudioCommand::SetWakeWord { .. } => {}
+            AudioCommand::SetVolume(percent) => self.volume = f32::from(percent.min(100)) / 100.0,
+            AudioCommand::Mic { .. } | AudioCommand::SetWakeWord { .. } => {}
         }
     }
 
@@ -86,7 +96,8 @@ impl Mixer {
             } else {
                 CHIME_WITHOUT_TTS
             };
-            *sample = (tts + (alert.unwrap_or_default() + ding.unwrap_or_default()) * gain)
+            *sample = ((tts + (alert.unwrap_or_default() + ding.unwrap_or_default()) * gain)
+                * self.volume)
                 .clamp(-1.0, 1.0);
         }
 
@@ -135,7 +146,7 @@ impl Mixer {
         let Some(samples) = self.sounds.samples(&sound) else {
             return;
         };
-        let repeat = matches!(sound, Sound::TimerChime | Sound::ReminderChime);
+        let repeat = repeats(&sound);
         let playback = SoundPlayback {
             sound,
             samples,
@@ -145,24 +156,26 @@ impl Mixer {
             rate: self.rate as usize,
         };
         match playback.sound {
-            Sound::Ding => self.ding = Some(playback),
-            Sound::TimerChime | Sound::ReminderChime => self.alert = Some(playback),
+            Sound::Ding | Sound::Preview(_) => self.ding = Some(playback),
+            Sound::TimerChime | Sound::ReminderChime | Sound::PingChime => {
+                self.alert = Some(playback)
+            }
             Sound::ToolDone => {}
         }
     }
 
     fn stop_sound(&mut self, sound: Sound) {
         match sound {
-            Sound::Ding => {
+            Sound::Ding | Sound::Preview(_) => {
                 if self
                     .ding
                     .as_ref()
-                    .is_some_and(|playing| playing.sound == Sound::Ding)
+                    .is_some_and(|playing| playing.sound == sound)
                 {
                     self.ding = None;
                 }
             }
-            Sound::TimerChime | Sound::ReminderChime => {
+            Sound::TimerChime | Sound::ReminderChime | Sound::PingChime => {
                 if self
                     .alert
                     .as_ref()

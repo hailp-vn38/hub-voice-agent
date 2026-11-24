@@ -1,4 +1,5 @@
 mod audio;
+mod display;
 pub(crate) mod effects;
 mod hub;
 pub(crate) mod jobs;

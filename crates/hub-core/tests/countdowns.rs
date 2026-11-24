@@ -49,6 +49,7 @@ async fn countdown_updates_at_midnight_through_run() {
         config,
         Store::open(&dir).unwrap(),
         Ports {
+            device: std::sync::Arc::new(hub_core::NoDevice),
             clock: Arc::new(TestClock::at(start.clone())),
             calendar: Arc::new(hub_core::GoogleCalendar::default()),
             weather: Arc::new(hub_core::OpenMeteo::default()),
@@ -191,6 +192,7 @@ async fn countdown_updates_at_midnight_through_run() {
         hub_core::ConfigStore::open(&dir).unwrap(),
         Store::open(&dir).unwrap(),
         Ports {
+            device: std::sync::Arc::new(hub_core::NoDevice),
             clock: Arc::new(TestClock::at(restart)),
             calendar: Arc::new(hub_core::GoogleCalendar::default()),
             weather: Arc::new(hub_core::OpenMeteo::default()),

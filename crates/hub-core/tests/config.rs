@@ -44,3 +44,20 @@ fn saving_preserves_external_fields_and_restricts_file_permissions() {
         );
     }
 }
+
+#[test]
+fn device_settings_default_for_old_files_and_survive_restart() {
+    use hub_core::{DeviceSettings, SettingChange, TextSize};
+    let dir = tempfile::tempdir().unwrap();
+    let mut store = ConfigStore::open(dir.path()).unwrap();
+    assert_eq!(store.get().device, DeviceSettings::default());
+    store
+        .update(|c| c.device.apply(SettingChange::TextSize(TextSize::Large)))
+        .unwrap();
+    store
+        .update(|c| c.device.apply(SettingChange::Volume(0.25)))
+        .unwrap();
+    let reopened = ConfigStore::open(dir.path()).unwrap();
+    assert_eq!(reopened.get().device.text_size, TextSize::Large);
+    assert_eq!(reopened.get().device.volume, 0.25);
+}

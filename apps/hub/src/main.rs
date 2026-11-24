@@ -6,6 +6,7 @@ compile_error!(
 compile_error!("enable exactly one backend feature: `desktop` (default) or `pi`");
 
 mod audio;
+mod device;
 mod ui;
 use hub_core::{ConfigStore, Io, Ports, SystemClock, UiState};
 use slint::ComponentHandle;
@@ -63,7 +64,7 @@ fn main() -> anyhow::Result<()> {
             let audio_rx = audio.events;
             ui::spawn_network(weak.clone(), SETUP_PORT);
             ui::spawn_bridge(weak, ui_rx, audio.levels);
-            let ports = Ports { clock: Arc::new(SystemClock), system: Arc::new(HostSystem), calendar: Arc::new(hub_core::GoogleCalendar::default()), weather: Arc::new(hub_core::OpenMeteo::default()), home: Arc::new(hub_core::HomeAssistant::default()), images: Arc::new(hub_core::HttpImageFetcher) };
+            let ports = Ports { clock: Arc::new(SystemClock), system: Arc::new(HostSystem), device: Arc::new(device::HostDevice::new()), calendar: Arc::new(hub_core::GoogleCalendar::default()), weather: Arc::new(hub_core::OpenMeteo::default()), home: Arc::new(hub_core::HomeAssistant::default()), images: Arc::new(hub_core::HttpImageFetcher) };
             tokio::select! {
                 result = hub_core::run(config, store, ports, Io { voice_config_tx: config_tx, voice_tx, voice_rx, audio_tx, audio_rx, input_rx, ui_tx }) => result,
                 _ = stop_rx => Ok(()),

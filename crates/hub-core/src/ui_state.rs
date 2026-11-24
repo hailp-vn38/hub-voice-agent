@@ -23,6 +23,8 @@ pub struct UiState {
     pub countdowns: Vec<crate::CountdownView>,
     pub view: crate::ViewState,
     pub voice_settings: VoiceSettingsState,
+    pub settings: crate::DeviceSettings,
+    pub display: DisplayState,
     pub timers: Vec<crate::Timer>,
     pub voice: VoiceUiState,
     pub tool_trail: Vec<ToolTrailStep>,
@@ -53,6 +55,8 @@ impl Default for UiState {
             countdowns: Vec::new(),
             view: crate::ViewState::default(),
             voice_settings: VoiceSettingsState::default(),
+            settings: crate::DeviceSettings::default(),
+            display: DisplayState::default(),
             timers: Vec::new(),
             voice: VoiceUiState::default(),
             tool_trail: Vec::new(),
@@ -104,6 +108,15 @@ pub struct UiEvents {
     pub spawn: u64,
 }
 
+/// Màn hình thực tế của thiết bị, khác với cài đặt đã lưu.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct DisplayState {
+    pub resolutions: Vec<String>,
+    pub resolution: Option<String>,
+    /// Giây còn lại để giữ độ phân giải mới; 0 = không có phép thử.
+    pub resolution_confirm: u32,
+}
+
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct VoiceSettingsState {
     pub ota_url: String,
@@ -112,6 +125,7 @@ pub struct VoiceSettingsState {
     pub activation: Option<String>,
     pub error: Option<String>,
     pub enrolling: bool,
+    pub reminder_speech: bool,
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]

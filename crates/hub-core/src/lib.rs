@@ -4,6 +4,8 @@ mod alerts;
 mod audio;
 mod config;
 mod conversation;
+mod device;
+mod device_settings;
 mod features;
 mod lunar;
 mod selector;
@@ -21,10 +23,12 @@ mod voice_settings;
 use std::sync::Arc;
 
 pub use alerts::Alert;
-pub use audio::{AudioCommand, AudioEvent, Sensitivity, Sound};
+pub use audio::{AudioCommand, AudioEvent, SOUND_NAMES, Sensitivity, Sound, Tone};
 pub use config::{
     CalendarSettings, Config, ConfigStore, HomeSettings, VoiceSettings, WeatherSettings,
 };
+pub use device::{Device, NoDevice};
+pub use device_settings::{AmbientAfter, DeviceSettings, SettingChange, TextSize};
 pub use ports::{
     CalendarDelta, CalendarEvent, CalendarFuture, CalendarQuery, CalendarSource, Clock,
     FetchedImage, HomeDomain, HomeEntity, HomeEvent, HomeSource, ImageFetcher, NewCalendarEvent,
@@ -42,8 +46,8 @@ pub use present::{
 pub use runtime::run;
 use tokio::sync::{mpsc, watch};
 pub use ui_state::{
-    PhotoFetch, PhotoFetchState, ResponseSpeaker, ToolTrailState, ToolTrailStep, UiEvents, UiState,
-    VoiceSettingsState, VoiceState, VoiceUiState,
+    DisplayState, PhotoFetch, PhotoFetchState, ResponseSpeaker, ToolTrailState, ToolTrailStep,
+    UiEvents, UiState, VoiceSettingsState, VoiceState, VoiceUiState,
 };
 pub use view::{Focus, Screen, ViewState};
 use voice_client::{VoiceCommand, VoiceConfig, VoiceEvent};
@@ -56,6 +60,7 @@ pub struct Ports {
     pub home: Arc<dyn HomeSource>,
     pub images: Arc<dyn ImageFetcher>,
     pub system: Arc<dyn System>,
+    pub device: Arc<dyn Device>,
 }
 
 pub enum UserInput {
@@ -76,6 +81,10 @@ pub enum UserInput {
     Activity,
     OrbTapped,
     SaveVoiceUrl(String),
+    Setting(SettingChange),
+    KeepResolution,
+    PreviewSound(String),
+    ReminderSpeech(bool),
     VoiceConnect,
     Setup(
         setup_web::Update,

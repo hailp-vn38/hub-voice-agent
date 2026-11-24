@@ -21,6 +21,7 @@ pub(super) struct Capture {
     queued_events: Vec<AudioEvent>,
     encoder: Encoder,
     mic_on: bool,
+    wake_enabled: bool,
     level: f32,
 }
 
@@ -36,6 +37,7 @@ impl Capture {
             encoder: Encoder::new(SAMPLE_RATE, Channels::Mono, Application::Voip)
                 .expect("16 kHz mono Opus is supported"),
             mic_on: false,
+            wake_enabled: true,
             level: 0.0,
         }
     }
@@ -51,6 +53,15 @@ impl Capture {
                 self.mic_frame.clear();
                 self.preroll.clear();
                 self.queued_events.clear();
+            }
+            AudioCommand::SetWakeWord {
+                enabled,
+                sensitivity,
+            } => {
+                self.wake_enabled = *enabled;
+                if let Some(detector) = &mut self.wake {
+                    detector.set_sensitivity(*sensitivity);
+                }
             }
             _ => {}
         }
@@ -71,10 +82,11 @@ impl Capture {
             self.wake_block[self.wake_block_len] = sample;
             self.wake_block_len += 1;
             if self.wake_block_len == WAKE_BLOCK_SAMPLES {
-                if self
-                    .wake
-                    .as_mut()
-                    .is_some_and(|detector| detector.push(&self.wake_block))
+                if self.wake_enabled
+                    && self
+                        .wake
+                        .as_mut()
+                        .is_some_and(|detector| detector.push(&self.wake_block))
                 {
                     events.push(AudioEvent::WakeWord);
                 }

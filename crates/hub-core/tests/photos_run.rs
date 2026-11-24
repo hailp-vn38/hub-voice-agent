@@ -68,6 +68,7 @@ async fn show_image_displays_downloaded_photo() {
         config,
         Store::open(dir.path()).unwrap(),
         Ports {
+            device: std::sync::Arc::new(hub_core::NoDevice),
             home: Arc::new(hub_core::HomeAssistant::default()),
             clock: Arc::new(TestClock::at(
                 "2026-11-23T12:00:00+07:00[Asia/Ho_Chi_Minh]"

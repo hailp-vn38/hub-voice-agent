@@ -63,6 +63,7 @@ async fn timers_are_saved_reloaded_and_limit_is_reported() {
         config,
         Store::open(&dir).unwrap(),
         Ports {
+            device: std::sync::Arc::new(hub_core::NoDevice),
             clock: Arc::new(TestClock::at(start.clone())),
             calendar: Arc::new(hub_core::GoogleCalendar::default()),
             weather: Arc::new(hub_core::OpenMeteo::default()),
@@ -187,6 +188,7 @@ async fn timers_are_saved_reloaded_and_limit_is_reported() {
         config,
         Store::open(&dir).unwrap(),
         Ports {
+            device: std::sync::Arc::new(hub_core::NoDevice),
             clock: Arc::new(TestClock::at(start)),
             calendar: Arc::new(hub_core::GoogleCalendar::default()),
             weather: Arc::new(hub_core::OpenMeteo::default()),

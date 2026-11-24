@@ -7,10 +7,15 @@ pub enum Alert {
     Reminder(Reminder),
 }
 impl Alert {
-    fn sound(&self) -> Sound {
-        match self {
-            Self::Timer(_) => Sound::TimerChime,
-            Self::Reminder(_) => Sound::ReminderChime,
+    fn sound(&self, settings: &crate::DeviceSettings) -> Sound {
+        let (picked, default) = match self {
+            Self::Timer(_) => (&settings.timer_sound, Sound::TimerChime),
+            Self::Reminder(_) => (&settings.reminder_sound, Sound::ReminderChime),
+        };
+        if picked == "Ping" {
+            Sound::PingChime
+        } else {
+            default
         }
     }
 }
@@ -18,6 +23,7 @@ impl Alert {
 pub(crate) struct Alerts {
     queue: VecDeque<Alert>,
     active: Option<(Alert, i64)>,
+    playing: Option<Sound>,
 }
 impl Alerts {
     pub fn active(&self) -> Option<&Alert> {
@@ -45,7 +51,7 @@ impl Alerts {
         let Some((alert, _)) = self.active.take() else {
             return (None, Vec::new());
         };
-        let sound = alert.sound();
+        let sound = self.playing.take();
         (
             Some(alert),
             vec![
@@ -53,7 +59,8 @@ impl Alerts {
                     ui.alert = None;
                     true
                 })),
-                Effect::Audio(AudioCommand::StopSound(sound)),
+                // Dừng đúng chuông đã phát, dù cài đặt có đổi từ lúc báo.
+                Effect::Audio(AudioCommand::StopSound(sound.unwrap_or(Sound::TimerChime))),
             ],
         )
     }
@@ -62,6 +69,7 @@ impl Alerts {
         now: i64,
         turn_active: bool,
         synced: bool,
+        settings: &crate::DeviceSettings,
     ) -> (Option<Alert>, Vec<Effect>) {
         let (dismissed, mut effects) = if self.active.as_ref().is_some_and(|(alert, since)| {
             now.saturating_sub(*since)
@@ -80,7 +88,8 @@ impl Alerts {
             && let Some(alert) = self.queue.pop_front()
         {
             self.active = Some((alert.clone(), now));
-            let sound = alert.sound();
+            let sound = alert.sound(settings);
+            self.playing = Some(sound.clone());
             effects.push(Effect::Ui(Box::new(move |ui| {
                 ui.alert = Some(alert);
                 ui.events.alert = ui.events.alert.saturating_add(1);

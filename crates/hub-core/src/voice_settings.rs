@@ -28,6 +28,7 @@ pub(crate) fn initial(store: &ConfigStore) -> VoiceSettingsState {
             .unwrap_or_else(|| DEFAULT_OTA_URL.into()),
         device_id: voice.device_id.clone(),
         status_label: "Chưa cấu hình".into(),
+        reminder_speech: voice.reminder_speech,
         ..Default::default()
     }
 }

@@ -127,3 +127,18 @@ fn rms(samples: &[i16]) -> f32 {
         .sum::<f32>();
     (energy / samples.len() as f32).sqrt()
 }
+
+#[test]
+fn wake_word_can_be_disabled_by_command() {
+    let detector = FakeWakeDetector {
+        detect_on_block: 1,
+        blocks_seen: 0,
+    };
+    let mut capture = Capture::new(Some(Box::new(detector)));
+    capture.apply(&AudioCommand::SetWakeWord {
+        enabled: false,
+        sensitivity: hub_core::Sensitivity::Medium,
+    });
+    let events = capture.push(&vec![0; WAKE_BLOCK_SAMPLES]);
+    assert!(events.is_empty());
+}
