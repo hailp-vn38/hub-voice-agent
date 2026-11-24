@@ -27,7 +27,7 @@ export component Shell inherits Rectangle {
     private property <Screen> shown: Nav.screen;
     private property <bool> is-feature: shown != Screen.center && shown != Screen.menu;
     // Thanh điều hướng trái dùng chung: hiện/ẩn mờ dần, vị trí không đổi.
-    private property <bool> has-rail: shown == Screen.center || shown == Screen.menu || shown == Screen.timers || shown == Screen.reminders || shown == Screen.calendar;
+    private property <bool> has-rail: shown == Screen.center || shown == Screen.menu || shown == Screen.timers || shown == Screen.countdowns || shown == Screen.reminders || shown == Screen.calendar;
     private property <float> rail-p: has-rail ? 1 : 0;
     animate rail-p { duration: Theme.anim-screen; easing: ease-out; }
     // Chấm trang và độ đậm chấm theo màn, cũng mờ dần.

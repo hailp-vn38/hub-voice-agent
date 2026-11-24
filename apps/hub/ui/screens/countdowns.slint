@@ -1,12 +1,9 @@
 import { Theme } from "../theme.slint";
-import { Nav } from "../contract/nav.slint";
-import { BackNav } from "../components/back-nav.slint";
 import { Countdown, CountdownUnit, CountdownsData } from "../contract/countdowns.slint";
-import { Card } from "../components/card.slint";
+import { Backdrop } from "../components/home/backdrop.slint";
 import { SpawnIn } from "../components/spawn.slint";
 import { Confetti } from "../components/confetti.slint";
 import { ActionButton } from "../components/action-button.slint";
-import { Dock } from "../components/orb.slint";
 
 global CdFmt {
     pure public function show-value(c: Countdown) -> string {
@@ -77,129 +74,157 @@ component FocusPulse inherits Rectangle {
     private property <duration> t0: -10000ms;
     private property <float> p: clamp((root.now - root.t0) / 1500ms, 0, 1);
     changed serial => { if (CountdownsData.focus == root.key) { root.t0 = animation-tick(); } }
-    border-radius: Theme.radius;
-    border-width: 4px;
+    border-radius: Theme.radius-panel;
+    border-width: 2 * Theme.unit;
     border-color: Theme.accent;
     opacity: 1 - root.p;
     visible: root.p < 1;
 }
 
 export component Countdowns inherits Rectangle {
-    private property <length> row-h: 150px;
-    // Chạm mốc ở danh sách: mốc chính phóng lên từ chỗ ô vừa chạm.
+    private property <length> u: Theme.unit;
+    private property <float> cw: self.width / root.u;
+    private property <float> ch: self.height / root.u;
+    private property <float> left: 130;
+    private property <float> right: root.cw - 30;
+    private property <float> top: 96;
+    private property <float> bottom: root.ch - 92;
+    private property <float> main-w: (root.right - root.left - 16) * 0.57;
     private property <duration> now: animation-tick();
     private property <duration> promote-t0: -10000ms;
     private property <length> from-x;
     private property <length> from-y;
     private property <float> q: clamp((root.now - root.promote-t0) / 400ms, 0, 1);
     private property <float> qe: 1 - (1 - root.q) * (1 - root.q);
-    VerticalLayout {
-        padding: Theme.space-l;
-        spacing: Theme.space-m;
+
+    Backdrop { dim: 0.35; }
+
+    Text {
+        x: root.left * root.u;
+        y: 42 * root.u;
+        width: (root.right - root.left) * root.u;
+        height: 40 * root.u;
+        text: CountdownsData.title;
+        color: Theme.text;
+        font-size: Theme.type-page-title;
+        font-weight: 600;
+        vertical-alignment: center;
+        overflow: elide;
+    }
+
+    if !CountdownsData.has-main: Rectangle {
+        x: root.left * root.u;
+        y: root.top * root.u;
+        width: (root.right - root.left) * root.u;
+        height: (root.bottom - root.top) * root.u;
+        border-radius: Theme.radius-panel;
+        background: Theme.glass;
+        border-width: 1 * root.u;
+        border-color: Theme.border;
+        VerticalLayout {
+            alignment: center;
+            spacing: 12 * root.u;
+            Image { height: min(160 * root.u, parent.height * 0.5); source: @image-url("../../assets/home/mascot/assistant.png"); image-fit: contain; }
+            Text { text: "Chưa có mốc đếm ngược"; color: Theme.text; font-size: Theme.type-section; font-weight: 600; horizontal-alignment: center; }
+            Text { text: "Thử nói: “Hey Jarvis, đếm ngược đến Tết”"; color: Theme.text-dim; font-size: Theme.type-body; horizontal-alignment: center; wrap: word-wrap; }
+        }
+    }
+
+    if CountdownsData.has-main: SpawnIn {
+        x: root.left * root.u;
+        y: root.top * root.u;
+        width: root.main-w * root.u;
+        height: (root.bottom - root.top) * root.u;
+        key: CountdownsData.main.key;
+        opacity: CountdownsData.main.fading ? 0 : 1;
+        animate opacity { duration: 400ms; easing: ease-out; }
         Rectangle {
-            height: Theme.touch-min;
-            Text {
-                text: "‹ " + CountdownsData.title;
-                color: Theme.text;
-                font-size: Theme.font-title;
-                horizontal-alignment: left;
-                vertical-alignment: center;
-            }
-            TouchArea { width: 480px; x: 0; clicked => { Nav.navigate(BackNav.origin); } }
-        }
-        if !CountdownsData.has-main: Text {
-            text: "Hey Jarvis, đếm ngược đến Tết";
-            color: Theme.text-dim;
-            font-size: Theme.font-body;
-            horizontal-alignment: center;
-            vertical-alignment: center;
-            vertical-stretch: 1;
-        }
-        if CountdownsData.has-main: HorizontalLayout {
-            spacing: Theme.space-l;
-            vertical-stretch: 1;
-            main-card := SpawnIn {
-                key: CountdownsData.main.key;
-                horizontal-stretch: 3;
-                opacity: CountdownsData.main.fading ? 0 : 1;
-                animate opacity { duration: 400ms; easing: ease-out; }
-                Card {
-                    x: root.from-x * (1 - root.qe);
-                    y: root.from-y * (1 - root.qe);
-                    transform-scale: 0.5 + 0.5 * root.qe;
-                    VerticalLayout {
-                        padding: Theme.space-l;
-                        spacing: Theme.space-m;
-                        Text { text: CountdownsData.main.label; color: Theme.text-dim; font-size: Theme.font-title; }
-                        FlipText {
-                            key: CountdownsData.main.key;
-                            num: CountdownsData.main.value.to-float();
-                            text: CdFmt.show-value(CountdownsData.main);
-                            text-color: CdFmt.value-color(CountdownsData.main);
-                            font-size: Theme.font-hero;
-                            flip-enabled: CountdownsData.main.unit == CountdownUnit.days;
-                            vertical-stretch: 1;
-                        }
-                        Text {
-                            text: CountdownsData.main.target + (CountdownsData.main.lunar != "" ? " · " + CountdownsData.main.lunar : "");
-                            color: Theme.text;
-                            font-size: Theme.font-body;
-                        }
-                        Rectangle {
-                            height: 16px;
-                            border-radius: 8px;
-                            background: Theme.background;
-                            Rectangle {
-                                x: 0;
-                                width: parent.width * clamp(CountdownsData.main.progress, 0, 1);
-                                border-radius: 8px;
-                                background: Theme.accent;
-                            }
-                        }
-                        Text { text: CountdownsData.main.progress-text; color: Theme.text-dim; font-size: Theme.font-small; }
-                    }
-                    FocusPulse { key: CountdownsData.main.key; }
-                    TouchArea { clicked => { CountdownsData.open-detail(); } }
+            x: root.from-x * (1 - root.qe);
+            y: root.from-y * (1 - root.qe);
+            transform-scale: 0.5 + 0.5 * root.qe;
+            border-radius: Theme.radius-panel;
+            background: @linear-gradient(135deg, Theme.accent.darker(0.55) 0%, Theme.glass 100%);
+            border-width: 1 * root.u;
+            border-color: Theme.accent.with-alpha(0.65);
+            VerticalLayout {
+                padding: 28 * root.u;
+                spacing: 12 * root.u;
+                Text { text: "MỐC ĐẾM NGƯỢC"; color: Theme.accent-cyan; font-size: Theme.type-caption; font-weight: 600; }
+                Text { text: CountdownsData.main.label; color: Theme.text; font-size: Theme.type-section; font-weight: 600; overflow: elide; }
+                FlipText {
+                    key: CountdownsData.main.key;
+                    num: CountdownsData.main.value.to-float();
+                    text: CdFmt.show-value(CountdownsData.main);
+                    text-color: CdFmt.value-color(CountdownsData.main);
+                    font-size: CountdownsData.main.unit == CountdownUnit.today ? Theme.type-page-title : Theme.type-clock;
+                    flip-enabled: CountdownsData.main.unit == CountdownUnit.days;
+                    vertical-stretch: 1;
                 }
+                Text {
+                    text: CountdownsData.main.target + (CountdownsData.main.lunar != "" ? " · " + CountdownsData.main.lunar : "");
+                    color: Theme.text; font-size: Theme.type-body; overflow: elide;
+                }
+                Rectangle {
+                    height: 8 * root.u;
+                    border-radius: self.height / 2;
+                    background: Theme.background.with-alpha(0.65);
+                    Rectangle { x: 0; width: parent.width * clamp(CountdownsData.main.progress, 0, 1); border-radius: parent.border-radius; background: Theme.accent-cyan; }
+                }
+                Text { text: CountdownsData.main.progress-text; color: Theme.text-dim; font-size: Theme.type-caption; }
             }
-            Rectangle {
-                horizontal-stretch: 2;
-                for c[i] in CountdownsData.others: Rectangle {
-                    y: i * (root.row-h + Theme.space-m);
-                    height: root.row-h;
-                    width: parent.width;
-                    opacity: c.fading ? 0 : 1;
-                    animate y { duration: 350ms; easing: ease-out; }
-                    animate opacity { duration: 400ms; easing: ease-out; }
-                    SpawnIn {
+            FocusPulse { key: CountdownsData.main.key; }
+            TouchArea { clicked => { CountdownsData.open-detail(); } }
+        }
+    }
+
+    if CountdownsData.has-main: Rectangle {
+        x: (root.left + root.main-w + 16) * root.u;
+        y: root.top * root.u;
+        width: (root.right - root.left - root.main-w - 16) * root.u;
+        height: (root.bottom - root.top) * root.u;
+        border-radius: Theme.radius-panel;
+        background: Theme.glass;
+        border-width: 1 * root.u;
+        border-color: Theme.border;
+        clip: true;
+        VerticalLayout {
+            padding: 18 * root.u;
+            spacing: 12 * root.u;
+            Text { text: "Các mốc khác"; color: Theme.text; font-size: Theme.type-card-title; font-weight: 600; }
+            if CountdownsData.others.length == 0: Text {
+                text: "Các mốc tiếp theo sẽ xuất hiện ở đây"; color: Theme.text-dim; font-size: Theme.type-body; wrap: word-wrap; vertical-stretch: 1;
+            }
+            if CountdownsData.others.length > 0: Flickable {
+                vertical-stretch: 1;
+                content-height: rows.preferred-height;
+                rows := VerticalLayout {
+                    spacing: 8 * root.u;
+                    for c in CountdownsData.others: SpawnIn {
+                        height: 78 * root.u;
                         key: c.key;
-                        Card {
+                        opacity: c.fading ? 0 : 1;
+                        animate opacity { duration: 400ms; easing: ease-out; }
+                        Rectangle {
+                            border-radius: Theme.radius-s;
+                            background: touch.pressed ? Theme.card : Theme.card.with-alpha(0.6);
+                            border-width: 1 * root.u;
+                            border-color: Theme.border.with-alpha(0.6);
                             HorizontalLayout {
-                                padding: Theme.space-m;
-                                spacing: Theme.space-m;
+                                padding: 14 * root.u;
+                                spacing: 12 * root.u;
                                 VerticalLayout {
+                                    spacing: 4 * root.u;
                                     alignment: center;
-                                    Text { text: c.label; color: Theme.text; font-size: Theme.font-body; overflow: elide; }
-                                    Text {
-                                        text: c.target + (c.repeat-text != "" ? " · " + c.repeat-text : "");
-                                        color: Theme.text-dim;
-                                        font-size: Theme.font-small;
-                                        overflow: elide;
-                                    }
+                                    Text { text: c.label; color: Theme.text; font-size: Theme.type-body; font-weight: 600; overflow: elide; }
+                                    Text { text: c.target + (c.repeat-text != "" ? " · " + c.repeat-text : ""); color: Theme.text-dim; font-size: Theme.type-caption; overflow: elide; }
                                 }
-                                Text {
-                                    text: CdFmt.show-value(c);
-                                    color: CdFmt.value-color(c);
-                                    font-size: Theme.font-body;
-                                    horizontal-alignment: right;
-                                    vertical-alignment: center;
-                                }
+                                Text { text: CdFmt.show-value(c); color: CdFmt.value-color(c); font-size: Theme.type-body; horizontal-alignment: TextHorizontalAlignment.right; vertical-alignment: center; overflow: elide; }
                             }
                             FocusPulse { key: c.key; }
-                            TouchArea {
+                            touch := TouchArea {
                                 clicked => {
-                                    root.from-x = self.absolute-position.x - main-card.absolute-position.x;
-                                    root.from-y = self.absolute-position.y - main-card.absolute-position.y;
+                                    root.from-x = self.absolute-position.x - root.absolute-position.x - root.left * root.u;
+                                    root.from-y = self.absolute-position.y - root.absolute-position.y - root.top * root.u;
                                     root.promote-t0 = animation-tick();
                                     CountdownsData.select(c.key);
                                 }
@@ -209,28 +234,29 @@ export component Countdowns inherits Rectangle {
                 }
             }
         }
-        Rectangle { height: Dock.height; } // chừa Voice dock
     }
     if CountdownsData.detail-open && CountdownsData.has-main: Rectangle {
-        background: #000000a0;
+        background: Theme.background.with-alpha(0.75);
         TouchArea { clicked => { CountdownsData.close-detail(); } }
-        Card {
-            width: min(800px, root.width - 2 * Theme.space-l);
-            height: min(420px, root.height - 2 * Theme.space-l);
+        Rectangle {
+            width: min(520 * root.u, root.width - 64 * root.u);
+            height: min(260 * root.u, root.height - 64 * root.u);
+            border-radius: Theme.radius-panel;
+            background: Theme.card;
+            border-width: 1 * root.u;
+            border-color: Theme.border;
             VerticalLayout {
-                padding: Theme.space-l;
-                spacing: Theme.space-m;
-                Text { text: CountdownsData.main.label; color: Theme.text; font-size: Theme.font-title; }
+                padding: 24 * root.u;
+                spacing: 12 * root.u;
+                Text { text: CountdownsData.main.label; color: Theme.text; font-size: Theme.type-section; font-weight: 600; overflow: elide; }
                 Text {
                     text: CountdownsData.main.target + (CountdownsData.main.lunar != "" ? " · " + CountdownsData.main.lunar : "")
                         + (CountdownsData.main.repeat-text != "" ? " · " + CountdownsData.main.repeat-text : "");
-                    color: Theme.text-dim;
-                    font-size: Theme.font-body;
-                    wrap: word-wrap;
+                    color: Theme.text-dim; font-size: Theme.type-body; wrap: word-wrap;
                 }
                 Rectangle { vertical-stretch: 1; }
                 HorizontalLayout {
-                    spacing: Theme.space-m;
+                    spacing: 12 * root.u;
                     ActionButton { text: "Đóng"; clicked => { CountdownsData.close-detail(); } }
                     ActionButton { text: "Xoá"; danger: true; clicked => { CountdownsData.remove(CountdownsData.main.key); } }
                 }
