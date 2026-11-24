@@ -7,6 +7,6 @@ export component DataPanel inherits VerticalLayout {
     SettingRow { label: "Ảnh"; ActionButton { danger: true; text: "Xoá toàn bộ ảnh"; clicked => { root.ask("photos", "Xoá toàn bộ ảnh?"); } } }
     SettingRow { label: "Cache"; ActionButton { danger: true; text: "Xoá cache thời tiết/lịch"; clicked => { root.ask("cache", "Xoá cache thời tiết và lịch?"); } } }
     SettingRow { label: "Hẹn giờ"; ActionButton { danger: true; text: "Xoá hẹn giờ"; clicked => { root.ask("timers", "Xoá mọi hẹn giờ?"); } } }
-    SettingRow { label: "Đếm ngược"; ActionButton { danger: true; text: "Xoá đếm ngược"; clicked => { root.ask("countdowns", "Xoá mọi đếm ngược?"); } } }
+    SettingRow { label: "Ngày đặc biệt"; ActionButton { danger: true; text: "Xoá ngày đặc biệt"; clicked => { root.ask("countdowns", "Xoá mọi ngày đặc biệt?"); } } }
     SettingRow { label: "Reminder"; ActionButton { danger: true; text: "Xoá Reminder"; clicked => { root.ask("reminders", "Xoá mọi Reminder?"); } } }
 }

@@ -7,14 +7,18 @@ use voice_client::{ToolDef, ToolError};
 #[derive(Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Start {
+    /// Duration in whole minutes; convert hours ("1 tiếng rưỡi" = 90).
     pub minutes: u64,
+    /// Short name of what is being timed, e.g. "trứng".
     pub label: String,
 }
 #[derive(Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Adjust {
     pub label: String,
+    /// Seconds to add; negative to subtract.
     pub delta_seconds: Option<i64>,
+    /// true pauses, false resumes.
     pub paused: Option<bool>,
 }
 #[derive(Deserialize, JsonSchema)]
@@ -35,13 +39,26 @@ pub enum TimerTool {
 
 pub fn definitions() -> Vec<ToolDef> {
     vec![
-        definition::<Start>("hub_timer_start", "Start a timer in minutes"),
+        definition::<Start>(
+            "hub_timer_start",
+            "Start a timer that rings after a duration from now, like a kitchen timer \
+             (\"hẹn giờ 7 phút\", \"đếm ngược 10 phút\", \"bấm giờ luộc trứng\"). \
+             Use only for a plain duration. For \"nhắc tôi ...\" or a clock time use \
+             hub_reminder_create; for days until a date use hub_countdown_create",
+        ),
         definition::<Adjust>(
             "hub_timer_adjust",
-            "Adjust, pause or resume a timer by label",
+            "Add or remove time, pause or resume a running timer by label \
+             (\"thêm 2 phút\", \"tạm dừng hẹn giờ\")",
         ),
-        definition::<Cancel>("hub_timer_cancel", "Cancel a timer by label"),
-        definition::<List>("hub_timer_list", "List timers"),
+        definition::<Cancel>(
+            "hub_timer_cancel",
+            "Cancel a running timer by label (\"huỷ hẹn giờ trứng\")",
+        ),
+        definition::<List>(
+            "hub_timer_list",
+            "List running timers with time left (\"trứng còn bao lâu?\")",
+        ),
     ]
 }
 pub fn parse(name: &str, args: Value) -> Result<TimerTool, ToolError> {

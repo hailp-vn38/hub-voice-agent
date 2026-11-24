@@ -66,7 +66,7 @@ pub(super) fn from_state(state: &UiState) -> CountdownsView {
         .collect();
 
     CountdownsView {
-        title: format!("Đếm ngược · {} mốc", state.countdowns.len()),
+        title: format!("Ngày đặc biệt · {} mốc", state.countdowns.len()),
         main: main.clone().unwrap_or_default(),
         has_main: main.is_some(),
         others,

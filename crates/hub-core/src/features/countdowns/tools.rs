@@ -8,9 +8,12 @@ use voice_client::{ToolDef, ToolError};
 #[derive(Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Create {
+    /// Name of the day, e.g. "Tết", "sinh nhật vợ".
     pub label: String,
     /// Date YYYY-MM-DD in the calendar that `repeat` names.
     pub date: String,
+    /// `yearly` for solar birthdays and anniversaries, `yearly_lunar` for lunar
+    /// dates (Tết, Trung thu, giỗ), `none` for a one-off date such as a trip.
     pub repeat: Repeat,
     /// The lunar date is in a leap month.
     #[serde(default)]
@@ -31,9 +34,22 @@ pub enum Request {
 }
 pub fn definitions() -> Vec<ToolDef> {
     vec![
-        definition::<Create>("hub_countdown_create", "Create a countdown"),
-        definition::<Remove>("hub_countdown_remove", "Remove a countdown by label"),
-        definition::<List>("hub_countdown_list", "List countdowns"),
+        definition::<Create>(
+            "hub_countdown_create",
+            "Save a special date (holiday, birthday, anniversary, trip) so the hub shows \
+             how many days are left; it never rings (\"đếm ngày đến Tết\", \
+             \"lưu sinh nhật vợ 12/3\"). Not for minutes or hours (hub_timer_start) \
+             and not for an alert at a time (hub_reminder_create)",
+        ),
+        definition::<Remove>(
+            "hub_countdown_remove",
+            "Remove a saved special date by label",
+        ),
+        definition::<List>(
+            "hub_countdown_list",
+            "List saved special dates with days left; use to answer \
+             \"còn bao nhiêu ngày đến ...?\"",
+        ),
     ]
 }
 pub fn parse(name: &str, args: Value) -> Result<Request, ToolError> {

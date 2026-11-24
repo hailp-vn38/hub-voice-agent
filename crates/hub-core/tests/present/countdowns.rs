@@ -57,7 +57,7 @@ fn present_prepares_countdowns_from_the_snapshot_time() {
 
     let view = present(&state);
     let countdowns = view.countdowns;
-    assert_eq!(countdowns.title, "Đếm ngược · 5 mốc");
+    assert_eq!(countdowns.title, "Ngày đặc biệt · 5 mốc");
     assert!(countdowns.has_main);
     assert_eq!(countdowns.main.key, "1");
     assert_eq!(countdowns.main.unit, CountdownUnit::Today);

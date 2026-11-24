@@ -8,6 +8,7 @@ use voice_client::{ToolDef, ToolError};
 #[derive(Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Create {
+    /// What to remind; the hub speaks it when due, e.g. "uống thuốc".
     pub label: String,
     /// When to remind: RFC 3339 (`2026-11-23T09:00:00+07:00`) or local time
     /// without offset (`2026-11-23T09:00:00`).
@@ -25,6 +26,7 @@ pub struct Label {
 #[derive(Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Snooze {
+    /// Minutes to snooze.
     pub minutes: u64,
 }
 #[derive(Deserialize, JsonSchema)]
@@ -40,10 +42,21 @@ pub enum Tool {
 
 pub fn definitions() -> Vec<ToolDef> {
     vec![
-        definition::<Create>("hub_reminder_create", "Create a local reminder"),
-        definition::<List>("hub_reminder_list", "List local reminders"),
+        definition::<Create>(
+            "hub_reminder_create",
+            "Remind the user of something at a clock time, once, daily or weekly; when \
+             due the hub shows an alert and speaks the label (\"nhắc tôi 9 giờ gọi mẹ\", \
+             \"báo thức 6 giờ sáng\", \"mỗi tối 9h nhắc uống thuốc\"). For \
+             \"nhắc tôi sau 20 phút ...\" set at to now plus 20 minutes. Not for a plain \
+             duration (hub_timer_start), days until a date (hub_countdown_create) or an \
+             appointment on the calendar (hub_calendar_create)",
+        ),
+        definition::<List>("hub_reminder_list", "List reminders saved on the hub"),
         definition::<Label>("hub_reminder_cancel", "Cancel a reminder by label"),
-        definition::<Snooze>("hub_reminder_snooze", "Snooze the active reminder"),
+        definition::<Snooze>(
+            "hub_reminder_snooze",
+            "Snooze the reminder that is ringing now (\"nhắc lại sau 5 phút\")",
+        ),
     ]
 }
 pub fn parse(name: &str, args: Value) -> Result<Tool, ToolError> {

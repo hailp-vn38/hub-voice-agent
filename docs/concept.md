@@ -177,7 +177,7 @@ OAuth device flow (nhập mã trên điện thoại) **không hỗ trợ scope C
 | Lịch | Các sự kiện sắp tới | Menu, chạm card lịch, hoặc `hub_open_screen` |
 | Nhà | Toàn bộ thẻ demo | Menu, chạm card nhà, hoặc `hub_open_screen` |
 | Hẹn giờ | Các hẹn giờ đang chạy, huỷ bằng chạm | Menu hoặc `hub_open_screen` |
-| Đếm ngược | Các mốc đếm ngược, xoá bằng chạm | Menu hoặc `hub_open_screen` |
+| Ngày đặc biệt | Các mốc, xoá bằng chạm | Menu hoặc `hub_open_screen` |
 | Reminder | Reminder sắp tới (cục bộ) | Menu hoặc `hub_open_screen` |
 | Ảnh | Các ảnh agent đã gửi gần đây (cache) | Menu hoặc `hub_open_screen` |
 | Setting | Chỉ lựa chọn + IP/QR Setup web | Menu hoặc icon bánh răng |
@@ -212,7 +212,7 @@ Card hub dùng lưới phía trên; hàng dưới cùng dành cho Voice dock, Or
 ```
 
 - **Hai tầng ngang:** màn trung tâm ⇄ Menu tính năng. Vuốt phải → trái để vào menu, trái → phải để quay lại; chấm chỉ trang nhỏ ở mép trên cho biết đang ở đâu.
-- **Menu tính năng:** lưới 4 × 2 ô lớn — Thời tiết, Lịch, Nhà, Hẹn giờ, Đếm ngược, Reminder, Ảnh, Setting. Mỗi ô có icon, tên và một dòng thông tin sống (vd. "1 đang chạy", "3 sự kiện hôm nay").
+- **Menu tính năng:** lưới 4 × 2 ô lớn — Thời tiết, Lịch, Nhà, Hẹn giờ, Ngày đặc biệt, Reminder, Ảnh, Setting. Mỗi ô có icon, tên và một dòng thông tin sống (vd. "1 đang chạy", "3 sự kiện hôm nay").
 - **Màn tính năng:** chạm ô để mở; vuốt trái → phải để về menu. Không lồng sâu hơn một tầng.
 - **Đường tắt:** chạm card trên màn trung tâm, hoặc agent gọi `hub_open_screen`, mở thẳng màn tính năng; vuốt về thì quay lại màn trung tâm.
 - **Tự quay về:** không có tương tác sau ~60 giây thì trở về màn trung tâm (rồi sang Ambient theo luật cũ).
@@ -353,18 +353,18 @@ Hẹn giờ chạy và lưu **cục bộ** trên hub (còn nguyên khi mất m�
 
 Không có nhãn thì hub tự đặt nhãn theo thời lượng ("Hẹn giờ 5 phút"); câu nói mơ hồ khi có nhiều hẹn giờ → agent hỏi lại "hẹn giờ nào?".
 
-### Màn Đếm ngược
+### Màn Ngày đặc biệt
 
-Đếm ngược tới một ngày/giờ, chạy và lưu **cục bộ** trên hub; tối đa ~8 mốc.
+Đếm số ngày tới một ngày/giờ (tên trong code: `Countdown`), chạy và lưu **cục bộ** trên hub; tối đa ~8 mốc.
 
 **Bố cục** phía trên Voice dock:
 
 | Vùng | Nội dung |
 |---|---|
-| Đầu màn | "‹ Đếm ngược · N mốc" |
+| Đầu màn | "‹ Ngày đặc biệt · N mốc" |
 | Trái — Mốc chính | Mốc gần nhất (hoặc mốc vừa được hỏi/chạm): nhãn, số ngày rất lớn, ngày đích (kèm ngày âm lịch nếu là mốc âm lịch), thanh tiến độ "X% chặng đường" tính từ lúc tạo hoặc từ lần lặp trước |
 | Phải — Các mốc khác | Sắp theo mốc gần nhất: nhãn, số ngày, ngày đích, "hằng năm" nếu lặp |
-| Trống | Gợi ý "Hey Jarvis, đếm ngược đến Tết" |
+| Trống | Gợi ý "Hey Jarvis, đếm ngày đến Tết" |
 
 **Đơn vị hiển thị theo khoảng cách:**
 
@@ -396,16 +396,25 @@ Mốc âm lịch cần bộ chuyển đổi âm–dương lịch Việt Nam ch�
 
 | Câu nói | Tool | Màn phản ứng |
 |---|---|---|
-| "Đếm ngược đến sinh nhật vợ ngày 12/3" | `hub_countdown_create` (`repeat: yearly`) | Mốc mới sinh ra từ Orb |
-| "Đếm ngược đến Tết" | `hub_countdown_create` (`repeat: yearly_lunar`) | Như trên, kèm ngày âm lịch |
+| "Lưu sinh nhật vợ ngày 12/3" | `hub_countdown_create` (`repeat: yearly`) | Mốc mới sinh ra từ Orb |
+| "Đếm ngày đến Tết" | `hub_countdown_create` (`repeat: yearly_lunar`) | Như trên, kèm ngày âm lịch |
 | "Còn bao nhiêu ngày đến Tết?" | `hub_countdown_list` (`focus`: nhãn) | Mốc Tết lên vị trí chính |
-| "Xoá đếm ngược chuyến đi" | `hub_countdown_remove` | Ô mờ dần |
+| "Xoá ngày chuyến đi" | `hub_countdown_remove` | Ô mờ dần |
 
-Hỏi về mốc chưa tạo ("còn bao lâu đến Trung thu?") → agent trả lời trực tiếp và có thể hỏi "có muốn thêm đếm ngược không?".
+Hỏi về mốc chưa tạo ("còn bao lâu đến Trung thu?") → agent trả lời trực tiếp và có thể hỏi "có muốn lưu ngày này không?".
+
+**Chọn tool giữa Hẹn giờ, Ngày đặc biệt và Reminder** (mô tả tool ghi các luật này để agent chọn đúng):
+
+| Câu nói | Tool |
+|---|---|
+| Một khoảng thời gian: "hẹn giờ 7 phút", "đếm ngược 10 phút" | `hub_timer_start` |
+| "Nhắc tôi …", "báo thức …", giờ trong ngày, lặp hằng ngày/tuần | `hub_reminder_create` (kể cả "nhắc tôi sau 20 phút …": `at` = bây giờ + 20 phút) |
+| Số ngày tới một ngày: "đếm ngày đến Tết", "lưu sinh nhật" | `hub_countdown_create` |
+| Lịch hẹn trên Google Calendar: "thêm lịch họp …" | `hub_calendar_create` |
 
 ### Màn Reminder
 
-Reminder **chạy và lưu cục bộ trên hub**, giống Hẹn giờ và Đếm ngược. Hub **không dùng** Reminder của vela-server (không khai báo feature `reminders`, không dùng Wake Signal). Nhờ vậy hub có đầy đủ nội dung, vẫn nhắc khi mất mạng.
+Reminder **chạy và lưu cục bộ trên hub**, giống Hẹn giờ và Ngày đặc biệt. Hub **không dùng** Reminder của vela-server (không khai báo feature `reminders`, không dùng Wake Signal). Nhờ vậy hub có đầy đủ nội dung, vẫn nhắc khi mất mạng.
 
 **Bố cục** phía trên Voice dock:
 
@@ -584,14 +593,14 @@ ClientHello của hub khai báo `features.mcp=true` (bật Device MCP), `feature
 | `hub_calendar_get` | Trả sự kiện trong khoảng thời gian (từ cache Google Calendar API) | Mở màn Lịch, làm nổi bật ngày/sự kiện được hỏi |
 | `hub_calendar_create` | Tạo sự kiện trên Google Calendar: tiêu đề, bắt đầu, kết thúc hoặc cả ngày, địa điểm (tuỳ chọn) | Mở màn Lịch; thẻ sự kiện sinh ra từ Orb, bay vào đúng ngày |
 | `hub_timer_list` | Trả các hẹn giờ đang chạy | Mở màn Hẹn giờ |
-| `hub_countdown_list` | Trả các mốc đếm ngược | Mở màn Đếm ngược, làm nổi bật mốc được hỏi |
-| `hub_open_screen` | Mở màn tính năng (thời tiết, lịch, nhà, hẹn giờ, đếm ngược, Reminder, ảnh, setting) hoặc về màn trung tâm | Chuyển màn như khi vuốt |
+| `hub_countdown_list` | Trả các Ngày đặc biệt | Mở màn Ngày đặc biệt, làm nổi bật mốc được hỏi |
+| `hub_open_screen` | Mở màn tính năng (thời tiết, lịch, nhà, hẹn giờ, ngày đặc biệt, Reminder, ảnh, setting) hoặc về màn trung tâm | Chuyển màn như khi vuốt |
 | `hub_set_brightness` / `hub_set_volume` | Chỉnh độ sáng / âm lượng | Thanh trượt hiện và chạy tới giá trị mới |
 | `hub_timer_start` | Hẹn giờ theo khoảng thời gian (vd. 7 phút), có nhãn | Mở màn Hẹn giờ; vòng đếm ngược mới sinh ra từ Orb vào danh sách; hết giờ thì chuông + Orb nhấp nháy |
 | `hub_timer_cancel` | Huỷ một hẹn giờ theo nhãn | Mở màn Hẹn giờ; vòng tròn co lại rồi biến mất |
 | `hub_timer_adjust` | Chỉnh một hẹn giờ theo nhãn: thêm/bớt thời gian (`delta_seconds`), tạm dừng, tiếp tục | Mở màn Hẹn giờ; vòng nở ra/co lại, hoặc mờ đi/sáng lại |
-| `hub_countdown_create` | Đếm ngược tới một ngày/giờ (vd. Tết, sinh nhật), có nhãn; `repeat`: `none` / `yearly` / `yearly_lunar` | Mở màn Đếm ngược; ô mới sinh ra từ Orb |
-| `hub_countdown_remove` | Xoá một đếm ngược theo nhãn | Mở màn Đếm ngược; ô mờ dần |
+| `hub_countdown_create` | Lưu một Ngày đặc biệt (vd. Tết, sinh nhật), có nhãn; `repeat`: `none` / `yearly` / `yearly_lunar` | Mở màn Ngày đặc biệt; ô mới sinh ra từ Orb |
+| `hub_countdown_remove` | Xoá một Ngày đặc biệt theo nhãn | Mở màn Ngày đặc biệt; ô mờ dần |
 | `hub_reminder_create` | Tạo Reminder cục bộ: nội dung, thời điểm, `repeat` (`none` / `daily` / `weekly`) | Mở màn Reminder; mục mới sinh ra từ Orb vào dòng thời gian |
 | `hub_reminder_list` | Trả các Reminder sắp tới; tham số `focus` (khoảng thời gian) | Mở màn Reminder, làm nổi bật các mục được hỏi |
 | `hub_reminder_cancel` | Huỷ một Reminder | Mục mờ dần |
@@ -618,7 +627,7 @@ Quy tắc chung cho mọi tính năng: **giọng nói điều khiển view.** Kh
 | Thời tiết | `hub_weather_get` | — | Ngày/giờ được hỏi |
 | Lịch | `hub_calendar_get` | `hub_calendar_create` | Ngày/sự kiện được hỏi hoặc vừa tạo |
 | Hẹn giờ | `hub_timer_list` | `hub_timer_start`, `hub_timer_cancel`, `hub_timer_adjust` | Hẹn giờ vừa tạo/huỷ |
-| Đếm ngược | `hub_countdown_list` | `hub_countdown_create`, `hub_countdown_remove` | Mốc được hỏi hoặc vừa tạo |
+| Ngày đặc biệt | `hub_countdown_list` | `hub_countdown_create`, `hub_countdown_remove` | Mốc được hỏi hoặc vừa tạo |
 | Ảnh | `hub_image_list` | `hub_show_image`, `hub_image_control` | Ảnh toàn màn hoặc ảnh được nhắc tới |
 | Setting | — | `hub_set_brightness`, `hub_set_volume` | Không đổi màn; chỉ hiện thanh trượt |
 | Reminder | `hub_reminder_list` | `hub_reminder_create`, `hub_reminder_cancel`, `hub_reminder_snooze` | Mục được hỏi hoặc vừa tạo |

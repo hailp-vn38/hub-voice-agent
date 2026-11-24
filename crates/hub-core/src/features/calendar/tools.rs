@@ -26,7 +26,7 @@ pub fn definitions() -> Vec<ToolDef> {
         ),
         definition::<Create>(
             "hub_calendar_create",
-            "Create a calendar event; start and end are RFC3339 timestamps or all-day YYYY-MM-DD dates (end exclusive)",
+            "Create an event on the user's Google Calendar (\"thêm lịch họp 3 giờ chiều mai\"); start and end are RFC3339 timestamps or all-day YYYY-MM-DD dates (end exclusive). For \"nhắc tôi ...\" use hub_reminder_create",
         ),
     ]
 }

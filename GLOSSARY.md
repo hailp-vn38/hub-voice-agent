@@ -63,7 +63,7 @@ Cột nút cố định ở mép trái màn: Home, Ứng dụng, Thống kê, C�
 _Avoid_: sidebar, tab bar
 
 **Màn tính năng** (`Screen::Feature`):
-Màn của một tính năng (Thời tiết, Lịch, Nhà, Hẹn giờ, Đếm ngược, Reminder, Ảnh, Setting).
+Màn của một tính năng (Thời tiết, Lịch, Nhà, Hẹn giờ, Ngày đặc biệt, Reminder, Ảnh, Setting).
 _Avoid_: trang, tab, màn con
 
 **Ambient** (`Screen::Ambient`):
@@ -102,18 +102,18 @@ _Avoid_: admin page, web config
 ## Tính năng cục bộ
 
 **Hẹn giờ** (`Timer`):
-Đếm lùi một khoảng thời gian (vd. 7 phút), có nhãn; tối đa 4.
+Đếm lùi một khoảng thời gian (vd. 7 phút), có nhãn; tối đa 4. Người dùng có thể gọi là "đếm ngược 7 phút".
 _Avoid_: alarm, báo thức
 
-**Đếm ngược** (`Countdown`):
-Đếm số ngày tới một Mốc.
-_Avoid_: timer
+**Ngày đặc biệt** (`Countdown`):
+Đếm số ngày tới một Mốc; chỉ hiển thị, không kêu. Code và tool vẫn dùng tên `countdown`.
+_Avoid_: đếm ngược, timer
 
 **Mốc** (`Countdown` target):
-Ngày/giờ đích của Đếm ngược, có thể lặp hằng năm theo dương hoặc âm lịch.
+Ngày/giờ đích của Ngày đặc biệt, có thể lặp hằng năm theo dương hoặc âm lịch.
 
 **Reminder** (`Reminder`):
-Lời nhắc tại một thời điểm, có thể lặp hằng ngày/tuần; lưu trên Hub, không phải Reminder của vela-server.
+Lời nhắc tại một thời điểm, có thể lặp hằng ngày/tuần; đến hạn thì hiện Alert và đọc nội dung. "Báo thức 6 giờ" là một Reminder; lưu trên Hub, không phải Reminder của vela-server.
 _Avoid_: lời nhắc server, notification
 
 **Đã lỡ** (`missed`):
