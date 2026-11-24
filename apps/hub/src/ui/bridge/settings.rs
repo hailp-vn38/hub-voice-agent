@@ -1,7 +1,10 @@
-use crate::{App, AudioSettings, DisplaySettings, SettingsData, Theme, VoiceSettingsView};
+use crate::{
+    App, AudioSettings, DisplaySettings, HomeEntity, HomeSettings, SettingsData, Theme,
+    VoiceSettingsView,
+};
 use hub_core::{
-    AmbientAfter, DeviceSettings, DisplayState, SOUND_NAMES, Sensitivity, SettingChange, TextSize,
-    UserInput,
+    AmbientAfter, DataKind, DeviceSettings, DisplayState, HomeEntity as CoreHomeEntity,
+    SOUND_NAMES, Sensitivity, SettingChange, TextSize, UserInput,
 };
 use slint::{ComponentHandle, ModelRc, SharedString, VecModel};
 use std::{cell::RefCell, rc::Rc};
@@ -63,8 +66,14 @@ pub(super) fn choice(key: &str, picked: &str) -> Option<SettingChange> {
     })
 }
 
-/// Công tắc trên UI → thay đổi có kiểu. Khoá `entity:*` thuộc danh mục Nhà, chưa xử lý ở đây.
+/// Công tắc trên UI → thay đổi có kiểu; khoá `entity:<id>` chọn thiết bị cho màn trung tâm.
 pub(super) fn toggle(key: &str, on: bool) -> Option<SettingChange> {
+    if let Some(id) = key.strip_prefix("entity:") {
+        return Some(SettingChange::CenterEntity {
+            id: id.to_string(),
+            selected: on,
+        });
+    }
     Some(match key {
         "ambient-night" => SettingChange::AmbientNight(on),
         "ui-sounds" => SettingChange::UiSounds(on),
@@ -113,12 +122,44 @@ pub(super) fn text_scale(size: TextSize) -> f32 {
     }
 }
 
-pub(super) fn apply(app: &App, settings: &DeviceSettings, state: &DisplayState) {
+/// Khoá `clear(...)` của màn Dữ liệu → loại dữ liệu.
+pub(super) fn data_kind(key: &str) -> Option<DataKind> {
+    Some(match key {
+        "photos" => DataKind::Photos,
+        "cache" => DataKind::Cache,
+        "timers" => DataKind::Timers,
+        "countdowns" => DataKind::Countdowns,
+        "reminders" => DataKind::Reminders,
+        _ => return None,
+    })
+}
+
+fn home(settings: &DeviceSettings, entities: &[CoreHomeEntity]) -> HomeSettings {
+    let rows = entities
+        .iter()
+        .map(|entity| HomeEntity {
+            id: entity.id.as_str().into(),
+            name: entity.name.as_str().into(),
+            selected: settings.center_entities.contains(&entity.id),
+        })
+        .collect::<Vec<_>>();
+    HomeSettings {
+        entities: ModelRc::new(VecModel::from(rows)),
+    }
+}
+
+pub(super) fn apply(
+    app: &App,
+    settings: &DeviceSettings,
+    state: &DisplayState,
+    entities: &[CoreHomeEntity],
+) {
     app.global::<Theme>()
         .set_text_scale(text_scale(settings.text_size));
     let data = app.global::<SettingsData>();
     data.set_resolution_confirm(state.resolution_confirm as i32);
     data.set_display(display(settings, state));
+    data.set_home(home(settings, entities));
     data.set_audio(audio(settings));
     data.set_voice(VoiceSettingsView {
         wake_word: settings.wake_word,
@@ -159,6 +200,8 @@ pub(super) fn connect_inputs(app: &App, inputs: Rc<RefCell<Inputs>>) {
             toggle(&key, on).map(UserInput::Setting)
         })
     });
+    let clear = send.clone();
+    data.on_clear(move |key| clear(data_kind(&key).map(UserInput::Clear)));
     data.on_keep_resolution(move || {
         let mut input = keep.borrow_mut();
         input.activity();

@@ -98,7 +98,7 @@ pub(super) fn from_state(
             .collect(),
         timer: center_timer(state, timers),
         countdown: center_countdown(countdowns),
-        home: home.tiles.iter().take(4).cloned().collect(),
+        home: center_tiles(&home.tiles, &state.settings.center_entities),
         home_safe: state.home_connected,
         focus: center_focus(state),
         focus_serial: state.events.focus,
@@ -182,4 +182,20 @@ fn center_focus(state: &UiState) -> CenterCard {
         Some(Focus::Timer(_)) => CenterCard::Timer,
         Some(Focus::Photo(_)) | None => CenterCard::None,
     }
+}
+
+/// Thiết bị đã chọn theo thứ tự chọn; chưa chọn thì bốn thiết bị đầu tiên.
+fn center_tiles(tiles: &[HomeTileView], chosen: &[String]) -> Vec<HomeTileView> {
+    if chosen.is_empty() {
+        return tiles
+            .iter()
+            .take(crate::MAX_CENTER_ENTITIES)
+            .cloned()
+            .collect();
+    }
+    chosen
+        .iter()
+        .filter_map(|id| tiles.iter().find(|tile| tile.key == *id))
+        .cloned()
+        .collect()
 }

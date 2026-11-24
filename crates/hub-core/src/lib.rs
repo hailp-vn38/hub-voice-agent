@@ -28,7 +28,9 @@ pub use config::{
     CalendarSettings, Config, ConfigStore, HomeSettings, VoiceSettings, WeatherSettings,
 };
 pub use device::{Device, NoDevice};
-pub use device_settings::{AmbientAfter, DeviceSettings, SettingChange, TextSize};
+pub use device_settings::{
+    AmbientAfter, DeviceSettings, MAX_CENTER_ENTITIES, SettingChange, TextSize,
+};
 pub use ports::{
     CalendarDelta, CalendarEvent, CalendarFuture, CalendarQuery, CalendarSource, Clock,
     FetchedImage, HomeDomain, HomeEntity, HomeEvent, HomeSource, ImageFetcher, NewCalendarEvent,
@@ -84,12 +86,24 @@ pub enum UserInput {
     Setting(SettingChange),
     KeepResolution,
     PreviewSound(String),
+    Clear(DataKind),
     ReminderSpeech(bool),
     VoiceConnect,
     Setup(
         setup_web::Update,
         tokio::sync::oneshot::Sender<Result<(), String>>,
     ),
+}
+
+/// Loại dữ liệu người dùng có thể xoá ở màn Setting.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum DataKind {
+    Photos,
+    /// Cache thời tiết và lịch; lấy lại từ mạng sau khi xoá.
+    Cache,
+    Timers,
+    Countdowns,
+    Reminders,
 }
 
 pub enum TimerInput {

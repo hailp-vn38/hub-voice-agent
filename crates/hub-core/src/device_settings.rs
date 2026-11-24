@@ -38,6 +38,8 @@ pub struct DeviceSettings {
     pub wake_word: bool,
     pub sensitivity: Sensitivity,
     pub mic_muted: bool,
+    /// Id thiết bị Home Assistant hiện ở màn trung tâm; rỗng = bốn thiết bị đầu tiên.
+    pub center_entities: Vec<String>,
     pub timezone: Option<String>,
 }
 
@@ -58,6 +60,7 @@ impl Default for DeviceSettings {
             wake_word: true,
             sensitivity: Sensitivity::default(),
             mic_muted: false,
+            center_entities: Vec::new(),
             timezone: None,
         }
     }
@@ -81,6 +84,7 @@ pub enum SettingChange {
     Sensitivity(Sensitivity),
     MicMuted(bool),
     Timezone(String),
+    CenterEntity { id: String, selected: bool },
 }
 
 impl AmbientAfter {
@@ -94,6 +98,9 @@ impl AmbientAfter {
         }
     }
 }
+
+/// Số thiết bị tối đa hiện ở màn trung tâm.
+pub const MAX_CENTER_ENTITIES: usize = 4;
 
 /// Độ sáng ban đêm khi "Theo giờ", tính theo độ sáng đã chọn.
 const NIGHT_DIM: f32 = 0.3;
@@ -143,6 +150,12 @@ impl DeviceSettings {
             SettingChange::Sensitivity(v) => self.sensitivity = v,
             SettingChange::MicMuted(v) => self.mic_muted = v,
             SettingChange::Timezone(v) => self.timezone = Some(v),
+            SettingChange::CenterEntity { id, selected } => {
+                self.center_entities.retain(|chosen| *chosen != id);
+                if selected && self.center_entities.len() < MAX_CENTER_ENTITIES {
+                    self.center_entities.push(id);
+                }
+            }
         }
     }
 }

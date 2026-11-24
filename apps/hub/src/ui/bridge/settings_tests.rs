@@ -28,7 +28,6 @@ fn choices_map_labels_to_typed_changes() {
 fn unknown_keys_and_labels_are_ignored() {
     assert_eq!(choice("text-size", "Khổng lồ"), None);
     assert_eq!(choice("bogus", "Lớn"), None);
-    assert_eq!(toggle("entity:Đèn", true), None);
     assert_eq!(
         toggle("mic-muted", true),
         Some(SettingChange::MicMuted(true))
@@ -53,4 +52,18 @@ fn text_sizes_scale_the_theme() {
     assert_eq!(text_scale(TextSize::Small), 0.85);
     assert_eq!(text_scale(TextSize::Medium), 1.0);
     assert_eq!(text_scale(TextSize::Large), 1.25);
+}
+
+#[test]
+fn entity_toggles_and_data_keys_map_to_typed_inputs() {
+    assert_eq!(
+        toggle("entity:light.den", true),
+        Some(SettingChange::CenterEntity {
+            id: "light.den".into(),
+            selected: true
+        })
+    );
+    assert_eq!(data_kind("photos"), Some(DataKind::Photos));
+    assert_eq!(data_kind("cache"), Some(DataKind::Cache));
+    assert_eq!(data_kind("bogus"), None);
 }

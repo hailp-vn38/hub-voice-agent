@@ -78,3 +78,24 @@ fn ambient_delay_in_seconds() {
     assert_eq!(AmbientAfter::Minute1.seconds(), Some(60));
     assert_eq!(AmbientAfter::Never.seconds(), None);
 }
+
+#[test]
+fn center_entities_are_limited_and_deselectable() {
+    let mut settings = DeviceSettings::default();
+    for id in ["a", "b", "c", "d", "e"] {
+        settings.apply(SettingChange::CenterEntity {
+            id: id.into(),
+            selected: true,
+        });
+    }
+    assert_eq!(settings.center_entities, ["a", "b", "c", "d"]);
+    settings.apply(SettingChange::CenterEntity {
+        id: "b".into(),
+        selected: false,
+    });
+    settings.apply(SettingChange::CenterEntity {
+        id: "e".into(),
+        selected: true,
+    });
+    assert_eq!(settings.center_entities, ["a", "c", "d", "e"]);
+}

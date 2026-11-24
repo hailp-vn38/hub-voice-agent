@@ -1,5 +1,5 @@
 use super::{
-    audio,
+    audio, data,
     display::Display,
     effects::{self, Effect, SettingsEffect, execute_all},
     hub::Hub,
@@ -78,6 +78,7 @@ pub async fn run(
                     display.try_resolution(mode, hub.now().timestamp().as_second(), &io);
                     Vec::new()
                 }
+                UserInput::Clear(kind) => data::clear(kind, &mut hub, &mut store, config.get()),
                 UserInput::PreviewSound(name) => Sound::preview(&name)
                     .map(|sound| Effect::Audio(AudioCommand::Play(sound)))
                     .into_iter()

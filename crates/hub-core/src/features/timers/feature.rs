@@ -85,6 +85,10 @@ impl Feature {
         effects.extend(view.open(Screen::Timers, focus, now));
         effects
     }
+    pub fn clear(&mut self) -> Vec<Effect> {
+        self.timers.items.clear();
+        self.changed()
+    }
     pub fn dismiss(&mut self, id: i64) -> Vec<Effect> {
         self.timers.items.retain(|timer| timer.id != id);
         self.changed()

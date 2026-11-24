@@ -1,4 +1,5 @@
 mod audio;
+mod data;
 mod display;
 pub(crate) mod effects;
 mod hub;

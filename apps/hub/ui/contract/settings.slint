@@ -24,7 +24,7 @@ export struct VoiceSettingsView {
     mic-muted: bool,
     read-reminder: bool,
 }
-export struct HomeEntity { name: string, selected: bool }
+export struct HomeEntity { id: string, name: string, selected: bool }
 export struct HomeSettings { entities: [HomeEntity] }
 export struct ConnectionSettings {
     server-status: string, // "Đã kết nối · 42 ms", "Mất kết nối"…

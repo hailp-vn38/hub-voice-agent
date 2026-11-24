@@ -164,6 +164,11 @@ impl Feature {
     fn reply(&self, call: ToolCall) -> Effect {
         Effect::Reply(call, Ok(serde_json::json!({"reminders": self.items})))
     }
+    pub fn clear(&mut self) -> Vec<Effect> {
+        self.items.clear();
+        self.history.clear();
+        self.changed()
+    }
     fn changed(&self) -> Vec<Effect> {
         let items = self.items.clone();
         let history = self.history.clone();

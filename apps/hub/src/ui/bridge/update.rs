@@ -3,7 +3,9 @@ use super::{
 };
 use crate::App;
 use crate::audio::Levels;
-use hub_core::{DeviceSettings, DisplayState, HubView, PhotoState, UiState, VoiceSettingsState};
+use hub_core::{
+    DeviceSettings, DisplayState, HomeEntity, HubView, PhotoState, UiState, VoiceSettingsState,
+};
 use slint::Weak;
 use tokio::sync::watch;
 
@@ -120,7 +122,7 @@ pub fn spawn_bridge(
     tokio::spawn(async move {
         let mut shown: Option<HubView> = None;
         let mut shown_voice_settings: Option<VoiceSettingsState> = None;
-        let mut shown_device: Option<(DeviceSettings, DisplayState)> = None;
+        let mut shown_device: Option<(DeviceSettings, DisplayState, Vec<HomeEntity>)> = None;
         while rx.changed().await.is_ok() {
             let state = rx.borrow_and_update().clone();
             let view = hub_core::present(&state);
@@ -132,11 +134,15 @@ pub fn spawn_bridge(
                     (state.voice_settings.clone(), url_changed)
                 });
             let mut updates = diff(shown.as_ref(), &view, voice_settings);
-            let device = (state.settings.clone(), state.display.clone());
+            let device = (
+                state.settings.clone(),
+                state.display.clone(),
+                state.home.clone(),
+            );
             if shown_device.as_ref() != Some(&device) {
                 shown_device = Some(device.clone());
                 updates.push(Box::new(move |app| {
-                    settings::apply(app, &device.0, &device.1)
+                    settings::apply(app, &device.0, &device.1, &device.2)
                 }));
             }
             shown = Some(view);

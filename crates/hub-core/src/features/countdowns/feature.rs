@@ -54,6 +54,13 @@ impl Feature {
         }))]
     }
 
+    pub fn clear(&mut self, today: Date) -> Vec<Effect> {
+        self.items.clear();
+        let mut effects = vec![Effect::store(|store| store.countdowns_save(&[]))];
+        effects.extend(self.snapshot(today));
+        effects
+    }
+
     pub fn remove_id(&mut self, id: i64, today: Date) -> Vec<Effect> {
         let Some(index) = self.items.iter().position(|item| item.id == id) else {
             return Vec::new();

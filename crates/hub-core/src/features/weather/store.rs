@@ -14,6 +14,10 @@ impl crate::Store {
         row.map(|(updated, data)| Ok((updated, serde_json::from_str(&data)?)))
             .transpose()
     }
+    pub(crate) fn weather_clear(&self) -> anyhow::Result<()> {
+        self.connection.execute("DELETE FROM weather_cache", [])?;
+        Ok(())
+    }
     pub(crate) fn weather_save(&self, key: &str, updated: i64, data: &Value) -> anyhow::Result<()> {
         self.connection.execute(
             "INSERT OR REPLACE INTO weather_cache (key, updated, data) VALUES (?1, ?2, ?3)",

@@ -23,6 +23,9 @@ impl Feature {
             photos: store.photos_load()?,
         })
     }
+    pub fn ids(&self) -> Vec<String> {
+        self.photos.iter().map(|photo| photo.id.clone()).collect()
+    }
     pub fn snapshot(&self) -> Effect {
         let photos = self.photos.clone();
         Effect::Ui(Box::new(move |ui| {

@@ -5,12 +5,12 @@ import { SettingRow } from "../../components/setting-row.slint";
 
 export component HomePanel inherits VerticalLayout {
     Text {
-        text: "Chọn tối đa 4 thiết bị cho màn trung tâm";
+        text: "Chọn tối đa 4 thiết bị cho màn trung tâm (không chọn = 4 thiết bị đầu)";
         color: Theme.text-dim;
         font-size: Theme.type-caption;
     }
     for e in SettingsData.home.entities: SettingRow {
         label: e.name;
-        Toggle { on: e.selected; toggled(v) => { SettingsData.toggle("entity:" + e.name, v); } }
+        Toggle { on: e.selected; toggled(v) => { SettingsData.toggle("entity:" + e.id, v); } }
     }
 }
