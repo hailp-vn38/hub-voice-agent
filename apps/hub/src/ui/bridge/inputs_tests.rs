@@ -124,3 +124,55 @@ fn home_and_photo_callbacks_map_to_hub_inputs() {
     assert!(matches!(next_action(&mut rx), UserInput::RemovePhoto { id } if id == "p2"));
     assert!(rx.try_recv().is_err());
 }
+
+/// Màn tính năng phủ lên menu và màn trung tâm; chạm vào chỗ trống không được
+/// rơi xuống ô bên dưới (ví dụ thẻ Lịch) và mở nhầm màn.
+#[test]
+fn taps_on_a_feature_screen_do_not_reach_screens_below() {
+    use slint::LogicalPosition;
+    use slint::platform::{PointerEventButton, WindowEvent};
+
+    let app = app();
+    TEST_WINDOW.with(|window| window.set_size(slint::PhysicalSize::new(1280, 600)));
+    app.show().expect("show app");
+    let (tx, mut rx) = tokio::sync::mpsc::channel(64);
+    super::connect_inputs(&app, tx);
+    let settle = || {
+        for _ in 0..12 {
+            slint::platform::update_timers_and_animations();
+            std::thread::sleep(Duration::from_millis(60));
+        }
+    };
+    for origin in [crate::Screen::Center, crate::Screen::Menu] {
+        app.global::<crate::Nav>().set_screen(origin);
+        settle();
+        app.global::<crate::Nav>()
+            .set_screen(crate::Screen::Weather);
+        settle();
+        // Chỗ trống trên màn Thời tiết, nằm trên thẻ Lịch/Reminder và các ô menu.
+        for (x, y) in [
+            (560.0, 195.0),
+            (1000.0, 150.0),
+            (700.0, 400.0),
+            (1000.0, 300.0),
+        ] {
+            let position = LogicalPosition::new(x, y);
+            TEST_WINDOW.with(|window| {
+                window.dispatch_event(WindowEvent::PointerPressed {
+                    position,
+                    button: PointerEventButton::Left,
+                });
+                window.dispatch_event(WindowEvent::PointerReleased {
+                    position,
+                    button: PointerEventButton::Left,
+                });
+            });
+            while let Ok(input) = rx.try_recv() {
+                assert!(
+                    !matches!(input, UserInput::Open(_)),
+                    "tap at {x},{y} from {origin:?} opened a screen"
+                );
+            }
+        }
+    }
+}

@@ -96,12 +96,16 @@ export component Shell inherits Rectangle {
                 x: (1 - root.menu-p) * root.w;
                 opacity: root.menu-p;
                 background: Theme.background;
+                // Chặn chạm xuyên xuống màn trung tâm bên dưới (opacity 0 vẫn nhận chuột).
+                TouchArea { }
                 MenuScreen { u: root.u; cw: root.cw; ch: root.ch; }
             }
             if root.feat-p > 0 && root.shown != Screen.ambient: Rectangle {
                 x: (1 - root.feat-p) * root.w;
                 opacity: root.feat-p;
                 background: Theme.background;
+                // Chặn chạm xuyên xuống menu / màn trung tâm bên dưới.
+                TouchArea { }
                 if root.shown == Screen.home: Home { }
                 if root.shown == Screen.weather: Weather { }
                 if root.shown == Screen.settings: Settings { }
