@@ -1,7 +1,7 @@
 import { Theme } from "../theme.slint";
 import { AlertData, AlertKind } from "../contract/alert.slint";
 import { Icon } from "../components/icon.slint";
-import { Backdrop } from "../components/home/backdrop.slint";
+import { Backdrop, BackdropImage } from "../components/home/backdrop.slint";
 
 // Báo toàn màn (hết giờ / Reminder). Chạm bất kỳ đâu để tắt; chừa hàng dock cho Orb.
 // Khi đóng: hẹn giờ mờ đi; Reminder thu nhỏ về góc trái dưới ("Đã nhắc gần đây").
@@ -31,6 +31,7 @@ export component Alert inherits Rectangle {
 
     if root.on: TouchArea { clicked => { AlertData.dismiss(); } }
 
+    if root.vis > 0: BackdropImage { width: parent.width; height: parent.height; }
     if root.vis > 0: Backdrop { dim: 0.35; }
     if root.vis > 0: Rectangle { background: root.tone.with-alpha(0.08); }
 

@@ -1,6 +1,6 @@
 import { Theme } from "../theme.slint";
 import { Screen } from "../contract/nav.slint";
-import { IdleBackground } from "idle-background.slint";
+import { BackdropImage } from "home/backdrop.slint";
 import { Ambient } from "../screens/ambient.slint";
 import { MenuScreen } from "../screens/menu.slint";
 import { CenterScreen } from "../screens/center.slint";
@@ -14,15 +14,22 @@ import { Countdowns } from "../screens/countdowns.slint";
 import { Reminders } from "../screens/reminders.slint";
 import { Timers } from "../screens/timers.slint";
 
+// Màn vẽ `Backdrop` thì để ScreenFade lo ảnh nền chung, nền của màn trong suốt.
+global ScreenBackdrop {
+    pure public function uses(s: Screen) -> bool {
+        s == Screen.center || s == Screen.menu || s == Screen.home || s == Screen.settings
+            || s == Screen.reminders || s == Screen.timers || s == Screen.countdowns || s == Screen.photos || s == Screen.calendar
+    }
+}
+
 // Nội dung của một màn theo `screen`. TouchArea đầu tiên chặn chạm xuyên xuống lớp bên dưới.
 component ScreenContent inherits Rectangle {
     in property <Screen> screen;
     in property <length> u;
     in property <float> cw;
     in property <float> ch;
-    background: Theme.background;
+    background: ScreenBackdrop.uses(root.screen) ? transparent : Theme.background;
     TouchArea { }
-    if root.screen == Screen.center: IdleBackground { }
     if root.screen == Screen.center: CenterScreen { u: root.u; cw: root.cw; ch: root.ch; }
     if root.screen == Screen.menu: MenuScreen { u: root.u; cw: root.cw; ch: root.ch; }
     if root.screen == Screen.ambient: Ambient { }
@@ -39,6 +46,7 @@ component ScreenContent inherits Rectangle {
 
 // Chuyển màn bằng mờ dần: màn cũ mờ đi trong khi màn mới hiện dần, cùng `Theme.anim-screen`.
 // Không trượt, không zoom. Đổi `screen` là đủ; không cần biết màn đi đâu.
+// Ảnh nền chung sống suốt (không tạo lại item Image mỗi lần chuyển màn), mờ cùng màn không dùng nó.
 export component ScreenFade inherits Rectangle {
     in property <Screen> screen;
     in property <length> u;
@@ -57,6 +65,12 @@ export component ScreenFade inherits Rectangle {
         root.t0 = animation-tick();
     }
 
+    BackdropImage {
+        width: parent.width;
+        height: parent.height;
+        opacity: ScreenBackdrop.uses(root.to-screen) ? 1
+            : root.p < 1 && ScreenBackdrop.uses(root.from-screen) ? 1 - root.p : 0;
+    }
     if root.p < 1: ScreenContent {
         screen: root.from-screen;
         u: root.u;

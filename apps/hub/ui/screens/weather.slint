@@ -1,8 +1,6 @@
 import { Theme } from "../theme.slint";
-import { Screen } from "../contract/nav.slint";
 import { WeatherData } from "../contract/weather.slint";
 import { WeatherBackdrop } from "../components/weather/backdrop.slint";
-import { NavRail } from "../components/home/nav-rail.slint";
 import { CurrentColumn } from "../components/weather/current.slint";
 import { HoursChart } from "../components/weather/hours-chart.slint";
 import { DaysColumn } from "../components/weather/days-column.slint";
@@ -26,13 +24,6 @@ export component Weather inherits Rectangle {
 
     WeatherBackdrop { bg: WeatherData.background; is-day: WeatherData.is-day; }
     Rectangle { background: @linear-gradient(180deg, Theme.background.with-alpha(0.55) 0%, Theme.background.with-alpha(0.3) 50%, Theme.background.with-alpha(0.85) 100%); }
-    NavRail {
-        x: 14 * root.u;
-        y: 42 * root.u;
-        height: (root.ch - 152) * root.u;
-        u: root.u;
-        current: Screen.weather;
-    }
 
     // Đầu màn: tiêu đề + nơi, nhãn "tạm xem", trạng thái cập nhật (chấm + chữ).
     HorizontalLayout {

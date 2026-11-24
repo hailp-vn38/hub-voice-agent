@@ -1,8 +1,6 @@
 import { Theme } from "../theme.slint";
-import { Screen } from "../contract/nav.slint";
 import { HomeData } from "../contract/home.slint";
 import { Backdrop } from "../components/home/backdrop.slint";
-import { NavRail } from "../components/home/nav-rail.slint";
 import { DeviceTile } from "../components/home/quick-tile.slint";
 
 // Màn Nhà (Aurora): Thanh điều hướng trái; đầu màn có trạng thái Home Assistant;
@@ -23,13 +21,6 @@ export component Home inherits Rectangle {
     private property <bool> offline: HomeData.configured && !HomeData.connected;
 
     Backdrop { dim: 0.25; }
-    NavRail {
-        x: 14 * root.u;
-        y: 42 * root.u;
-        height: (root.ch - 152) * root.u;
-        u: root.u;
-        current: Screen.home;
-    }
 
     // Đầu màn.
     HorizontalLayout {

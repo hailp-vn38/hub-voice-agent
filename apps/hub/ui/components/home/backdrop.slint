@@ -1,15 +1,16 @@
 import { Theme } from "../../theme.slint";
 
-// Nền Aurora: ảnh ngôi nhà đêm phủ kín, gradient tối cho chữ dễ đọc.
+// Ảnh ngôi nhà đêm phủ kín. Tạo item Image mới rất tốn (khựng khi chuyển màn), nên ScreenFade
+// giữ một bản sống suốt dưới mọi màn; chỉ lớp phủ toàn màn (Alert) tự vẽ thêm.
+export component BackdropImage inherits Image {
+    source: @image-url("../../../assets/home/backgrounds/home-night.jpg");
+    image-fit: cover;
+}
+
+// Nền Aurora: gradient tối phủ lên ảnh (do ScreenFade vẽ) cho chữ dễ đọc.
 // `dim` > 0 làm tối thêm (màn nhiều chữ như Ứng dụng).
 export component Backdrop inherits Rectangle {
     in property <float> dim: 0;
-    Image {
-        width: parent.width;
-        height: parent.height;
-        source: @image-url("../../../assets/home/backgrounds/home-night.jpg");
-        image-fit: cover;
-    }
     Rectangle { background: @linear-gradient(90deg, Theme.background.with-alpha(0.85) 0%, Theme.background.with-alpha(0.6) 40%, Theme.background.with-alpha(0.45) 68%, Theme.background.with-alpha(0.75) 100%); }
     Rectangle { background: @linear-gradient(180deg, Theme.background.with-alpha(0.4) 0%, Theme.background.with-alpha(0.15) 54%, Theme.background.with-alpha(0.9) 100%); }
     Rectangle { background: Theme.background.with-alpha(root.dim); }
