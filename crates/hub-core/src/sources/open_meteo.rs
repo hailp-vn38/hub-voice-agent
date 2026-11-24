@@ -1,11 +1,50 @@
 use serde_json::Value;
 
+/// One geocoding match for a place name.
+#[derive(Clone, Debug, PartialEq)]
+pub struct GeoPlace {
+    pub name: String,
+    pub latitude: f64,
+    pub longitude: f64,
+}
+
 #[derive(Clone, Default)]
 pub struct OpenMeteo {
     client: reqwest::Client,
 }
 
 impl OpenMeteo {
+    /// Looks up places by name (up to 5) to pick the home location from.
+    pub async fn search(&self, query: &str) -> anyhow::Result<Vec<GeoPlace>> {
+        let geo: Value = self
+            .client
+            .get("https://geocoding-api.open-meteo.com/v1/search")
+            .query(&[("name", query), ("count", "5"), ("language", "vi")])
+            .send()
+            .await?
+            .error_for_status()?
+            .json()
+            .await?;
+        Ok(Self::parse_places(&geo))
+    }
+    pub fn parse_places(geo: &Value) -> Vec<GeoPlace> {
+        geo["results"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter_map(|r| {
+                let parts: Vec<&str> = ["name", "admin1", "country"]
+                    .iter()
+                    .filter_map(|k| r[*k].as_str())
+                    .collect();
+                Some(GeoPlace {
+                    name: parts.join(", "),
+                    latitude: r["latitude"].as_f64()?,
+                    longitude: r["longitude"].as_f64()?,
+                })
+            })
+            .collect()
+    }
     pub fn parse_forecast(mut forecast: Value, air: Value) -> anyhow::Result<Value> {
         anyhow::ensure!(
             forecast["current"]["temperature_2m"].is_number(),

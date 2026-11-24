@@ -69,7 +69,9 @@ export component NavRail inherits Rectangle {
             u: root.u;
             icon: @image-url("../../../assets/home/icons/devices.png");
             label: "Ứng dụng";
-            active: root.current == Screen.menu;
+            active: root.current == Screen.menu || root.current == Screen.weather || root.current == Screen.calendar
+                || root.current == Screen.timers || root.current == Screen.countdowns || root.current == Screen.reminders
+                || root.current == Screen.photos;
             activated => { Nav.navigate(Screen.menu); }
         }
         NavButton {

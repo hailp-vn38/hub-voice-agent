@@ -39,6 +39,7 @@ export struct ConnectionSettings {
     calendar-status: string,
     weather-status: string,
 }
+export struct LocationOption { label: string, latitude: float, longitude: float }
 export struct SystemSettings {
     version: string,
     timezone: string,
@@ -59,6 +60,12 @@ export global SettingsData {
     in-out property <string> ota-url;
     // UI đặt true khi đang kéo slider để Shell không coi là vuốt điều hướng.
     in-out property <bool> dragging;
+    // Vị trí nhà cho Open-Meteo: tìm theo tên, chọn một kết quả.
+    in-out property <string> location-query;
+    in property <[LocationOption]> location-results;
+    in property <string> location-message;
+    callback search-location(string);
+    callback pick-location(int);
     callback set-brightness(float);
     callback set-volume(float);
     callback choose(string, string);

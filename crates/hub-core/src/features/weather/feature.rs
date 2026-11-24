@@ -19,6 +19,7 @@ pub struct WeatherView {
 pub(crate) struct Feature {
     source: Arc<dyn WeatherSource>,
     home: Option<(f64, f64)>,
+    home_name: Option<String>,
     active: String,
     next_refresh: i64,
     pending: bool,
@@ -36,6 +37,7 @@ impl Feature {
         let mut feature = Self {
             source,
             home,
+            home_name: settings.name.clone(),
             active,
             next_refresh: 0,
             pending: false,
@@ -65,7 +67,14 @@ impl Feature {
     }
     fn apply(&mut self, data: Value, stale: bool, updated: i64) {
         self.view = WeatherView {
-            location: data["location"].as_str().map(str::to_owned),
+            location: data["location"]
+                .as_str()
+                .map(str::to_owned)
+                .or_else(|| {
+                    (!self.active.starts_with("city:"))
+                        .then(|| self.home_name.clone())
+                        .flatten()
+                }),
             preview: self.active.starts_with("city:"),
             updated: Some(updated),
             forecast: Some(WeatherForecast::from_open_meteo(&data)),
@@ -233,6 +242,7 @@ impl Feature {
         now: i64,
     ) -> Vec<Effect> {
         self.home = settings.latitude.zip(settings.longitude);
+        self.home_name = settings.name.clone();
         self.active = Self::home_key(self.home);
         let _ = self.restore(store, now);
         vec![self.snapshot()]

@@ -33,6 +33,24 @@ export component ConnectionPanel inherits VerticalLayout {
     SettingRow { label: "Home Assistant"; Info { text: SettingsData.connection.ha-status; } }
     SettingRow { label: "Google Calendar"; Info { text: SettingsData.connection.calendar-status; } }
     SettingRow { label: "Open-Meteo"; Info { text: SettingsData.connection.weather-status; } }
+    SettingRow {
+        label: "Vị trí nhà";
+        LineEdit {
+            text <=> SettingsData.location-query;
+            placeholder-text: "Tên thành phố";
+            accepted => { SettingsData.search-location(SettingsData.location-query); }
+        }
+        ActionButton { text: "Tìm"; clicked => { SettingsData.search-location(SettingsData.location-query); } }
+    }
+    if SettingsData.location-message != "": SettingRow {
+        label: "";
+        Info { text: SettingsData.location-message; }
+    }
+    for place[i] in SettingsData.location-results: SettingRow {
+        label: "";
+        Info { text: place.label; }
+        ActionButton { text: "Chọn"; clicked => { SettingsData.pick-location(i); } }
+    }
     // Ngoại lệ tạm: ô nhập OTA URL giữ lại cho tới khi hub-core #13 xong (Setup web).
     SettingRow {
         label: "OTA URL (tạm)";

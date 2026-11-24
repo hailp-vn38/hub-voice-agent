@@ -36,11 +36,14 @@ fn main() -> anyhow::Result<()> {
     let (input_tx, input_rx) = mpsc::channel(16);
     let (stop_tx, stop_rx) = oneshot::channel::<()>();
     let setup_tx = input_tx.clone();
+    let location_tx = input_tx.clone();
+    let (handle_tx, handle_rx) = std::sync::mpsc::channel();
     let weak = app.as_weak();
     let core = thread::spawn(move || -> anyhow::Result<()> {
         let rt = tokio::runtime::Builder::new_multi_thread()
             .enable_all()
             .build()?;
+        let _ = handle_tx.send(rt.handle().clone());
         rt.block_on(async move {
             let listener = tokio::net::TcpListener::bind("0.0.0.0:8080").await?;
             tokio::spawn(async move {
@@ -64,6 +67,9 @@ fn main() -> anyhow::Result<()> {
         })
     });
     ui::connect_inputs(&app, input_tx);
+    if let Ok(handle) = handle_rx.recv() {
+        ui::connect_location(&app, location_tx, handle);
+    }
     app.run()?;
     let _ = stop_tx.send(());
     core.join()

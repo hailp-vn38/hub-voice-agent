@@ -108,7 +108,7 @@ pub use features::weather::{
     AirQuality, WeatherCurrent, WeatherDay, WeatherForecast, WeatherHour, WeatherView,
 };
 pub use lunar::{LunarDate, to_lunar, to_solar};
-pub use sources::{GoogleCalendar, HomeAssistant, HttpImageFetcher, OpenMeteo};
+pub use sources::{GeoPlace, GoogleCalendar, HomeAssistant, HttpImageFetcher, OpenMeteo};
 pub use store::Store;
 
 pub fn tool_definitions() -> Vec<voice_client::ToolDef> {

@@ -38,6 +38,7 @@ pub struct HomeSettings {
 pub struct WeatherSettings {
     pub latitude: Option<f64>,
     pub longitude: Option<f64>,
+    pub name: Option<String>,
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Config {

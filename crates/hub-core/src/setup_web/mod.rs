@@ -121,6 +121,7 @@ async fn weather(
         Update::Weather(WeatherSettings {
             latitude: Some(form.latitude),
             longitude: Some(form.longitude),
+            name: None,
         }),
     )
     .await

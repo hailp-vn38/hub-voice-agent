@@ -1,4 +1,4 @@
-use crate::{App, WeatherBg, WeatherData, WeatherDay, WeatherHour, WeatherNow};
+use crate::{App, ConnectionSettings, SettingsData, WeatherBg, WeatherData, WeatherDay, WeatherHour, WeatherNow};
 use hub_core::present::{WeatherBackground, WeatherDataView, WeatherDayView, WeatherHourView};
 use slint::{Color, ComponentHandle, ModelRc, VecModel};
 use std::rc::Rc;
@@ -6,6 +6,17 @@ use std::rc::Rc;
 pub(super) fn apply(app: &App, view: &WeatherDataView) {
     let weather = app.global::<WeatherData>();
     weather.set_location(view.location.as_str().into());
+    let settings = app.global::<SettingsData>();
+    let status = match (view.location.as_str(), view.updated.as_str()) {
+        ("", "") => "Chưa có vị trí nhà".to_owned(),
+        (location, "") => format!("{location} · đang lấy dữ liệu"),
+        ("", updated) => format!("Cập nhật {updated}"),
+        (location, updated) => format!("{location} · cập nhật {updated}"),
+    };
+    settings.set_connection(ConnectionSettings {
+        weather_status: status.into(),
+        ..settings.get_connection()
+    });
     weather.set_preview(view.preview);
     weather.set_updated(view.updated.as_str().into());
     weather.set_stale(view.stale);
