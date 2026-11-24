@@ -175,7 +175,10 @@ async fn show_image_displays_downloaded_photo() {
             }
         }
     };
-    assert_eq!(control["payload"]["result"]["structuredContent"]["ok"], true);
+    assert_eq!(
+        control["payload"]["result"]["structuredContent"]["ok"],
+        true
+    );
     assert!(!ui_rx.borrow().photos[0].pinned);
 
     let photo_to_remove = ui_rx.borrow().photos[1].clone();
@@ -193,7 +196,10 @@ async fn show_image_displays_downloaded_photo() {
             }
         }
     };
-    assert_eq!(next["payload"]["result"]["structuredContent"]["id"], photo_to_remove.id);
+    assert_eq!(
+        next["payload"]["result"]["structuredContent"]["id"],
+        photo_to_remove.id
+    );
     assert!(hub_core::present(&ui_rx.borrow()).photos.viewing);
     assert_eq!(hub_core::present(&ui_rx.borrow()).photos.viewer_index, 1);
     input_tx

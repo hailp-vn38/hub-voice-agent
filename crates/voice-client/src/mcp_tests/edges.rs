@@ -52,7 +52,10 @@ async fn string_request_ids_are_echoed() {
     call.reply(Ok(json!({ "ok": true })));
     let reply = next(&mut connection).await;
     assert_eq!(reply["payload"]["id"], "call-1");
-    assert_eq!(reply["payload"]["result"]["structuredContent"], json!({ "ok": true }));
+    assert_eq!(
+        reply["payload"]["result"]["structuredContent"],
+        json!({ "ok": true })
+    );
 }
 
 #[tokio::test]

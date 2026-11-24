@@ -152,7 +152,10 @@ async fn creating_event_replies_after_source_and_focuses_event() {
         }
     };
     wait_for_pending(&mut ui_rx, "Lunch", PendingState::Saved).await;
-    assert_eq!(reply["payload"]["result"]["structuredContent"]["event"]["id"], "created");
+    assert_eq!(
+        reply["payload"]["result"]["structuredContent"]["event"]["id"],
+        "created"
+    );
     assert_eq!(ui_rx.borrow().view.screen, Screen::Calendar);
     assert_eq!(
         ui_rx.borrow().view.focus,
@@ -169,7 +172,10 @@ async fn creating_event_replies_after_source_and_focuses_event() {
         if let Message::Text(text) = message {
             let value: Value = serde_json::from_str(&text).unwrap();
             if value["payload"]["id"] == 3 {
-                assert_eq!(value["payload"]["result"]["structuredContent"]["events"][0]["id"], "created");
+                assert_eq!(
+                    value["payload"]["result"]["structuredContent"]["events"][0]["id"],
+                    "created"
+                );
                 break;
             }
         }

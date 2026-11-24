@@ -19,7 +19,10 @@ async fn tools_call_reply_and_drop_are_correlated_to_numeric_request_ids() {
     call.reply(Ok(json!({ "ok": true })));
     let reply = next(&mut connection).await;
     assert_eq!(reply["payload"]["id"], 42);
-    assert_eq!(reply["payload"]["result"]["structuredContent"], json!({ "ok": true }));
+    assert_eq!(
+        reply["payload"]["result"]["structuredContent"],
+        json!({ "ok": true })
+    );
     assert_eq!(
         reply["payload"]["result"]["content"],
         json!([{ "type": "text", "text": "{\"ok\":true}" }])
