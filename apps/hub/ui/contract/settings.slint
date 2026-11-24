@@ -34,7 +34,8 @@ export struct ConnectionSettings {
     enrollment-code: string,
     wifi-name: string,
     wifi-strength: int,
-    wifi-ip: string,
+    wifi-ip: string, // "" khi chưa có mạng
+    setup-url: string, // "http://<ip LAN>:8080", "" khi chưa có mạng
     ha-status: string,
     calendar-status: string,
     weather-status: string,

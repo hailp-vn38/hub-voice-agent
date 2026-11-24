@@ -28,7 +28,15 @@ export component ConnectionPanel inherits VerticalLayout {
     }
     SettingRow {
         label: "Wi-Fi";
-        Info { text: SettingsData.connection.wifi-name + " · " + SettingsData.connection.wifi-strength + "/3 · " + SettingsData.connection.wifi-ip; }
+        Info {
+            text: SettingsData.connection.wifi-ip == "" ? "Chưa kết nối mạng"
+                : SettingsData.connection.wifi-name == "" ? "IP LAN " + SettingsData.connection.wifi-ip
+                : SettingsData.connection.wifi-name + " · " + SettingsData.connection.wifi-strength + "/3 · " + SettingsData.connection.wifi-ip;
+        }
+    }
+    if SettingsData.connection.setup-url != "": SettingRow {
+        label: "Trang thiết lập";
+        Text { text: SettingsData.connection.setup-url; color: Theme.warm; font-size: Theme.type-section; vertical-alignment: center; }
     }
     SettingRow { label: "Home Assistant"; Info { text: SettingsData.connection.ha-status; } }
     SettingRow { label: "Google Calendar"; Info { text: SettingsData.connection.calendar-status; } }

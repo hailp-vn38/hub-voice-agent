@@ -6,6 +6,7 @@ mod home;
 mod images;
 mod inputs;
 mod location;
+mod network;
 mod photos;
 mod reminders;
 mod timers;
@@ -15,4 +16,5 @@ mod weather;
 
 pub use inputs::connect_inputs;
 pub use location::connect_location;
+pub use network::spawn_network;
 pub use update::spawn_bridge;

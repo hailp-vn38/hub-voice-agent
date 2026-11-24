@@ -13,6 +13,9 @@ use std::{path::PathBuf, sync::Arc, thread};
 use tokio::sync::{mpsc, oneshot, watch};
 slint::include_modules!();
 
+/// Cổng của Setup web; Settings hiển thị `http://<ip LAN>:SETUP_PORT`.
+const SETUP_PORT: u16 = 8080;
+
 struct HostSystem;
 impl hub_core::System for HostSystem {
     /// The desktop clock is trusted. On the Pi, systemd-timesyncd creates this
@@ -45,7 +48,7 @@ fn main() -> anyhow::Result<()> {
             .build()?;
         let _ = handle_tx.send(rt.handle().clone());
         rt.block_on(async move {
-            let listener = tokio::net::TcpListener::bind("0.0.0.0:8080").await?;
+            let listener = tokio::net::TcpListener::bind(("0.0.0.0", SETUP_PORT)).await?;
             tokio::spawn(async move {
                 if let Err(error) = hub_core::setup_web::serve(listener, setup_tx).await {
                     eprintln!("Setup web dừng: {error}");
@@ -58,6 +61,7 @@ fn main() -> anyhow::Result<()> {
             });
             let audio_tx = audio.commands;
             let audio_rx = audio.events;
+            ui::spawn_network(weak.clone(), SETUP_PORT);
             ui::spawn_bridge(weak, ui_rx, audio.levels);
             let ports = Ports { clock: Arc::new(SystemClock), system: Arc::new(HostSystem), calendar: Arc::new(hub_core::GoogleCalendar::default()), weather: Arc::new(hub_core::OpenMeteo::default()), home: Arc::new(hub_core::HomeAssistant::default()), images: Arc::new(hub_core::HttpImageFetcher) };
             tokio::select! {
