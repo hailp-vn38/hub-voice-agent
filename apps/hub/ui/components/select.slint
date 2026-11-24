@@ -1,0 +1,77 @@
+import { Theme } from "../theme.slint";
+
+// Danh sách thả xuống cho nhiều lựa chọn: nút hiện giá trị đang chọn, chạm để mở danh sách cuộn.
+export component Select inherits Rectangle {
+    in property <[string]> options;
+    in property <string> current;
+    callback chosen(string);
+    private property <length> u: Theme.unit;
+    private property <length> item-h: 44 * root.u;
+    min-width: 260 * root.u;
+    height: 44 * root.u;
+    horizontal-stretch: 0;
+    border-radius: Theme.radius-s;
+    background: touch.pressed ? Theme.card : Theme.card.with-alpha(0.6);
+    border-width: 1 * root.u;
+    border-color: Theme.border;
+    HorizontalLayout {
+        padding-left: 16 * root.u;
+        padding-right: 14 * root.u;
+        spacing: 8 * root.u;
+        Text {
+            text: root.current;
+            color: Theme.text;
+            font-size: Theme.type-body;
+            font-weight: 600;
+            vertical-alignment: center;
+            overflow: elide;
+        }
+        Text {
+            text: "▾";
+            color: Theme.text-dim;
+            font-size: Theme.type-body;
+            vertical-alignment: center;
+            horizontal-stretch: 0;
+        }
+    }
+    touch := TouchArea { clicked => { popup.show(); } }
+
+    popup := PopupWindow {
+        x: 0;
+        y: root.height + 4 * root.u;
+        width: root.width;
+        height: min(root.options.length * root.item-h + 8 * root.u, 280 * root.u);
+        Rectangle {
+            border-radius: Theme.radius-s;
+            background: Theme.card;
+            border-width: 1 * root.u;
+            border-color: Theme.border;
+            clip: true;
+            Flickable {
+                y: 4 * root.u;
+                height: parent.height - 8 * root.u;
+                content-height: list.preferred-height;
+                list := VerticalLayout {
+                    for o in root.options: Rectangle {
+                        height: root.item-h;
+                        background: o == root.current ? Theme.accent.with-alpha(0.55) : item.pressed ? Theme.background.with-alpha(0.5) : transparent;
+                        Text {
+                            x: 16 * root.u;
+                            text: o;
+                            color: o == root.current ? Theme.text : Theme.text-dim;
+                            font-size: Theme.type-body;
+                            font-weight: o == root.current ? 600 : 400;
+                            vertical-alignment: center;
+                        }
+                        item := TouchArea {
+                            clicked => {
+                                root.chosen(o);
+                                popup.close();
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
