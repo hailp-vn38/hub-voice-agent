@@ -1,6 +1,6 @@
 use std::collections::VecDeque;
 
-use hub_core::{AudioCommand, AudioEvent};
+use hub_core::{AudioCommand, AudioEvent, Sensitivity};
 use opus::{Application, Channels, Encoder};
 use voice_client::OpusFrame;
 
@@ -22,6 +22,7 @@ pub(super) struct Capture {
     encoder: Encoder,
     mic_on: bool,
     wake_enabled: bool,
+    sensitivity: Sensitivity,
     level: f32,
 }
 
@@ -38,6 +39,7 @@ impl Capture {
                 .expect("16 kHz mono Opus is supported"),
             mic_on: false,
             wake_enabled: true,
+            sensitivity: Sensitivity::default(),
             level: 0.0,
         }
     }
@@ -59,12 +61,21 @@ impl Capture {
                 sensitivity,
             } => {
                 self.wake_enabled = *enabled;
+                self.sensitivity = *sensitivity;
                 if let Some(detector) = &mut self.wake {
                     detector.set_sensitivity(*sensitivity);
                 }
             }
             _ => {}
         }
+    }
+
+    /// Gắn detector được nạp muộn (model vừa tải xong), giữ độ nhạy đã đặt.
+    pub(super) fn set_wake(&mut self, mut wake: Option<Box<dyn WakeDetector>>) {
+        if let Some(detector) = &mut wake {
+            detector.set_sensitivity(self.sensitivity);
+        }
+        self.wake = wake;
     }
 
     pub(super) fn push(&mut self, pcm: &[i16]) -> Vec<AudioEvent> {

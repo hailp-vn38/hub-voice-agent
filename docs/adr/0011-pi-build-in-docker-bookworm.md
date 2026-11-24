@@ -1,5 +1,5 @@
 ---
-status: accepted
+status: superseded by 0014
 ---
 
 # Build bản Pi trong container Debian bookworm arm64

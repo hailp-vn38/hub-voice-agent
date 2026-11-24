@@ -1,11 +1,11 @@
 # AI Hub
 
-Thiết bị hub AI cá nhân trên Raspberry Pi 4 có màn cảm ứng: là Physical Device client của vela-server và là hub thông tin trong nhà. Tên trong ngoặc là tên dùng trong code.
+Thiết bị hub AI cá nhân trên máy tính bảng Linux (Debian 13) có màn cảm ứng: là Physical Device client của vela-server và là hub thông tin trong nhà. Tên trong ngoặc là tên dùng trong code.
 
 ## Thiết bị và server
 
 **Hub** (`hub`):
-Thiết bị Pi 4 + màn hình + mic array chạy app này.
+Máy tính bảng (màn cảm ứng, mic, loa tích hợp) chạy app này.
 _Avoid_: kiosk, máy, client
 
 **vela-server**:

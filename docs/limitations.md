@@ -4,7 +4,7 @@ Cập nhật: 2026-11-24, theo nhánh `feat/hub-mac` và spec [hub-mac](../.scra
 
 Tài liệu này nói thẳng những gì hub **chưa** làm được, để người dùng và người phát triển không phải đoán. Ticket nào gỡ một hạn chế thì sửa tài liệu này trong cùng commit.
 
-Mục 1 là tình trạng hôm nay trên nhánh. Mục 2 là những gì vẫn còn sau khi spec hub-mac xong (hub dùng cơ bản trên Mac). Mục 3 là những gì chỉ liên quan tới Pi.
+Mục 1 là tình trạng hôm nay trên nhánh. Mục 2 là những gì vẫn còn sau khi spec hub-mac xong (hub dùng cơ bản trên Mac). Mục 3 là những gì chỉ liên quan tới máy tính bảng.
 
 ## 1. Hôm nay trên `feat/hub-mac`
 
@@ -21,8 +21,8 @@ Ticket hub-mac 01–10 đã map xong: bridge ghi mọi màn từ hub-core, chuy�
 
 | Hạn chế | Ảnh hưởng | Cách xử lý tạm | Theo dõi |
 |---|---|---|---|
-| Mac không có khử vọng (AEC) | Dùng loa ngoài: server nghe lại TTS, tự ngắt lời; wake word có thể bắt nhầm | **Đeo tai nghe**, hoặc cắm XVF3800 qua USB ([development.md](development.md) "Âm thanh trên Mac") | ADR 0005 |
-| Model wake word không có trong repo | Thiếu model thì không gọi "hey jarvis" được | Tải ba file ONNX vào `models/`; hoặc chạm Orb | hub-mac 09 |
+| Mac không có khử vọng (AEC) | Dùng loa ngoài: server nghe lại TTS, tự ngắt lời; wake word có thể bắt nhầm | **Đeo tai nghe** ([development.md](development.md) "Âm thanh trên Mac") | ADR 0005 |
+| Model wake word không có trong repo | Thiếu model thì không gọi "hey jarvis" được | App tự tải khi mở lần đầu (cần mạng); hoặc chạm Orb | hub-mac 09 |
 | Model `hey_jarvis` là tiếng Anh, độ nhạy cố định ở mức vừa | Có thể bắt nhầm hoặc bỏ sót với giọng Việt | Nói rõ, gần mic | G5 (Setting giọng nói) |
 | Không chỉnh âm lượng trong hub | — | Dùng phím âm lượng của Mac | G3, G4 |
 | Không tắt mic được | Wake word luôn nghe | Thoát app | G5 |
@@ -46,15 +46,15 @@ Ticket hub-mac 01–10 đã map xong: bridge ghi mọi màn từ hub-core, chuy�
 | Lịch chỉ đọc Google Calendar; thời tiết chỉ từ Open-Meteo | — | Thiết kế (ADR 0007) |
 | Setup web không xác thực trên mạng LAN | Ai cùng mạng cũng đổi được cấu hình | ADR 0009, quyết định có chủ đích |
 
-## 3. Chỉ trên Pi (chưa làm, chưa kiểm)
+## 3. Chỉ trên máy tính bảng (chưa làm, chưa kiểm)
 
-Spec hub-mac để Pi lại sau. Các mục dưới đây **chưa được kiểm trên máy thật**:
+Spec hub-mac để máy tính bảng lại sau. Các mục dưới đây **chưa được kiểm trên máy thật**:
 
-- ReSpeaker XVF3800 làm cả đường vào và ra, AEC phần cứng, barge-in.
-- Backend `linuxkms` + FemtoVG, fps của hiệu ứng Aurora trên GPU V3D, màn cảm ứng thật.
-- `libopus` và ONNX Runtime (`ort`) cho aarch64 trong image Docker bookworm (ADR 0011).
+- Mic/loa tích hợp không có AEC phần cứng: wake word và barge-in khi loa đang phát. Client vẫn khai báo `features.aec=true`.
+- Backend `linuxkms` + FemtoVG, fps của hiệu ứng Aurora trên GPU tích hợp, màn cảm ứng thật.
+- Build `libopus` và ONNX Runtime (`ort`) ngay trên Debian 13 x86_64 (ADR 0014).
 - Lần đầu khởi động khi chưa có mạng: điểm truy cập Wi-Fi và hai mã QR (G10). Hiện phải cắm Ethernet hoặc cấu hình Wi-Fi bằng tay.
 - Độ sáng màn hình, khởi động lại / tắt máy qua `System` (G4, G8).
-- Nhiệt độ và CPU khi chạy lâu.
+- Nhiệt độ, CPU và pin khi chạy lâu.
 
-Danh sách đầy đủ việc chỉ kiểm được trên Pi: [development.md §6](development.md).
+Danh sách đầy đủ việc chỉ kiểm được trên máy tính bảng: [development.md §6](development.md).

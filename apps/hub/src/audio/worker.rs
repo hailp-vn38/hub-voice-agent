@@ -8,7 +8,7 @@ use std::{
 };
 use tokio::sync::{mpsc, watch};
 
-use super::{AudioHandle, Levels, capture, devices, mixer, resample, sounds, wake};
+use super::{AudioHandle, Levels, capture, devices, mixer, models, resample, sounds, wake};
 
 /// ~43 ms ở 48 kHz: đủ đệm cho vòng lặp ngủ 5 ms mà không thêm độ trễ thừa.
 const PCM_RING_SAMPLES: usize = 2048;
@@ -71,6 +71,8 @@ struct Worker {
     input_pcm: Consumer<i16>,
     mixer: mixer::Mixer,
     capture: capture::Capture,
+    /// Có khi model wake word đang được tải; nhận thư mục model khi tải xong.
+    wake_models: Option<std::sync::mpsc::Receiver<std::path::PathBuf>>,
     input_resampler: Option<resample::InputResampler>,
     _streams: [cpal::Stream; 2],
 }
@@ -91,6 +93,12 @@ impl Worker {
             .transpose()?;
         devices::start(&output_stream)?;
         devices::start(&input_stream)?;
+        let models_dir = wake::models_dir();
+        let (wake, wake_models) = if models::missing(&models_dir) {
+            (None, Some(models::fetch_in_background(models_dir)))
+        } else {
+            (wake::load_optional(&models_dir), None)
+        };
         Ok(Self {
             commands,
             outbox: Outbox::new(events),
@@ -98,10 +106,25 @@ impl Worker {
             output_pcm,
             input_pcm,
             mixer,
-            capture: capture::Capture::new(wake::load_default()),
+            capture: capture::Capture::new(wake),
+            wake_models,
             input_resampler,
             _streams: [output_stream, input_stream],
         })
+    }
+
+    fn attach_downloaded_wake(&mut self) {
+        let Some(models) = &self.wake_models else {
+            return;
+        };
+        match models.try_recv() {
+            Ok(dir) => {
+                self.capture.set_wake(wake::load_optional(&dir));
+                self.wake_models = None;
+            }
+            Err(std::sync::mpsc::TryRecvError::Disconnected) => self.wake_models = None,
+            Err(std::sync::mpsc::TryRecvError::Empty) => {}
+        }
     }
 
     fn run(mut self) {
@@ -113,6 +136,7 @@ impl Worker {
             if !self.apply_commands() || !self.outbox.flush() {
                 return;
             }
+            self.attach_downloaded_wake();
 
             let mut busy = false;
             loop {

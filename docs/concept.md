@@ -2,11 +2,11 @@
 
 > Hướng dẫn phát triển trên máy Mac: [development.md](development.md).
 >
-> Trạng thái: **ý tưởng**, chưa triển khai. Cập nhật: 2026-11-22.
+> Trạng thái: **ý tưởng**, chưa triển khai. Cập nhật: 2026-11-24.
 
 ## 1. Mục tiêu
 
-Một thiết bị hub AI cá nhân trên Raspberry Pi 4 với màn cảm ứng 5 inch:
+Một thiết bị hub AI cá nhân trên máy tính bảng Linux (Debian 13) có màn cảm ứng:
 
 - UI đẹp, có hiệu ứng, chạy toàn màn hình ở chế độ kiosk; bật máy là vào thẳng app.
 - Là **Physical Device client** của vela-server: nói chuyện với voice agent qua Voice Protocol.
@@ -23,12 +23,11 @@ Một thiết bị hub AI cá nhân trên Raspberry Pi 4 với màn cảm ứng 
 
 | Thành phần | Lựa chọn |
 |---|---|
-| Board | Raspberry Pi 4 |
+| Máy | Máy tính bảng Fujitsu Q5010, x86_64, Debian 13 trixie |
 | Màn hình | 5 inch cảm ứng, đặt ngang; xuất **1080p** (panel có thể là 2K, scale lên) |
-| Mic | ReSpeaker XVF3800 USB 4-Mic Array — USB Audio Class, AEC/beamforming phần cứng |
-| Loa | Loa 3–5 W, **cắm vào cổng ra của mic array** (không cắm jack Pi) để chip có tín hiệu tham chiếu cho AEC |
+| Mic, loa | Tích hợp trong máy tính bảng |
 
-AEC là điều kiện để wake word và barge-in hoạt động khi loa đang phát.
+Máy không có AEC phần cứng. AEC là điều kiện để wake word và barge-in hoạt động khi loa đang phát; cách khử vọng còn phải chọn (ADR 0005).
 
 ## 3. Kiến trúc
 
@@ -38,7 +37,7 @@ AEC là điều kiện để wake word và barge-in hoạt động khi loa đang
 ai-hub/
 ├── crates/voice-client   # chỉ kết nối voice theo mô hình client–server
 ├── crates/hub-core       # toàn bộ hành vi của hub, không UI/audio/OS
-└── apps/hub              # ứng dụng chạy trên Pi 4
+└── apps/hub              # ứng dụng chạy trên máy tính bảng
 ```
 
 Thiết kế chi tiết từng module: [codebase.md](codebase.md); quyết định đã chốt: [adr/](adr/).
@@ -48,7 +47,7 @@ Thiết kế chi tiết từng module: [codebase.md](codebase.md); quyết đị
 - WebSocket tới vela-server, ClientHello/ServerHello, các message Voice Protocol.
 - Gửi/nhận frame Opus 60 ms qua channel.
 - Reconnect có backoff.
-- Test được trên macOS, không cần Pi.
+- Test được trên macOS, không cần máy tính bảng.
 
 Type giao thức định nghĩa lại ở client; chỉ tách crate giao thức dùng chung với server khi giao thức đã ổn định.
 
@@ -155,8 +154,8 @@ OAuth device flow (nhập mã trên điện thoại) **không hỗ trợ scope C
 - **Slint**, backend `linuxkms`, renderer **FemtoVG** (OpenGL ES): vẽ thẳng ra DRM/KMS, không X11/Wayland.
 - **1080p** mặc định; setting cho chọn mode KMS khác.
 - Layout theo tỉ lệ và `scale-factor`, không pixel cố định; chọn scale theo mode khi khởi động.
-- Hiệu ứng dựa trên transform/opacity/gradient; tránh blur toàn màn hình (GPU V3D của Pi 4).
-- Đo fps thực tế trên Pi trước khi chốt hiệu ứng.
+- Hiệu ứng dựa trên transform/opacity/gradient; tránh blur toàn màn hình (GPU tích hợp yếu).
+- Đo fps thực tế trên máy tính bảng trước khi chốt hiệu ứng.
 
 ### Nguyên tắc
 
@@ -242,7 +241,7 @@ Bố cục ba cột phía trên Voice dock:
 | Giông | Như mưa + chớp sáng toàn màn ngắn, thưa (vài chục giây một lần) |
 | Sương mù | Lớp mờ trôi ngang |
 
-Màu nền ngả theo ngày/đêm dựa trên giờ mọc/lặn. Giới hạn số hạt và chỉ dùng transform/opacity để giữ fps trên Pi 4.
+Màu nền ngả theo ngày/đêm dựa trên giờ mọc/lặn. Giới hạn số hạt và chỉ dùng transform/opacity để giữ fps trên máy tính bảng.
 
 **Tương tác chạm:**
 
@@ -332,7 +331,7 @@ Hẹn giờ chạy và lưu **cục bộ** trên hub (còn nguyên khi mất m�
 **Hết giờ** (ở bất kỳ màn nào, kể cả Ambient):
 
 - Màn hình sáng lên, chuyển sang trạng thái báo toàn màn: nền ấm, icon chuông với vòng lan theo nhịp, "{nhãn} · hết giờ".
-- Chuông lặp lại qua loa của mic array (AEC khử được, nên wake word vẫn nghe được khi chuông kêu).
+- Chuông lặp lại qua loa (cần AEC để wake word vẫn nghe được khi chuông kêu).
 - Tắt: **chạm bất kỳ đâu**, hoặc "Hey Jarvis, tắt" / "thêm 1 phút".
 - Tự tắt sau 2 phút nếu không ai phản hồi; thẻ hẹn giờ ghi "Đã hết giờ lúc HH:MM" cho tới khi được xoá.
 - Nhiều hẹn giờ cùng hết: báo lần lượt theo thứ tự.
@@ -507,7 +506,7 @@ Reminder **chạy và lưu cục bộ trên hub**, giống Hẹn giờ và Ngày
 
 ### Hiệu ứng theo trạng thái
 
-| Trạng thái | Hiệu ứng | Ghi chú Pi 4 |
+| Trạng thái | Hiệu ứng | Ghi chú hiệu năng |
 |---|---|---|
 | Idle | Đồng hồ chuyển số nhẹ, nền đổi màu chậm theo giờ trong ngày | Cập nhật mỗi phút |
 | Listening | Thanh sóng theo biên độ mic | 7–20 hình chữ nhật |
@@ -569,7 +568,7 @@ Ngay trên dòng chữ, cạnh Orb, là một dải chấm nhỏ: *nghe → hi�
 
 **6. Âm thanh giao diện**
 
-Tiếng "ding" ngắn khi wake, tiếng nhẹ khi tool xong, chuông khi hẹn giờ hết. Phát qua cùng đường loa của mic array để AEC khử được.
+Tiếng "ding" ngắn khi wake, tiếng nhẹ khi tool xong, chuông khi hẹn giờ hết. Phát qua cùng đường loa với TTS.
 
 ### Agent điều khiển hub và hiệu ứng tool
 
@@ -696,7 +695,7 @@ Setup web **luôn mở cho LAN, không có xác thực** (quyết định có ch
 
 ## 7. Hệ thống và kiosk
 
-- Raspberry Pi OS Lite (không desktop).
+- Debian 13 trixie, không cài desktop.
 - App chạy bằng systemd service, `Restart=always`, user riêng trong nhóm `video input render audio`.
 - Tắt `getty@tty1`, dịch vụ không dùng; ẩn log và con trỏ trên console; splash khi boot.
 - Sau này có thể chuyển Buildroot/Yocto để boot nhanh hơn.
@@ -714,8 +713,8 @@ Lưu trên thiết bị, quyền đọc chỉ cho user của app:
 
 | Rủi ro | Giảm thiểu |
 |---|---|
-| AEC kém → wake word tự kích hoạt bởi loa, barge-in sai | Mic array có AEC phần cứng, loa cắm vào mic array |
-| Hiệu ứng giật trên Pi 4 | 1080p, tránh blur, đo fps sớm |
+| Không có AEC phần cứng → wake word tự kích hoạt bởi loa, barge-in sai | Chưa có; cần chọn cách khử vọng cho mic/loa tích hợp (ADR 0005) |
+| Hiệu ứng giật trên GPU tích hợp | Tránh blur, đo fps sớm |
 | Độ trễ khi đánh thức | Giữ WS ở Ready, ring buffer sau wake word |
 | `hey_jarvis` train bằng giọng tiếng Anh → kém nhạy với giọng Việt | Chỉnh threshold khi thử thực tế; đo tỉ lệ bỏ sót và kích hoạt nhầm |
 | `hub_show_image` tải URL do LLM đưa → ảnh nặng làm đầy RAM, hoặc hub bị dùng để gọi địa chỉ trong LAN | Giới hạn kích thước, timeout, loại file; thu nhỏ trước khi hiển thị; cân nhắc chặn địa chỉ LAN/localhost |

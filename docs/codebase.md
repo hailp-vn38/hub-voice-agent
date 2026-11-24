@@ -71,7 +71,7 @@ ai-hub/
 │       │   ├── selector.rs       # chọn mục theo nhãn → Found / Ambiguous / NotFound
 │       │   ├── lunar.rs          # âm–dương lịch Việt Nam (UTC+7)
 │       │   ├── ports.rs          # Clock, WeatherSource, CalendarSource, HomeSource, ImageFetcher, System
-│       │   ├── sources/          # adapter thật của port (chạy được cả Mac và Pi)
+│       │   ├── sources/          # adapter thật của port (chạy được cả Mac và máy tính bảng)
 │       │   │   ├── open_meteo.rs       # forecast, air quality, geocoding
 │       │   │   ├── google_calendar.rs  # events.list/insert, OAuth đổi mã + refresh
 │       │   │   ├── home_assistant.rs   # WebSocket API
@@ -88,8 +88,8 @@ ai-hub/
 │           ├── fixtures/         # JSON thật của Open-Meteo, Google, HA
 │           └── *.rs              # voice_flow, timers, reminders, calendar, photos, view…
 │
-├── apps/hub/                     # binary chạy trên Mac và Pi
-│   ├── Cargo.toml                # features: desktop (mặc định) | pi
+├── apps/hub/                     # binary chạy trên Mac và máy tính bảng
+│   ├── Cargo.toml                # features: desktop (mặc định) | kiosk
 │   ├── build.rs                  # slint-build
 │   ├── src/
 │   │   ├── main.rs               # nối dây (xem 3.3)
@@ -103,7 +103,7 @@ ai-hub/
 │   │   ├── audio/
 │   │   │   ├── mod.rs            # AudioHandle { commands, events, levels }; re-export spawn() / disabled()
 │   │   │   ├── worker.rs         # thread audio: mở stream, vòng lặp lệnh → Mixer, mic → Capture
-│   │   │   ├── devices.rs        # cpal: Pi chọn XVF3800 vào/ra; Mac dùng thiết bị mặc định
+│   │   │   ├── devices.rs        # cpal: thiết bị vào/ra mặc định
 │   │   │   ├── capture.rs        # mic → wake word + preroll + Opus encode
 │   │   │   ├── wake.rs           # openWakeWord qua ort
 │   │   │   ├── mixer.rs          # Opus decode TTS + trộn chuông
@@ -112,7 +112,7 @@ ai-hub/
 │   │   │   └── levels.rs         # Levels: RMS → thang dB 0..1 cho Orb
 │   │   └── system/
 │   │       ├── mod.rs            # chọn adapter theo feature
-│   │       ├── pi.rs             # backlight sysfs, nmcli, systemctl
+│   │       ├── linux.rs          # backlight sysfs, nmcli, systemctl
 │   │       └── desktop.rs        # no-op + log
 │   ├── ui/                       # file .slint
 │   │   ├── app.slint             # cửa sổ gốc: Shell
@@ -130,11 +130,9 @@ ai-hub/
 │       └── sounds/               # ding, chuông hẹn giờ, chuông Reminder
 │
 ├── models/                       # ONNX wake word — không commit
-├── docker/pi-build.Dockerfile
 ├── deploy/ai-hub.service
 ├── scripts/
-│   ├── fetch-models.sh
-│   └── deploy-pi.sh
+│   └── install-linux.sh
 └── docs/
     ├── concept.md
     ├── development.md
@@ -222,7 +220,7 @@ Integration test dùng server WebSocket giả tại `tests/`; test backoff dùng
 #### Interface bên ngoài
 
 Interface bên dưới là thiết kế đích. Hiện `run(config, store, ports, io)` xử lý voice settings, hội thoại và các tool hẹn giờ. `ConfigStore` giữ cấu hình voice, Google Calendar, Home Assistant và vị trí nhà; `Store::open(dir)` hoặc `Store::in_memory()` mở SQLite; `tool_definitions()` cung cấp schema cho tool hẹn giờ, đếm ngược, Reminder, lịch, thời tiết, Home Assistant và ảnh. `HomeSource` nhận cấu hình qua watch, phát sự kiện kết nối và trạng thái; `HomeAssistant` xác thực, đăng ký sự kiện và tự kết nối lại. `UiState.home` giữ entity, đơn vị cảm biến, trạng thái cấu hình/kết nối, `pending` của lệnh và thời điểm cập nhật; chạm thiết bị qua `UserInput::ToggleHome`. `WeatherSource` cung cấp dự báo theo tọa độ hoặc tên thành phố; `OpenMeteo` là adapter HTTP. Cache SQLite giữ JSON nguyên bản, còn `UiState.weather` giữ `WeatherForecast` có kiểu cùng vị trí, giờ cập nhật và trạng thái cũ. Cache được dùng trong 30 phút và tạm xem kết thúc ngay khi rời màn Thời tiết.
-Hẹn giờ đến hạn được xếp hàng vào `UiState.alert`; `System::time_synced()` chặn báo khi giờ chưa tin cậy. Desktop trả `true`; trên Pi, `apps/hub` coi giờ đã đồng bộ khi systemd-timesyncd tạo `/run/systemd/timesync/synchronized`. `UserInput::DismissAlert` tắt chuông; `UserInput::RemoveCountdown(id)` xoá mốc ngay khỏi Store và `UiState`, còn animation mờ dần thuộc UI.
+Hẹn giờ đến hạn được xếp hàng vào `UiState.alert`; `System::time_synced()` chặn báo khi giờ chưa tin cậy. Desktop trả `true`; trên máy tính bảng, `apps/hub` coi giờ đã đồng bộ khi systemd-timesyncd tạo `/run/systemd/timesync/synchronized`. `UserInput::DismissAlert` tắt chuông; `UserInput::RemoveCountdown(id)` xoá mốc ngay khỏi Store và `UiState`, còn animation mờ dần thuộc UI.
 
 ```rust
 pub async fn run(config: ConfigStore, store: Store, ports: Ports, io: Io) -> anyhow::Result<()>;
@@ -335,7 +333,7 @@ Không có enum `ToolRequest` chung: `view::screen_for_hub_tool` ánh xạ tiề
 | `CalendarSource` | `sources::google_calendar` | Fake |
 | `HomeSource` (`subscribe() -> Receiver<HomeEvent>` + `call_service`; adapter tự reconnect) | `sources::home_assistant` | Fake |
 | `ImageFetcher` | `sources::image_fetch` | Fake |
-| `System` (độ sáng, Wi-Fi, AP setup, khởi động lại/tắt máy) | `apps/hub/system/pi.rs` | `system/desktop.rs`, fake |
+| `System` (độ sáng, Wi-Fi, AP setup, khởi động lại/tắt máy) | `apps/hub/system/linux.rs` | `system/desktop.rs`, fake |
 
 Không phải seam (một adapter): `Store` (test dùng `Store::in_memory()`), `ConfigStore` (test dùng thư mục tạm), `setup_web`, OAuth đổi mã (trong `setup_web`), refresh access token (trong `sources::google_calendar`).
 
@@ -352,7 +350,7 @@ Không phải seam (một adapter): `Store` (test dùng `Store::in_memory()`), `
 
 **UI bridge:** `bridge/mod.rs` đọc `watch<UiState>` và qua `slint::invoke_from_event_loop` gọi `bridge/<screen>.rs::apply(&app, &state.<screen>)` cho từng màn; callback Slint đổi sang `UserInput`. Logic không nằm ở đây; nếu bridge cần một nhánh `if` theo nghiệp vụ thì nhánh đó thuộc `hub-core`.
 
-**Audio:** Trên Pi, audio vào/ra dùng ReSpeaker XVF3800 để phần cứng làm AEC; trên Mac dùng thiết bị mặc định (theo ADR 0005, đeo tai nghe hoặc cắm XVF3800 để test thật). Luồng PCM 16 kHz mono chia hai: khối 80 ms cho openWakeWord (melspectrogram → embedding → `hey_jarvis`) và khối 60 ms cho Opus encode. `preroll` giữ ~1–2 s gần nhất để xả khi `Mic { on: true }`. `playback` trộn TTS với chuông (chuông nhỏ hơn khi đang có TTS) ([ADR 0005](adr/0005-local-wake-word-hardware-aec.md)).
+**Audio:** Audio vào/ra dùng thiết bị mặc định, trên máy tính bảng là mic/loa tích hợp; chưa có AEC (ADR 0005), đeo tai nghe khi test barge-in. Luồng PCM 16 kHz mono chia hai: khối 80 ms cho openWakeWord (melspectrogram → embedding → `hey_jarvis`) và khối 60 ms cho Opus encode. `preroll` giữ ~1–2 s gần nhất để xả khi `Mic { on: true }`. `playback` trộn TTS với chuông (chuông nhỏ hơn khi đang có TTS) ([ADR 0005](adr/0005-local-wake-word-hardware-aec.md)).
 
 ## 4. Luồng qua các module
 
@@ -397,7 +395,7 @@ Actor tick 1 Hz cho mọi thứ theo giờ (hẹn giờ, Reminder, tự quay v�
 
 | Nơi chạy | Thư mục dữ liệu |
 |---|---|
-| Pi | `/var/lib/ai-hub/` (`StateDirectory=ai-hub` trong systemd) |
+| Máy tính bảng | `/var/lib/ai-hub/` (`StateDirectory=ai-hub` trong systemd) |
 | Mac (dev) | `./.data/` hoặc `AI_HUB_DATA_DIR` |
 
 ```
@@ -407,7 +405,7 @@ Actor tick 1 Hz cho mọi thứ theo giờ (hẹn giờ, Reminder, tự quay v�
 └── photos/            # ảnh đã thu nhỏ + thumbnail
 ```
 
-Model wake word: `models/` cạnh binary (Pi: `/opt/ai-hub/models/`).
+Model wake word: `AI_HUB_MODELS_DIR`, mặc định `models/` (máy tính bảng: `/var/lib/ai-hub/models/`). Thiếu thì `audio/models.rs` tự tải ở nền khi mở app.
 
 ## 6. Test
 
@@ -418,14 +416,14 @@ Model wake word: `models/` cạnh binary (Pi: `/opt/ai-hub/models/`).
 | Hành vi hub | `tests/` của hub-core: harness dựng `run()` với channel, fake port, `Store::in_memory()`, tokio time paused | Mac |
 | Adapter `sources::*` | Parse fixture JSON thật; không gọi mạng trong CI | Mac |
 | `voice-client` | Server WS giả | Mac |
-| `apps/hub` | Unit test `preroll`; còn lại chạy tay | Mac + Pi |
-| fps, cảm ứng, kiosk, AP setup | Thủ công trên Pi ([development.md §6](development.md)) | Pi |
+| `apps/hub` | Unit test `preroll`; còn lại chạy tay | Mac + máy tính bảng |
+| fps, cảm ứng, kiosk, AP setup | Thủ công trên máy tính bảng ([development.md §6](development.md)) | Máy tính bảng |
 
 Ví dụ test qua interface của hub-core: gửi `ToolCall("hub_timer_start", {minutes: 7, label: "luộc trứng"})` → kiểm reply OK, `UiState` ở màn Hẹn giờ có một thẻ; tiến clock 7 phút → `UiState.alert` là hết giờ và có `AudioCommand::Play(TimerChime)`.
 
 ## 7. Câu hỏi mở phát hiện khi thiết kế
 
-- **Giờ trước khi NTP đồng bộ.** Pi 4 không có RTC; khởi động khi mất mạng thì giờ hệ thống sai (fake-hwclock chỉ giữ giờ lúc tắt). Hẹn giờ/Reminder theo giờ tuyệt đối có thể báo sai hoặc gắn "Đã lỡ" sai. Đề xuất: `System` báo trạng thái đồng bộ giờ, `alerts` không xử lý mục quá hạn cho tới khi đã đồng bộ.
+- **Giờ trước khi NTP đồng bộ.** Máy tính bảng có RTC nên thường đúng giờ, nhưng nếu pin RTC hết hoặc giờ lệch mà chưa có mạng thì giờ hệ thống sai. Hẹn giờ/Reminder theo giờ tuyệt đối có thể báo sai hoặc gắn "Đã lỡ" sai. Đề xuất: `System` báo trạng thái đồng bộ giờ, `alerts` không xử lý mục quá hạn cho tới khi đã đồng bộ.
 - **Đổi độ phân giải lúc chạy.** Chưa rõ Slint `linuxkms` có đổi mode KMS mà không khởi động lại app không. Nếu phải khởi động lại, luồng "Giữ độ phân giải này? 10" cần lưu mode cũ vào config để quay về sau lần khởi động kế.
 - **Sample rate.** Kiểm sample rate Opus mà Voice Protocol yêu cầu; openWakeWord cần 16 kHz. Khác nhau thì `capture` phải resample một nhánh.
 

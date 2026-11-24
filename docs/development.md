@@ -1,6 +1,6 @@
 # AI Hub — Phát triển trên máy Mac
 
-> Trạng thái: **kế hoạch**, repo chưa có code. Lệnh và đường dẫn dưới đây là cách dự kiến tổ chức; cập nhật lại khi dựng workspace. Cập nhật: 2026-11-22.
+> Trạng thái: **kế hoạch**, repo chưa có code. Lệnh và đường dẫn dưới đây là cách dự kiến tổ chức; cập nhật lại khi dựng workspace. Cập nhật: 2026-11-24.
 
 Xem thiết kế tổng thể ở [concept.md](concept.md).
 
@@ -10,10 +10,9 @@ Xem thiết kế tổng thể ở [concept.md](concept.md).
 |---|---|
 | Máy | Mac Apple Silicon (arm64), 16 GB RAM |
 | Rust | 1.98 (rustup), target `aarch64-apple-darwin` |
-| Docker | 28.x — dùng để build bản cho Pi |
-| Thiết bị đích | Raspberry Pi 4, Raspberry Pi OS Lite (Debian bookworm, arm64) |
+| Thiết bị đích | Máy tính bảng Fujitsu Q5010 (x86_64), Debian 13 trixie không desktop; màn cảm ứng, mic và loa tích hợp |
 
-Ý chính: **viết và chạy hub ngay trên Mac**, build bản Pi trong container `linux/arm64` (chạy native trên Apple Silicon, không giả lập), rồi chép binary sang Pi.
+Ý chính: **viết và chạy hub ngay trên Mac** (hoặc trên Linux có desktop), rồi build bản kiosk ngay trên máy tính bảng bằng `scripts/install-linux.sh`.
 
 ## 2. Cấu trúc repo dự kiến
 
@@ -22,10 +21,9 @@ ai-hub/
 ├── Cargo.toml              # workspace
 ├── crates/voice-client/    # kết nối Voice Protocol, không UI, không thiết bị âm thanh
 ├── crates/hub-core/        # hành vi của hub, test bằng `cargo test -p hub-core`
-├── apps/hub/               # app Slint chạy trên Mac và Pi
+├── apps/hub/               # app Slint chạy trên Mac và máy tính bảng Linux
 │   └── ui/                 # file .slint
-├── docker/pi-build.Dockerfile
-├── deploy/ai-hub.service   # systemd cho Pi
+├── deploy/ai-hub.service   # systemd cho máy tính bảng
 └── docs/
 ```
 
@@ -37,12 +35,12 @@ Những gì app thật trên Mac chưa làm được: [limitations.md](limitatio
 
 | Nơi chạy | Feature Slint | Ghi chú |
 |---|---|---|
-| Mac (phát triển) | `backend-winit` | Cửa sổ desktop; chuột thay ngón tay |
-| Pi 4 | `backend-linuxkms` + `renderer-femtovg` | Vẽ thẳng ra DRM/KMS, không X11/Wayland |
+| Mac / Linux desktop (phát triển) | `backend-winit` | Cửa sổ desktop; chuột thay ngón tay |
+| Máy tính bảng (kiosk) | `backend-linuxkms` + `renderer-femtovg` | Vẽ thẳng ra DRM/KMS, không X11/Wayland |
 
-Chọn bằng feature của crate `apps/hub` (dự kiến `desktop` mặc định, `pi` khi build cho Pi). Code ngoài phần chọn backend giống nhau trên hai nơi.
+Chọn bằng feature của crate `apps/hub`: `desktop` mặc định, `kiosk` khi build cho máy tính bảng. Code ngoài phần chọn backend giống nhau trên hai nơi.
 
-### Mô phỏng màn hình 5 inch 1080p
+### Mô phỏng màn hình máy tính bảng
 
 - Cửa sổ kích thước logic 1920×1080, thu nhỏ bằng `SLINT_SCALE_FACTOR` (vd. `0.5`) cho vừa màn Mac.
 - Vuốt menu: nhấn giữ chuột và kéo ngang. Chạm: click.
@@ -63,21 +61,11 @@ Chọn bằng feature của crate `apps/hub` (dự kiến `desktop` mặc địn
 | Cách | Khi nào |
 |---|---|
 | Mic/loa có sẵn của Mac (`cpal` → CoreAudio) | Phát triển UI và luồng hội thoại; **đeo tai nghe** để loa không lọt vào mic (Mac không có AEC cho app) |
-| ReSpeaker XVF3800 cắm USB vào Mac | Test wake word, AEC và barge-in thật. Chọn XVF3800 làm **cả ngõ vào và ngõ ra**, loa cắm vào cổng ra của mic array |
 
 - TTS Opus cần thư viện hệ thống: cài bằng `brew install opus` trước khi build.
 - Lần đầu dùng mic, macOS hỏi quyền Microphone cho terminal/IDE đang chạy app.
 - Wake word `hey_jarvis` dùng openWakeWord qua `ort`. Ba model ONNX được đọc từ `AI_HUB_MODELS_DIR`, mặc định là `models/`; model không commit.
-- Nếu thiếu model, tải openWakeWord v0.5.1 vào thư mục `models/`:
-
-  ```sh
-  mkdir -p models
-  base=https://github.com/dscripka/openWakeWord/releases/download/v0.5.1
-  curl -L "$base/melspectrogram.onnx" -o models/melspectrogram.onnx
-  curl -L "$base/embedding_model.onnx" -o models/embedding_model.onnx
-  curl -L "$base/hey_jarvis_v0.1.onnx" -o models/hey_jarvis.onnx
-  ```
-
+- Lần đầu mở app, nếu thiếu model, app tự tải openWakeWord v0.5.1 (~3,7 MB) từ GitHub vào thư mục này ở nền; wake word bật ngay khi tải xong. Không có mạng thì wake word tắt, lần mở sau tải lại.
 - Trong worktree ticket/integration hiện tại, chạy app với bộ model đã có ở checkout chính:
 
   ```sh
@@ -86,49 +74,42 @@ Chọn bằng feature của crate `apps/hub` (dự kiến `desktop` mặc địn
 
 ### Dịch vụ bên ngoài
 
-Open-Meteo, Google Calendar API, Home Assistant và Setup web chạy trên Mac giống hệt Pi.
+Open-Meteo, Google Calendar API, Home Assistant và Setup web chạy trên Mac giống hệt máy tính bảng.
 
-- Google OAuth: khi dev trên Mac, trình duyệt chạy cùng máy nên redirect `http://127.0.0.1:<port>` về thẳng app — không cần bước chép URL như trên Pi.
+- Google OAuth: khi dev trên Mac, trình duyệt chạy cùng máy nên redirect `http://127.0.0.1:<port>` về thẳng app — không cần bước chép URL như trên máy tính bảng.
 - Home Assistant: trỏ tới HA trong mạng nhà, hoặc chạy HA bằng Docker để demo.
 
-## 4. Build bản cho Pi 4
+## 4. Build và cài trên máy tính bảng
 
-Build trong container Debian bookworm `linux/arm64` để glibc khớp Raspberry Pi OS.
+Build ngay trên máy tính bảng (Debian 13 trixie, x86_64), không cross-compile từ Mac (ADR 0014).
 
-Thư viện hệ thống cần trong image (dự kiến): `libudev-dev`, `libinput-dev`, `libdrm-dev`, `libgbm-dev`, `libegl-dev`, `libgles-dev`, `libxkbcommon-dev`, `libfontconfig-dev`, `libasound2-dev`, `pkg-config`. ONNX Runtime cho `ort` cần bản `aarch64-linux`.
-
-Luồng dự kiến:
-
-1. Dựng image build một lần (`docker/pi-build.Dockerfile`, `--platform linux/arm64`).
-2. Chạy `cargo build --release -p hub --no-default-features --features pi` trong container, mount repo và cache `~/.cargo/registry`, thư mục `target` riêng (vd. `target/pi`) để không lẫn với bản Mac.
-3. Kết quả: binary `aarch64-unknown-linux-gnu`.
-
-Không dùng `cross` hay `cargo-zigbuild`: các thư viện đồ hoạ (`libinput`, `libgbm`, EGL) cần sysroot đầy đủ, container bookworm arm64 có sẵn nên đơn giản hơn.
-
-## 5. Đưa lên Pi
-
-1. Chép binary, model wake word và `deploy/ai-hub.service` sang Pi bằng `scp` (hoặc `rsync`).
-2. Lần đầu: cài thư viện runtime (`libinput10`, `libgbm1`, `libegl1`, `libgles2`, `libasound2`, `libfontconfig1`), tạo user `hub` trong nhóm `video input render audio`, bật service.
-3. Các lần sau: chép binary mới rồi `systemctl restart ai-hub`.
+1. Clone repo lên máy tính bảng.
+2. Lần đầu: `scripts/install-linux.sh --init` — cài thư viện build (`libudev-dev`, `libinput-dev`, `libdrm-dev`, `libgbm-dev`, `libegl-dev`, `libgles-dev`, `libxkbcommon-dev`, `libfontconfig-dev`, `libseat-dev`, `libasound2-dev`, `libopus-dev`), Rust qua rustup, user `hub`, rồi bật service.
+3. Các lần sau: `git pull` rồi `scripts/install-linux.sh` — build `cargo build --release -p hub --no-default-features --features kiosk` vào `target/kiosk`, chép binary vào `/opt/ai-hub`, khởi động lại service.
 4. Xem log: `journalctl -u ai-hub -f`.
 
-Gom các bước này vào một script deploy (dự kiến `scripts/deploy-pi.sh <host>`) khi dựng repo.
+Service đặt `AI_HUB_MODELS_DIR=/var/lib/ai-hub/models`; lần đầu chạy app tự tải model vào đó (cần mạng).
 
-## 6. Chỉ kiểm tra được trên Pi thật
+## 5. Âm thanh trên máy tính bảng
+
+Mic và loa tích hợp, chọn thiết bị ALSA mặc định. Máy không có AEC phần cứng như XVF3800 (xem ADR 0005 và [limitations.md](limitations.md)).
+
+## 6. Chỉ kiểm tra được trên máy tính bảng thật
 
 | Hạng mục | Vì sao |
 |---|---|
-| Backend `linuxkms`, renderer FemtoVG trên GPU V3D | Mac không có DRM/KMS |
-| **fps thực tế của hiệu ứng** (Orb, chữ rung, nền thời tiết, chuyển màn) | GPU Pi yếu hơn nhiều; đo sớm trước khi làm nhiều hiệu ứng |
+| Backend `linuxkms`, renderer FemtoVG trên GPU Intel | Mac không có DRM/KMS |
+| **fps thực tế của hiệu ứng** (Orb, chữ rung, nền thời tiết, chuyển màn) | Đo sớm trước khi làm nhiều hiệu ứng |
 | Màn cảm ứng thật: hướng xoay, độ nhạy, cảm giác vuốt | Chuột không giống ngón tay |
-| Kiosk: systemd, thời gian boot, splash, ẩn console | Chỉ có trên Pi OS |
-| Lần đầu khởi động: điểm truy cập Wi-Fi + 2 mã QR | Cần Wi-Fi của Pi |
-| Nhiệt độ và CPU khi chạy lâu (wake word + UI) | Pi có thể hạ xung khi nóng |
+| Mic/loa tích hợp: wake word và barge-in khi loa đang phát | Không có AEC phần cứng |
+| Kiosk: systemd, thời gian boot, ẩn console | Chỉ có trên máy thật |
+| Lần đầu khởi động: điểm truy cập Wi-Fi + 2 mã QR | Cần Wi-Fi của máy |
+| Nhiệt độ, CPU và pin khi chạy lâu (wake word + UI) | Máy có thể hạ xung khi nóng |
 
 ## 7. Thứ tự gợi ý
 
 1. Dựng workspace + cửa sổ Slint trống chạy trên Mac.
-2. Build bản Pi trong Docker và chạy được màn trống trên Pi (kiểm chứng sớm chuỗi build + `linuxkms`).
+2. Build bản kiosk trên máy tính bảng và chạy được màn trống (kiểm chứng sớm chuỗi build + `linuxkms`).
 3. `voice-client` nói chuyện được với vela-server cục bộ.
-4. Orb + Voice dock + wake word trên Mac; đo fps hiệu ứng trên Pi.
+4. Orb + Voice dock + wake word trên Mac; đo fps hiệu ứng trên máy tính bảng.
 5. Lần lượt các màn: trung tâm, Menu, Thời tiết, Lịch, Hẹn giờ, Đếm ngược, Reminder, Ảnh, Setting.

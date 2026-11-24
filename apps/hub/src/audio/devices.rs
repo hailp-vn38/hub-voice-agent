@@ -74,45 +74,14 @@ pub(super) fn open_input(producer: Producer<i16>) -> Result<(Stream, u32)> {
     Ok((stream, rate))
 }
 
-#[cfg(feature = "pi")]
-fn output_device(host: &cpal::Host) -> Result<Device> {
-    host.output_devices()
-        .context("không liệt kê được thiết bị audio output trên Pi")?
-        .find(|device| {
-            device
-                .description()
-                .is_ok_and(|description| is_xvf3800_device_name(description.name()))
-        })
-        .context("Pi yêu cầu thiết bị audio output XVF3800; không tìm thấy thiết bị này")
-}
-
-#[cfg(not(feature = "pi"))]
 fn output_device(host: &cpal::Host) -> Result<Device> {
     host.default_output_device()
         .context("không tìm thấy thiết bị audio output mặc định")
 }
 
-#[cfg(feature = "pi")]
-fn input_device(host: &cpal::Host) -> Result<Device> {
-    host.input_devices()
-        .context("không liệt kê được thiết bị audio input trên Pi")?
-        .find(|device| {
-            device
-                .description()
-                .is_ok_and(|description| is_xvf3800_device_name(description.name()))
-        })
-        .context("Pi yêu cầu thiết bị audio input XVF3800; không tìm thấy thiết bị này")
-}
-
-#[cfg(not(feature = "pi"))]
 fn input_device(host: &cpal::Host) -> Result<Device> {
     host.default_input_device()
         .context("không tìm thấy thiết bị audio input mặc định")
-}
-
-#[cfg(any(feature = "pi", test))]
-fn is_xvf3800_device_name(name: &str) -> bool {
-    name.to_ascii_lowercase().contains("xvf3800")
 }
 
 pub(super) fn start(stream: &Stream) -> Result<()> {
@@ -189,7 +158,3 @@ fn supported_sample_format(format: SampleFormat) -> bool {
             | SampleFormat::U64
     )
 }
-
-#[cfg(test)]
-#[path = "devices_tests.rs"]
-mod tests;

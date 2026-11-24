@@ -1,9 +1,9 @@
-#[cfg(all(feature = "desktop", feature = "pi"))]
+#[cfg(all(feature = "desktop", feature = "kiosk"))]
 compile_error!(
-    "features `desktop` and `pi` are mutually exclusive; for the Pi use `--no-default-features --features pi`"
+    "features `desktop` and `kiosk` are mutually exclusive; for the tablet use `--no-default-features --features kiosk`"
 );
-#[cfg(not(any(feature = "desktop", feature = "pi")))]
-compile_error!("enable exactly one backend feature: `desktop` (default) or `pi`");
+#[cfg(not(any(feature = "desktop", feature = "kiosk")))]
+compile_error!("enable exactly one backend feature: `desktop` (default) or `kiosk`");
 
 mod audio;
 mod device;
@@ -19,7 +19,7 @@ const SETUP_PORT: u16 = 8080;
 
 struct HostSystem;
 impl hub_core::System for HostSystem {
-    /// The desktop clock is trusted. On the Pi, systemd-timesyncd creates this
+    /// The desktop clock is trusted. On the kiosk tablet, systemd-timesyncd creates this
     /// file once NTP has synchronized the clock.
     fn time_synced(&self) -> bool {
         cfg!(feature = "desktop")

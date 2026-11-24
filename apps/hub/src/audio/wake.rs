@@ -31,11 +31,10 @@ fn threshold(sensitivity: Sensitivity) -> f32 {
     }
 }
 
-pub(super) fn load_default() -> Option<Box<dyn WakeDetector>> {
-    let models_dir = std::env::var_os("AI_HUB_MODELS_DIR")
+pub(super) fn models_dir() -> PathBuf {
+    std::env::var_os("AI_HUB_MODELS_DIR")
         .map(PathBuf::from)
-        .unwrap_or_else(|| PathBuf::from("models"));
-    load_optional(&models_dir)
+        .unwrap_or_else(|| PathBuf::from("models"))
 }
 
 pub(super) fn load_optional(models_dir: &Path) -> Option<Box<dyn WakeDetector>> {

@@ -142,3 +142,27 @@ fn wake_word_can_be_disabled_by_command() {
     let events = capture.push(&vec![0; WAKE_BLOCK_SAMPLES]);
     assert!(events.is_empty());
 }
+
+#[test]
+fn late_wake_detector_gets_the_sensitivity_set_before_it_arrived() {
+    use std::sync::{Arc, Mutex};
+    struct Recording(Arc<Mutex<Option<hub_core::Sensitivity>>>);
+    impl WakeDetector for Recording {
+        fn push(&mut self, _pcm: &[i16]) -> bool {
+            false
+        }
+        fn set_sensitivity(&mut self, sensitivity: hub_core::Sensitivity) {
+            *self.0.lock().unwrap() = Some(sensitivity);
+        }
+    }
+    let applied = Arc::new(Mutex::new(None));
+    let mut capture = Capture::new(None);
+    capture.apply(&AudioCommand::SetWakeWord {
+        enabled: true,
+        sensitivity: hub_core::Sensitivity::High,
+    });
+
+    capture.set_wake(Some(Box::new(Recording(applied.clone()))));
+
+    assert_eq!(*applied.lock().unwrap(), Some(hub_core::Sensitivity::High));
+}

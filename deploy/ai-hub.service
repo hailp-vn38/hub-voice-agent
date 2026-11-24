@@ -5,6 +5,7 @@ After=systemd-user-sessions.service
 [Service]
 User=hub
 SupplementaryGroups=video input render audio
+Environment=AI_HUB_MODELS_DIR=/var/lib/ai-hub/models
 ExecStart=/opt/ai-hub/ai-hub
 Restart=always
 StateDirectory=ai-hub

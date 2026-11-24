@@ -2,6 +2,7 @@ mod capture;
 mod devices;
 mod levels;
 mod mixer;
+mod models;
 mod resample;
 mod sounds;
 mod wake;

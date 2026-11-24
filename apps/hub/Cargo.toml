@@ -18,6 +18,7 @@ rtrb = "0.4"
 symphonia = { version = "0.5.5", default-features = false, features = ["mp3"] }
 ort = "=2.0.0-rc.15"
 qrcode = { version = "0.14", default-features = false }
+reqwest = { workspace = true, features = ["blocking"] }
 
 tokio = { workspace = true, features = ["rt-multi-thread", "sync", "time"] }
 anyhow = { workspace = true }
@@ -40,4 +41,4 @@ slint-build = { workspace = true }
 [features]
 default = ["desktop"]
 desktop = ["slint/backend-winit", "slint/renderer-femtovg"]
-pi = ["slint/backend-linuxkms", "slint/renderer-femtovg"]
+kiosk = ["slint/backend-linuxkms", "slint/renderer-femtovg"]
