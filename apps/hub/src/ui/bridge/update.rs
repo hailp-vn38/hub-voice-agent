@@ -54,7 +54,7 @@ impl<'a> Changes<'a> {
 fn diff(
     previous: Option<&HubView>,
     view: &HubView,
-    voice_settings: Option<(VoiceSettingsState, bool)>,
+    voice_settings: Option<VoiceSettingsState>,
 ) -> Vec<Update> {
     let mut changes = Changes::new(previous, view);
     if previous.is_some_and(|previous| agent_photos_finished(previous, view)) {
@@ -67,8 +67,8 @@ fn diff(
     changes.field(|view| &view.voice, voice::apply_voice);
     changes.field(|view| &view.response, voice::apply_response);
     changes.field(|view| &view.tool_trail, voice::apply_tool_trail);
-    if let Some((settings, url_changed)) = voice_settings {
-        changes.push(move |app| voice::apply_voice_settings(app, &settings, url_changed));
+    if let Some(settings) = voice_settings {
+        changes.push(move |app| voice::apply_voice_settings(app, &settings));
     }
     changes.field(|view| &view.weather, weather::apply);
     changes.field(|view| &view.calendar, calendar::apply);
@@ -128,12 +128,7 @@ pub fn spawn_bridge(
             let state = rx.borrow_and_update().clone();
             let view = hub_core::present(&state);
             let voice_settings = (shown_voice_settings.as_ref() != Some(&state.voice_settings))
-                .then(|| {
-                    let url_changed = shown_voice_settings
-                        .as_ref()
-                        .is_none_or(|previous| previous.ota_url != state.voice_settings.ota_url);
-                    (state.voice_settings.clone(), url_changed)
-                });
+                .then(|| state.voice_settings.clone());
             let mut updates = diff(shown.as_ref(), &view, voice_settings);
             let device = (
                 state.settings.clone(),

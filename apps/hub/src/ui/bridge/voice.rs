@@ -79,11 +79,8 @@ pub(super) fn apply_tool_trail(app: &App, trail: &ToolTrailView) {
         .set_steps(ModelRc::from(Rc::new(VecModel::from(steps))));
 }
 
-pub(super) fn apply_voice_settings(app: &App, voice: &VoiceSettingsState, url_changed: bool) {
+pub(super) fn apply_voice_settings(app: &App, voice: &VoiceSettingsState) {
     let settings = app.global::<SettingsData>();
-    if url_changed {
-        settings.set_ota_url(voice.ota_url.as_str().into());
-    }
     settings.set_connection(ConnectionSettings {
         server_status: voice.status_label.as_str().into(),
         device_id: voice.device_id.as_str().into(),

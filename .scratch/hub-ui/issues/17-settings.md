@@ -36,24 +36,25 @@ Kịch bản: đổi từng lựa chọn (demo áp lại vào fixture), "Đổi 
 
 ## Map với hub-core
 
-Map: một phần (Kết nối voice, `bridge.rs`); còn chờ #13 (Setup web URL), các danh mục khác chưa có ticket hub-core
+Map: đầy đủ. Mọi thay đổi đi qua `UserInput::Setting(SettingChange)` → `ConfigStore` (`[device]` trong config.toml) → `UiState.settings` / `.display` → `SettingsData`.
 
 | Hợp đồng | UiState / UserInput |
 |---|---|
-| `SettingsData.display` | |
-| `.audio` | |
-| `.voice` | |
-| `.home` | |
-| `.system` | |
-| `.setup-url` / `.setup-qr` | |
-| `.resolution-confirm` / `keep-resolution()` | |
-| `set-brightness` / `set-volume` | |
-| `choose` / `toggle` / `preview-sound` | |
-| `clear` / `system-action` | |
-| `connect-voice()` / `save-voice-url(url)` | `UserInput::VoiceConnect` / `UserInput::SaveVoiceUrl` |
-| `.ota-url` (in-out, tạm) | `UiState.voice_settings.ota_url` |
+| `SettingsData.display` | `UiState.settings` (độ sáng, tự chỉnh sáng, cỡ chữ, Ambient) + `UiState.display` (mode thật, `resolution`) |
+| `.audio` | `UiState.settings` (âm lượng, âm giao diện, chuông); danh sách chuông = `SOUND_NAMES` |
+| `.voice` | `UiState.settings` (wake word, độ nhạy, tắt mic) + `voice_settings.reminder_speech` |
+| `.home` | `UiState.home` + `settings.center_entities` (tối đa `MAX_CENTER_ENTITIES`) |
+| `.system` | phiên bản của crate; múi giờ `settings.timezone` (áp vào `Hub::now()`) |
+| `.setup-url` / `.setup-qr` | bridge `network.rs` + `qr.rs` (IP LAN, cổng Setup web) |
+| `.resolution-confirm` / `keep-resolution()` | `UiState.display.resolution_confirm` / `UserInput::KeepResolution` |
+| `set-brightness` / `set-volume` | `SettingChange::Brightness` / `Volume` |
+| `choose` / `toggle` | `SettingChange::*`; `entity:<id>` → `CenterEntity`; `read-reminder` → `UserInput::ReminderSpeech` |
+| `preview-sound` | `UserInput::PreviewSound` |
+| `clear` | `UserInput::Clear(DataKind)` |
+| `system-action` | `UserInput::Power(PowerAction)` → `Device::power` |
+| `connect-voice()` | `UserInput::VoiceConnect` |
 | `.dragging` (in-out, UI ghi) | — |
-| `.connection.server-status` / `.device-id` / `.error` / `.enrolled` / `.enrollment-code` | `voice_settings.status_label` / `.device_id` / `.error` / `!enrolling` / `.activation` |
+| `.connection.*` | `voice_settings.*`, `network.rs`, trạng thái weather/calendar/home |
 
 ## Answer
 
@@ -68,3 +69,5 @@ Map: một phần (Kết nối voice, `bridge.rs`); còn chờ #13 (Setup web UR
 ## Comments
 
 - 2026-11-23 (review hub-ui): Demo sinh QR Setup web. Các nút Dữ liệu (ảnh, hẹn giờ, đếm ngược, Reminder) xoá thật trong demo; thêm kịch bản "Setting: xoá toàn bộ ảnh (mở Dữ liệu)". Đổi `ConnectionSettings`: `server-status` (chuỗi đã định dạng) thay `server-connected` + `latency-ms`, thêm `device-id`, `error`. Map một phần trong `bridge.rs`: `.connection`, `.ota-url`, `connect-voice()`, `save-voice-url(url)`; bỏ màn `voice-settings.slint` cũ. Ghi vào bảng Map các khác biệt so với ticket: `ota-url` và `dragging` là `in-out` do UI ghi; callback `system(string)` đổi tên thành `system-action(string)` vì `system` trùng tên property. Còn lại cho người (ready-for-human): kiểm bằng mắt theo kịch bản demo, đo fps trên Pi, rồi tick nghiệm thu.
+
+- 2026-11-24 (hoàn thiện Settings): nối toàn bộ danh mục vào hub-core. Đã bỏ ô OTA URL tạm và `ota-url` / `save-voice-url` khỏi contract vì Setup web (#13) đã nhận OTA URL; `UserInput::SaveVoiceUrl` giữ lại trong hub-core. Còn lại cho người: kiểm bằng mắt theo nghiệm thu, thử độ sáng / `systemctl` trên thiết bị thật, đo fps. Chưa làm: liệt kê mode màn hình thật (`HostDevice::resolutions` rỗng), Orb xám có gạch khi tắt mic, nhấn Orb để bật lại mic.

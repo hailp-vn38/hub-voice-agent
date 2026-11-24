@@ -59,10 +59,4 @@ export component ConnectionPanel inherits VerticalLayout {
         Info { text: place.label; }
         ActionButton { text: "Chọn"; clicked => { SettingsData.pick-location(i); } }
     }
-    // Ngoại lệ tạm: ô nhập OTA URL giữ lại cho tới khi hub-core #13 xong (Setup web).
-    SettingRow {
-        label: "OTA URL (tạm)";
-        LineEdit { text <=> SettingsData.ota-url; }
-        ActionButton { text: "Lưu"; clicked => { SettingsData.save-voice-url(SettingsData.ota-url); } }
-    }
 }

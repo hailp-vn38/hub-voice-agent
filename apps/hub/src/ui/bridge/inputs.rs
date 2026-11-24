@@ -165,12 +165,6 @@ pub fn connect_inputs(app: &App, input_tx: mpsc::Sender<UserInput>) {
     });
 
     let settings = app.global::<SettingsData>();
-    let save = inputs.clone();
-    settings.on_save_voice_url(move |url| {
-        let mut input = save.borrow_mut();
-        input.activity();
-        input.send(UserInput::SaveVoiceUrl(url.to_string()));
-    });
     let connect = inputs.clone();
     settings.on_connect_voice(move || {
         let mut input = connect.borrow_mut();

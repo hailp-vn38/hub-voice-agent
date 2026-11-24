@@ -57,8 +57,6 @@ export global SettingsData {
     in property <string> setup-url;
     in property <image> setup-qr;
     in property <int> resolution-confirm; // giây còn lại, 0 = ẩn
-    // Ngoại lệ tạm: OTA URL nhập ở đây cho tới khi hub-core #13 xong.
-    in-out property <string> ota-url;
     // UI đặt true khi đang kéo slider để Shell không coi là vuốt điều hướng.
     in-out property <bool> dragging;
     // Vị trí nhà cho Open-Meteo: tìm theo tên, chọn một kết quả.
@@ -76,5 +74,4 @@ export global SettingsData {
     callback system-action(string);
     callback keep-resolution();
     callback connect-voice();
-    callback save-voice-url(string);
 }
