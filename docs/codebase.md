@@ -50,16 +50,18 @@ ai-hub/
 │       │   │   ├── run.rs        # vòng select!: mỗi nhánh gọi Hub, rồi thực thi Vec<Effect>
 │       │   │   ├── hub.rs        # struct Hub: trạng thái tính năng + handler theo loại input
 │       │   │   ├── voice.rs, audio.rs, setup.rs, tick.rs
-│       │   │   ├── tools.rs      # mở màn của tool (view::screen_for_hub_tool) → tính năng
+│       │   │   ├── tools.rs      # mở màn của tool (registry) → with_feature → Feature::handle_tool/handle_job
 │       │   │   ├── effects.rs    # enum Effect + executor duy nhất
 │       │   │   └── jobs.rs       # task mạng: giữ ToolCall, timeout, huỷ job cũ cùng khoá
 │       │   ├── conversation.rs   # Idle / Listening / Thinking / Speaking / Offline
-│       │   ├── view.rs           # điều hướng, focus, tự quay về, Ambient, "tạm xem", tool server → màn
+│       │   ├── view.rs           # điều hướng, focus, tự quay về, Ambient, "tạm xem"; Screen::ALL
 │       │   ├── alerts.rs         # trạng thái báo toàn màn: hàng đợi, tự tắt, đợi hết lượt nói
 │       │   ├── ui_state.rs       # UiState, UserInput
 │       │   ├── present/          # UiState → Rust copy of Slint contract data
 │       │   ├── audio.rs          # AudioCommand, AudioEvent (adapter ở apps/hub)
 │       │   ├── features/         # mỗi tính năng một thư mục cùng khuôn (xem 3.2)
+│       │   │   ├── registry.rs   # bảng FEATURES: màn, tiền tố tool, từ khoá tool server, tiền tố job, definitions
+│       │   │   ├── dispatch.rs   # trait Feature (handle_tool, handle_job), Cx, adapter của từng tính năng
 │       │   │   ├── tool_args.rs  # definition(), parse(), error() dùng chung cho tool
 │       │   │   ├── timers/       # mod.rs (khai báo), feature.rs (điều phối), rules.rs, store.rs, tools.rs
 │       │   │   ├── countdowns/
@@ -293,7 +295,8 @@ Hai lớp:
 | Module | Giữ gì | Interface chính |
 |---|---|---|
 | `conversation` | Trạng thái voice, chờ im lặng 10 s sau TTS, mic tắt | `on(input, now) -> Vec<Effect>`; `turn_active()` |
-| `view` | Màn hiện tại, focus, tự về màn trung tâm sau ~60 s, Ambient, "tạm xem", tool phía server → màn | `open(screen, focus)`, `show(screen)`, `on_user(..)`, `tick(now)`, `screen_for_hub_tool(name)`, `screen_for_server_tool(name)` (theo từ khoá) |
+| `view` | Màn hiện tại, focus, tự về màn trung tâm sau ~60 s, Ambient, "tạm xem" | `open(screen, focus)`, `show(screen)`, `on_user(..)`, `tick(now)` |
+| `features::registry` | Bảng `FEATURES`: mỗi tính năng một `Spec` | `screen_for_hub_tool(name)`, `screen_for_server_tool(name)` (theo từ khoá), `screen_for_job(id)`, `tool_definitions()` |
 | `runtime::jobs` | Task mạng đang chạy, `ToolCall` đang chờ | `Effect::Spawn { job, work, reply, timeout }` → `Internal::JobDone(id, result)`; hết giờ → reply lỗi; job mới cùng khoá huỷ job cũ |
 | `alerts` | Hàng đợi trạng thái báo (hết giờ, Reminder): lần lượt, tự tắt 2 phút / 60 s, đợi hết lượt nói | `push(alert)`, `dismiss()`, `tick(now, turn_active)` |
 | `features::timers` | ≤ 4 hẹn giờ, giờ kết thúc tuyệt đối, thời lượng tổng, tạm dừng | `start`, `adjust`, `cancel`, `due(now)`; thao tác chạm qua `UserInput::Timer` |
@@ -310,11 +313,11 @@ Hai lớp:
 
 Luật tính năng là **logic thuần nhận `now`, trả kết quả**; actor lo ghi `Store` và phát hiệu ứng. Vì vậy test một luật (vd. Reminder `weekly` qua Chủ nhật) không cần actor.
 
-**Khuôn thư mục tính năng.** Thêm hoặc sửa một tính năng chỉ chạm thư mục của nó, cộng một tiền tố trong `view::screen_for_hub_tool` và một nhánh trong `runtime/tools.rs`:
+**Khuôn thư mục tính năng.** Mỗi tính năng một thư mục cùng khuôn, một hàng trong registry và một impl của trait `Feature` ([ADR 0015](adr/0015-feature-registry-and-trait.md)). Checklist từng bước, gồm cả phần Slint: [adding-a-feature.md](adding-a-feature.md).
 
 ```
 features/<x>/
-  mod.rs     # khai báo submodule, re-export Feature và type công khai
+  mod.rs     # khai báo submodule, re-export Feature, type công khai và hằng id job (JOB / JOB_PREFIX)
   feature.rs # điều phối: on_tool, on_job, tick, snapshot → Vec<Effect>
   rules.rs   # luật thuần
   store.rs   # impl Store { <x>_* }
@@ -322,7 +325,9 @@ features/<x>/
   tests.rs
 ```
 
-Không có enum `ToolRequest` chung: `view::screen_for_hub_tool` ánh xạ tiền tố tên (`hub_timer_*` → màn Hẹn giờ) và `runtime/tools.rs` chuyển cho tính năng của màn đó, `tool_definitions()` nối `definitions()` của từng tính năng. Không có trait `Feature`: các tính năng khác nhau nhiều (mạng, push, file), runtime gọi qua `match`; chỉ rút trait khi đã có 3–4 tính năng thật cùng hình dạng.
+Định tuyến: `registry::FEATURES` là nguồn duy nhất. `screen_for_hub_tool` ánh xạ tiền tố tên (`hub_timer_*` → màn Hẹn giờ); `screen_for_server_tool` ánh xạ từ khoá; `screen_for_job` ánh xạ tiền tố id job; `tool_definitions()` nối `definitions()` theo thứ tự bảng. `runtime/tools.rs::with_feature` chọn tính năng bằng `match Screen` không có nhánh `_` và gọi qua `dyn Feature`.
+
+Không có enum `ToolRequest` chung. Trait `Feature` **hẹp**: chỉ `handle_tool` và `handle_job` (cộng `Cx { view, alerts, store, now }`), vì đó là hai nơi runtime lặp cùng hình dạng. `load`, `snapshot`, `tick`, `due`… khác chữ ký giữa các tính năng nên `Hub` gọi trực tiếp trên field cụ thể; `features/dispatch.rs` chỉ chứa adapter mỏng từ trait tới method riêng của từng tính năng. Job id vẫn là chuỗi vì mang tham số (`home:<entity>`); mỗi tính năng khai báo hằng id của mình.
 
 #### Seam bên ngoài (port)
 

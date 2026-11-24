@@ -116,6 +116,10 @@ Issues and specs live as local markdown files under `.scratch/<feature>/`. See `
 
 Default five canonical labels (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`), recorded as a `Status:` line in each issue file. See `docs/agents/triage-labels.md`.
 
+### Adding a feature
+
+Thêm tính năng theo checklist `docs/adding-a-feature.md`; định tuyến nằm ở `crates/hub-core/src/features/registry.rs` (ADR 0015).
+
 ### Domain docs
 
 Single-context: one `GLOSSARY.md` and `docs/adr/` at the repo root. See `docs/agents/domain.md`.
