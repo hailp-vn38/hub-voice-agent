@@ -108,7 +108,7 @@ fn center_menu_and_ambient_views_populate_their_contracts() {
     assert_eq!(center_ui.get_time(), "14:32");
     assert_eq!(center_ui.get_date(), "Thứ hai, 23/11");
     assert_eq!(center_ui.get_weather().temp, "24°");
-    assert_eq!(center_ui.get_weather().stale, true);
+    assert!(center_ui.get_weather().stale);
     assert_eq!(center_ui.get_today().row_count(), 1);
     assert_eq!(center_ui.get_today().row_data(0).unwrap().title, "Họp");
     assert_eq!(
@@ -143,7 +143,7 @@ fn center_menu_and_ambient_views_populate_their_contracts() {
 fn center_and_ambient_callbacks_send_core_inputs_and_activity() {
     let app = app();
     let (tx, mut rx) = tokio::sync::mpsc::channel(16);
-    crate::ui::bridge::connect_inputs(&app, tx, crate::ui::bridge::BridgeState::default());
+    crate::ui::bridge::connect_inputs(&app, tx);
 
     app.global::<crate::Center>()
         .invoke_open(crate::Screen::Weather);

@@ -42,6 +42,7 @@ pub(super) fn models(view: &PhotosView) -> (ModelRc<Photo>, ModelRc<Photo>) {
     let (photos, viewer) = IMAGES.with(|images| {
         let mut images = images.borrow_mut();
         images.retain(|key, _| retained.contains(key.as_str()));
+        release_full_images(&mut images, &full_keys);
 
         let photos = view
             .photos
@@ -62,6 +63,15 @@ pub(super) fn models(view: &PhotosView) -> (ModelRc<Photo>, ModelRc<Photo>) {
         PHOTO_ROWS.with(|rows| ModelRc::from(rows.clone())),
         VIEWER_ROWS.with(|rows| ModelRc::from(rows.clone())),
     )
+}
+
+/// Chỉ giữ bản giải mã full cho ảnh đang xem và hai ảnh kề (design §1.2.6).
+fn release_full_images(images: &mut HashMap<String, CachedImages>, full_keys: &HashSet<String>) {
+    for (key, cached) in images.iter_mut() {
+        if !full_keys.contains(key) {
+            cached.full = CachedImage::default();
+        }
+    }
 }
 
 fn sync_model(model: &VecModel<Photo>, rows: Vec<Photo>) {

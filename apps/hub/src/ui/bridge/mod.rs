@@ -13,10 +13,4 @@ mod voice;
 mod weather;
 
 pub use inputs::connect_inputs;
-use std::sync::{Arc, Mutex};
 pub use update::spawn_bridge;
-
-#[derive(Clone, Default)]
-pub struct BridgeState {
-    countdowns: Arc<Mutex<countdowns::Presentation>>,
-}

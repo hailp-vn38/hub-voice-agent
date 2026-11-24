@@ -1,7 +1,11 @@
+use super::inputs::Inputs;
 use crate::{App, Countdown as UiCountdown, CountdownUnit as UiCountdownUnit, CountdownsData};
-use hub_core::present::{CountdownItemView, CountdownUnit, CountdownsView};
-use slint::{ComponentHandle, ModelRc, VecModel};
-use std::rc::Rc;
+use hub_core::{
+    UserInput,
+    present::{CountdownItemView, CountdownUnit, CountdownsView},
+};
+use slint::{ComponentHandle, ModelRc, VecModel, Weak};
+use std::{cell::RefCell, rc::Rc, time::Duration};
 
 #[cfg(test)]
 #[path = "countdowns_tests.rs"]
@@ -27,6 +31,10 @@ pub(super) struct Display {
 struct Removing {
     item: CountdownItemView,
     was_main: bool,
+}
+
+thread_local! {
+    static PRESENTATION: RefCell<Presentation> = RefCell::default();
 }
 
 #[derive(Default)]
@@ -63,9 +71,7 @@ impl Presentation {
     }
 
     pub(super) fn close_detail(&mut self) -> Option<Display> {
-        if self.view.is_none() {
-            return None;
-        }
+        self.view.as_ref()?;
         self.detail_open = false;
         Some(self.display())
     }
@@ -198,6 +204,58 @@ impl Presentation {
             confetti_serial: view.confetti_serial,
             detail_open: self.detail_open,
         }
+    }
+}
+
+/// Ghi `CountdownsView` mới từ hub-core, giữ lựa chọn và hiệu ứng xoá của UI.
+pub(super) fn update(app: &App, view: &CountdownsView) {
+    let display = PRESENTATION.with(|presentation| presentation.borrow_mut().update(view));
+    apply(app, &display);
+}
+
+/// Nối callback màn đếm ngược. Chạy trên luồng UI như `update`.
+pub(super) fn connect_inputs(app: &App, inputs: Rc<RefCell<Inputs>>) {
+    let data = app.global::<CountdownsData>();
+    let (select, weak) = (inputs.clone(), app.as_weak());
+    data.on_select(move |key| change(&select, &weak, |p| p.select(key.as_str())));
+    let (open, weak) = (inputs.clone(), app.as_weak());
+    data.on_open_detail(move || change(&open, &weak, Presentation::open_detail));
+    let (close, weak) = (inputs.clone(), app.as_weak());
+    data.on_close_detail(move || change(&close, &weak, Presentation::close_detail));
+
+    let weak = app.as_weak();
+    data.on_remove(move |key| {
+        let key = key.to_string();
+        let mut removed = None;
+        change(&inputs, &weak, |p| {
+            let (display, id) = p.remove(&key)?;
+            removed = Some(id);
+            Some(display)
+        });
+        let Some(id) = removed else {
+            return;
+        };
+        inputs.borrow().send(UserInput::RemoveCountdown(id));
+        let weak = weak.clone();
+        slint::Timer::single_shot(Duration::from_millis(400), move || {
+            let display = PRESENTATION.with(|p| p.borrow_mut().finish_remove(&key));
+            if let Some(app) = weak.upgrade() {
+                apply(&app, &display);
+            }
+        });
+    });
+}
+
+/// Báo Activity, đổi trạng thái hiển thị cục bộ, rồi ghi lại global nếu có thay đổi.
+fn change(
+    inputs: &RefCell<Inputs>,
+    app: &Weak<App>,
+    change: impl FnOnce(&mut Presentation) -> Option<Display>,
+) {
+    inputs.borrow_mut().activity();
+    let display = PRESENTATION.with(|p| change(&mut p.borrow_mut()));
+    if let (Some(display), Some(app)) = (display, app.upgrade()) {
+        apply(&app, &display);
     }
 }
 

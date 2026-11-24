@@ -130,9 +130,7 @@ pub(super) fn close_detail(app: &App) {
 fn update_detail(app: &App) {
     let detail = STATE.with(|state| {
         let CalendarBridgeState { interaction, view } = &mut *state.borrow_mut();
-        let Some(view) = view.as_ref() else {
-            return None;
-        };
+        let view = view.as_ref()?;
         interaction.detail(&view.details, &view.upcoming)
     });
     app.global::<CalendarData>()

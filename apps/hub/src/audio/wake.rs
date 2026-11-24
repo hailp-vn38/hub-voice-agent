@@ -98,7 +98,7 @@ impl OpenWakeWord {
             !mel_values.is_empty() && mel_values.len() % MEL_BINS == 0,
             "melspectrogram output has an unexpected shape"
         );
-        for frame in mel_values.chunks_exact(MEL_BINS) {
+        for frame in mel_values.as_chunks::<MEL_BINS>().0 {
             let mut mel = [0.0; MEL_BINS];
             for (value, source) in mel.iter_mut().zip(frame) {
                 *value = source / 10.0 + 2.0;

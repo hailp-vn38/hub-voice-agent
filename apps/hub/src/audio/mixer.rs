@@ -1,3 +1,4 @@
+use anyhow::{Context, Result};
 use hub_core::{AudioCommand, Sound};
 use opus::{Channels, Decoder};
 use rubato::{Async, Resampler};
@@ -25,20 +26,20 @@ pub(super) struct Mixer {
 }
 
 impl Mixer {
-    pub(super) fn new(sounds: Sounds, rate: u32) -> Self {
+    pub(super) fn new(sounds: Sounds, rate: u32) -> Result<Self> {
         debug_assert_eq!(sounds.rate(), rate);
-        Self {
+        Ok(Self {
             sounds,
             rate,
             tts_decoder: Decoder::new(TTS_RATE, Channels::Mono)
                 .expect("24 kHz mono is a supported Opus decoder format"),
-            tts_resampler: make_resampler(rate),
+            tts_resampler: make_resampler(rate)?,
             tts_pending: VecDeque::new(),
             tts_samples: VecDeque::new(),
             alert: None,
             ding: None,
             level: 0.0,
-        }
+        })
     }
 
     pub(super) fn apply(&mut self, command: AudioCommand) {
@@ -175,14 +176,13 @@ impl Mixer {
     }
 }
 
-fn make_resampler(rate: u32) -> Option<Async<f32>> {
+fn make_resampler(rate: u32) -> Result<Option<Async<f32>>> {
     if rate == TTS_RATE {
-        return None;
+        return Ok(None);
     }
-    Some(
-        resample::sinc(rate as f64 / TTS_RATE as f64, TTS_CHUNK_SAMPLES)
-            .expect("device rate must be resampleable from 24 kHz"),
-    )
+    resample::sinc(f64::from(rate) / f64::from(TTS_RATE), TTS_CHUNK_SAMPLES)
+        .with_context(|| format!("không resample được TTS 24 kHz sang {rate} Hz"))
+        .map(Some)
 }
 
 struct SoundPlayback {

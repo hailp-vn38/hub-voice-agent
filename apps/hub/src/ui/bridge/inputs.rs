@@ -1,4 +1,3 @@
-use super::BridgeState;
 use crate::{AlertData, App, CalendarData, Nav, SettingsData, TimersData, Voice, WeatherData};
 use hub_core::{Focus, Screen as CoreScreen, TimerInput, UserInput};
 use slint::ComponentHandle;
@@ -97,7 +96,7 @@ pub(super) fn to_ui_screen(screen: CoreScreen) -> crate::Screen {
 }
 
 /// Nối callback hợp đồng vào hub-core. Gọi trên luồng UI trước `app.run()`.
-pub fn connect_inputs(app: &App, input_tx: mpsc::Sender<UserInput>, bridge_state: BridgeState) {
+pub fn connect_inputs(app: &App, input_tx: mpsc::Sender<UserInput>) {
     let inputs = Rc::new(RefCell::new(Inputs::new(input_tx)));
     let nav = app.global::<Nav>();
     let activity = inputs.clone();
@@ -165,81 +164,6 @@ pub fn connect_inputs(app: &App, input_tx: mpsc::Sender<UserInput>, bridge_state
         inputs.send(UserInput::OrbTapped);
     });
 
-    let countdowns = app.global::<crate::CountdownsData>();
-    let select_state = bridge_state.countdowns.clone();
-    let select_activity = inputs.clone();
-    let select_app = app.as_weak();
-    countdowns.on_select(move |key| {
-        select_activity.borrow_mut().activity();
-        let display = select_state
-            .lock()
-            .expect("countdown bridge state poisoned")
-            .select(key.as_str());
-        if let (Some(display), Some(app)) = (display, select_app.upgrade()) {
-            super::countdowns::apply(&app, &display);
-        }
-    });
-
-    let detail_state = bridge_state.countdowns.clone();
-    let detail_activity = inputs.clone();
-    let detail_app = app.as_weak();
-    countdowns.on_open_detail(move || {
-        detail_activity.borrow_mut().activity();
-        let display = detail_state
-            .lock()
-            .expect("countdown bridge state poisoned")
-            .open_detail();
-        if let (Some(display), Some(app)) = (display, detail_app.upgrade()) {
-            super::countdowns::apply(&app, &display);
-        }
-    });
-
-    let close_state = bridge_state.countdowns.clone();
-    let close_activity = inputs.clone();
-    let close_app = app.as_weak();
-    countdowns.on_close_detail(move || {
-        close_activity.borrow_mut().activity();
-        let display = close_state
-            .lock()
-            .expect("countdown bridge state poisoned")
-            .close_detail();
-        if let (Some(display), Some(app)) = (display, close_app.upgrade()) {
-            super::countdowns::apply(&app, &display);
-        }
-    });
-
-    let remove_state = bridge_state.countdowns.clone();
-    let remove_activity = inputs.clone();
-    let remove_app = app.as_weak();
-    countdowns.on_remove(move |key| {
-        remove_activity.borrow_mut().activity();
-        let key = key.to_string();
-        let removal = remove_state
-            .lock()
-            .expect("countdown bridge state poisoned")
-            .remove(&key);
-        if let Some((display, id)) = removal {
-            if let Some(app) = remove_app.upgrade() {
-                super::countdowns::apply(&app, &display);
-            }
-            remove_activity
-                .borrow()
-                .send(UserInput::RemoveCountdown(id));
-
-            let state = remove_state.clone();
-            let app = remove_app.clone();
-            slint::Timer::single_shot(Duration::from_millis(400), move || {
-                let display = state
-                    .lock()
-                    .expect("countdown bridge state poisoned")
-                    .finish_remove(&key);
-                if let Some(app) = app.upgrade() {
-                    super::countdowns::apply(&app, &display);
-                }
-            });
-        }
-    });
-
     let settings = app.global::<SettingsData>();
     let save = inputs.clone();
     settings.on_save_voice_url(move |url| {
@@ -296,6 +220,7 @@ pub fn connect_inputs(app: &App, input_tx: mpsc::Sender<UserInput>, bridge_state
         input.send(UserInput::DismissAlert);
     });
 
+    super::countdowns::connect_inputs(app, inputs.clone());
     super::home::connect_inputs(app, inputs.clone());
     super::photos::connect_inputs(app, inputs.clone());
     super::center::connect_inputs(app, inputs);

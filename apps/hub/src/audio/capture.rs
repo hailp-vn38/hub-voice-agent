@@ -106,7 +106,10 @@ impl Capture {
             ..
         } = self;
         let skip = preroll.len() % MIC_FRAME_SAMPLES;
-        for frame in preroll.make_contiguous()[skip..].chunks_exact(MIC_FRAME_SAMPLES) {
+        for frame in preroll.make_contiguous()[skip..]
+            .as_chunks::<MIC_FRAME_SAMPLES>()
+            .0
+        {
             queued_events.push(AudioEvent::MicFrame(encode(encoder, frame)));
         }
     }

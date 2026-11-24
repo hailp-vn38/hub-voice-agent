@@ -7,7 +7,7 @@ const RATE: u32 = 48_000;
 
 #[test]
 fn ding_plays_once_then_silence() {
-    let mut mixer = Mixer::new(Sounds::load(RATE).unwrap(), RATE);
+    let mut mixer = Mixer::new(Sounds::load(RATE).unwrap(), RATE).unwrap();
     mixer.apply(AudioCommand::Play(Sound::Ding));
 
     let mut output = vec![0.0; RATE as usize * 3];
@@ -23,7 +23,7 @@ fn ding_plays_once_then_silence() {
 
 #[test]
 fn timer_chime_repeats_until_stopped() {
-    let mut mixer = Mixer::new(Sounds::load(RATE).unwrap(), RATE);
+    let mut mixer = Mixer::new(Sounds::load(RATE).unwrap(), RATE).unwrap();
     mixer.apply(AudioCommand::Play(Sound::TimerChime));
 
     let mut first = vec![0.0; RATE as usize * 2];
@@ -43,7 +43,7 @@ fn timer_chime_repeats_until_stopped() {
 #[test]
 fn ding_does_not_replace_a_looping_alert_chime() {
     for chime in [Sound::TimerChime, Sound::ReminderChime] {
-        let mut mixer = Mixer::new(Sounds::load(RATE).unwrap(), RATE);
+        let mut mixer = Mixer::new(Sounds::load(RATE).unwrap(), RATE).unwrap();
         mixer.apply(AudioCommand::Play(chime.clone()));
         mixer.apply(AudioCommand::Play(Sound::Ding));
 
@@ -62,7 +62,7 @@ fn ding_does_not_replace_a_looping_alert_chime() {
 #[test]
 fn stopping_an_alert_chime_keeps_the_overlapping_ding_one_shot() {
     for chime in [Sound::TimerChime, Sound::ReminderChime] {
-        let mut mixer = Mixer::new(Sounds::load(RATE).unwrap(), RATE);
+        let mut mixer = Mixer::new(Sounds::load(RATE).unwrap(), RATE).unwrap();
         mixer.apply(AudioCommand::Play(chime.clone()));
         mixer.apply(AudioCommand::Play(Sound::Ding));
         mixer.apply(AudioCommand::StopSound(chime));
@@ -83,7 +83,7 @@ fn stopping_an_alert_chime_keeps_the_overlapping_ding_one_shot() {
 
 #[test]
 fn stop_tts_discards_queued_audio() {
-    let mut mixer = Mixer::new(Sounds::load(RATE).unwrap(), RATE);
+    let mut mixer = Mixer::new(Sounds::load(RATE).unwrap(), RATE).unwrap();
     mixer.apply(AudioCommand::PlayTts(opus_frame(0.6)));
 
     let mut before_stop = [0.0; 1024];
@@ -98,7 +98,7 @@ fn stop_tts_discards_queued_audio() {
 
 #[test]
 fn level_tracks_tts_energy_and_returns_to_zero_after_stop() {
-    let mut mixer = Mixer::new(Sounds::load(RATE).unwrap(), RATE);
+    let mut mixer = Mixer::new(Sounds::load(RATE).unwrap(), RATE).unwrap();
     mixer.apply(AudioCommand::PlayTts(opus_frame(0.6)));
 
     let mut output = [0.0; 1024];
@@ -112,12 +112,12 @@ fn level_tracks_tts_energy_and_returns_to_zero_after_stop() {
 
 #[test]
 fn chime_is_quieter_while_tts_is_queued() {
-    let mut without_tts = Mixer::new(Sounds::load(RATE).unwrap(), RATE);
+    let mut without_tts = Mixer::new(Sounds::load(RATE).unwrap(), RATE).unwrap();
     without_tts.apply(AudioCommand::Play(Sound::TimerChime));
     let mut normal = [0.0; 1024];
     without_tts.pull(&mut normal);
 
-    let mut with_tts = Mixer::new(Sounds::load(RATE).unwrap(), RATE);
+    let mut with_tts = Mixer::new(Sounds::load(RATE).unwrap(), RATE).unwrap();
     with_tts.apply(AudioCommand::Play(Sound::TimerChime));
     with_tts.apply(AudioCommand::PlayTts(opus_frame(0.0)));
     let mut mixed = [0.0; 1024];
@@ -128,7 +128,7 @@ fn chime_is_quieter_while_tts_is_queued() {
 
 #[test]
 fn empty_mixer_outputs_silence_without_panicking() {
-    let mut mixer = Mixer::new(Sounds::load(RATE).unwrap(), RATE);
+    let mut mixer = Mixer::new(Sounds::load(RATE).unwrap(), RATE).unwrap();
     mixer.apply(AudioCommand::StopTts);
     mixer.apply(AudioCommand::StopSound(Sound::ReminderChime));
     mixer.apply(AudioCommand::Play(Sound::ToolDone));

@@ -52,8 +52,6 @@ fn main() -> anyhow::Result<()> {
     let (stop_tx, stop_rx) = oneshot::channel::<()>();
     let setup_tx = input_tx.clone();
     let weak = app.as_weak();
-    let bridge_state = ui::BridgeState::default();
-    let spawn_state = bridge_state.clone();
     let core = thread::spawn(move || -> anyhow::Result<()> {
         let rt = tokio::runtime::Builder::new_multi_thread()
             .enable_all()
@@ -66,11 +64,13 @@ fn main() -> anyhow::Result<()> {
                 }
             });
             let (voice_tx, voice_rx) = voice_client::spawn(config_rx);
-            let audio = audio::spawn(audio::AudioConfig)?;
+            let audio = audio::spawn().unwrap_or_else(|error| {
+                eprintln!("Chạy không có âm thanh: {error:#}");
+                audio::disabled()
+            });
             let audio_tx = audio.commands;
             let audio_rx = audio.events;
-            let audio_levels = audio.levels;
-            ui::spawn_bridge(weak, ui_rx, audio_levels, spawn_state);
+            ui::spawn_bridge(weak, ui_rx, audio.levels);
             let ports = Ports { clock: Arc::new(SystemClock), system: Arc::new(HostSystem), calendar: Arc::new(hub_core::GoogleCalendar::default()), weather: Arc::new(hub_core::OpenMeteo::default()), home: Arc::new(hub_core::HomeAssistant::default()), images: Arc::new(hub_core::HttpImageFetcher) };
             tokio::select! {
                 result = hub_core::run(config, store, ports, Io { voice_config_tx: config_tx, voice_tx, voice_rx, audio_tx, audio_rx, input_rx, ui_tx }) => result,
@@ -78,7 +78,7 @@ fn main() -> anyhow::Result<()> {
             }
         })
     });
-    ui::connect_inputs(&app, input_tx, bridge_state);
+    ui::connect_inputs(&app, input_tx);
     app.run()?;
     let _ = stop_tx.send(());
     core.join()

@@ -1,5 +1,6 @@
 mod capture;
 mod devices;
+mod levels;
 mod mixer;
 mod resample;
 mod sounds;
@@ -9,16 +10,8 @@ mod worker;
 use hub_core::{AudioCommand, AudioEvent};
 use tokio::sync::{mpsc, watch};
 
-pub use worker::spawn;
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct AudioConfig;
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct Levels {
-    pub mic: f32,
-    pub tts: f32,
-}
+pub use levels::Levels;
+pub use worker::{disabled, spawn};
 
 pub struct AudioHandle {
     pub commands: mpsc::Sender<AudioCommand>,
