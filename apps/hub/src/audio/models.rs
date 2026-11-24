@@ -16,7 +16,7 @@ const BASE_URL: &str = "https://github.com/dscripka/openWakeWord/releases/downlo
 const FILES: [(&str, &str); 3] = [
     ("melspectrogram.onnx", "melspectrogram.onnx"),
     ("embedding_model.onnx", "embedding_model.onnx"),
-    ("hey_jarvis.onnx", "hey_jarvis_v0.1.onnx"),
+    ("alexa.onnx", "alexa_v0.1.onnx"),
 ];
 
 pub(super) fn missing(dir: &Path) -> bool {

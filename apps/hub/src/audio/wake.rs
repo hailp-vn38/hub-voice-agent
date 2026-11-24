@@ -74,7 +74,7 @@ impl OpenWakeWord {
         Ok(Self {
             melspectrogram: load_session("melspectrogram.onnx")?,
             embedding: load_session("embedding_model.onnx")?,
-            classifier: load_session("hey_jarvis.onnx")?,
+            classifier: load_session("alexa.onnx")?,
             raw_history: VecDeque::with_capacity(
                 MODEL_BLOCK_SAMPLES + MELSPECTROGRAM_CONTEXT_SAMPLES,
             ),
@@ -158,7 +158,7 @@ impl OpenWakeWord {
         let score = scores
             .first()
             .copied()
-            .context("hey_jarvis model returned no score")?;
+            .context("alexa model returned no score")?;
         Ok(Some(score))
     }
 }

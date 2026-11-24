@@ -46,7 +46,7 @@ fn serve(ok: &'static [&'static str]) -> (String, Arc<Mutex<Vec<String>>>) {
 const ALL: &[&str] = &[
     "melspectrogram.onnx",
     "embedding_model.onnx",
-    "hey_jarvis_v0.1.onnx",
+    "alexa_v0.1.onnx",
 ];
 
 #[test]
@@ -59,8 +59,8 @@ fn downloads_every_missing_model_under_its_local_name() {
     download(&models, &base).unwrap();
 
     assert!(!missing(&models));
-    let classifier = std::fs::read_to_string(models.join("hey_jarvis.onnx")).unwrap();
-    assert_eq!(classifier, "model:hey_jarvis_v0.1.onnx");
+    let classifier = std::fs::read_to_string(models.join("alexa.onnx")).unwrap();
+    assert_eq!(classifier, "model:alexa_v0.1.onnx");
 }
 
 #[test]
@@ -74,7 +74,7 @@ fn skips_models_that_are_already_present() {
     download(dir.path(), &base).unwrap();
 
     assert!(requests.lock().unwrap().is_empty());
-    let kept = std::fs::read_to_string(dir.path().join("hey_jarvis.onnx")).unwrap();
+    let kept = std::fs::read_to_string(dir.path().join("alexa.onnx")).unwrap();
     assert_eq!(kept, "kept");
 }
 
@@ -85,7 +85,7 @@ fn failed_download_leaves_no_partial_model() {
 
     assert!(download(dir.path(), &base).is_err());
 
-    assert!(!dir.path().join("hey_jarvis.onnx").exists());
-    assert!(!dir.path().join("hey_jarvis.onnx.part").exists());
+    assert!(!dir.path().join("alexa.onnx").exists());
+    assert!(!dir.path().join("alexa.onnx.part").exists());
     assert!(missing(dir.path()));
 }
