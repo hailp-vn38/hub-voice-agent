@@ -111,7 +111,7 @@ impl Feature {
         let source = self.source.clone();
         let key = self.active.clone();
         Effect::Spawn {
-            job: "weather".into(),
+            job: super::JOB.into(),
             work: Box::pin(async move {
                 Ok(Box::new((key, source.forecast(location).await))
                     as Box<dyn std::any::Any + Send>)
@@ -177,7 +177,7 @@ impl Feature {
             .filter(|(updated, _)| now.saturating_sub(*updated) < REFRESH_SECONDS)
         {
             self.pending = false;
-            effects.push(Effect::CancelJob("weather".into()));
+            effects.push(Effect::CancelJob(super::JOB.into()));
             effects.push(Effect::Reply(call, Ok(self.named(data))));
             return effects;
         }

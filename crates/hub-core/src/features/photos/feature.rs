@@ -87,7 +87,7 @@ impl Feature {
             true
         })));
         effects.push(Effect::Spawn {
-            job: "photos".into(),
+            job: super::JOB.into(),
             reply: Some(call),
             timeout: Duration::from_secs(120),
             work: Box::pin(async move {

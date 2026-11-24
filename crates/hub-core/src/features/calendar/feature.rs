@@ -12,8 +12,8 @@ use jiff::{Timestamp, Zoned, civil::Date};
 use std::{sync::Arc, time::Duration};
 use voice_client::ToolCall;
 
-const SYNC_JOB: &str = "calendar-sync";
-const CREATE_JOB_PREFIX: &str = "calendar-create-";
+pub(super) const SYNC_JOB: &str = "calendar-sync";
+pub(super) const CREATE_JOB_PREFIX: &str = "calendar-create-";
 const SYNC_SECONDS: i64 = 300;
 const SAVED_SECONDS: i64 = 3;
 
@@ -49,9 +49,6 @@ impl Feature {
             created: Vec::new(),
             pending: Vec::new(),
         })
-    }
-    pub fn owns_job(id: &str) -> bool {
-        id == SYNC_JOB || id.starts_with(CREATE_JOB_PREFIX)
     }
     /// Drops the cache for a new account and syncs it at once.
     pub fn reset(&mut self, settings: CalendarSettings, now: &Zoned) -> Vec<Effect> {

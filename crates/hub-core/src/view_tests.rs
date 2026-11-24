@@ -1,22 +1,4 @@
-use super::{Screen, View, screen_for_hub_tool, screen_for_server_tool};
-
-#[test]
-fn hub_tools_map_to_their_feature_screen() {
-    assert_eq!(screen_for_hub_tool("hub_timer_start"), Some(Screen::Timers));
-    assert_eq!(screen_for_hub_tool("hub_show_image"), Some(Screen::Photos));
-    assert_eq!(screen_for_hub_tool("hub_unknown"), None);
-}
-
-#[test]
-fn server_tools_map_by_keyword() {
-    assert_eq!(
-        screen_for_server_tool("google_calendar_list_events"),
-        Some(Screen::Calendar)
-    );
-    assert_eq!(screen_for_server_tool("HassTurnOn"), Some(Screen::Home));
-    assert_eq!(screen_for_server_tool("get_weather"), Some(Screen::Weather));
-    assert_eq!(screen_for_server_tool("server_search"), None);
-}
+use super::{Screen, View};
 
 #[test]
 fn ambient_starts_after_the_configured_idle_time() {
@@ -31,4 +13,27 @@ fn ambient_never_starts_when_disabled() {
     let mut view = View::new(0);
     assert!(view.tick(100_000, None).is_empty());
     assert_eq!(view.screen(), Screen::Center);
+}
+
+#[test]
+fn screen_all_lists_every_variant_once() {
+    // The match has no wildcard: a new variant fails to compile here until it is
+    // counted, and then the length check below fails until `ALL` includes it.
+    let variants = |screen: Screen| match screen {
+        Screen::Center
+        | Screen::Menu
+        | Screen::Ambient
+        | Screen::Weather
+        | Screen::Calendar
+        | Screen::Home
+        | Screen::Timers
+        | Screen::Countdowns
+        | Screen::Reminders
+        | Screen::Photos
+        | Screen::Settings => 11,
+    };
+    assert_eq!(Screen::ALL.len(), variants(Screen::Center));
+    for (i, a) in Screen::ALL.iter().enumerate() {
+        assert!(!Screen::ALL[i + 1..].contains(a));
+    }
 }

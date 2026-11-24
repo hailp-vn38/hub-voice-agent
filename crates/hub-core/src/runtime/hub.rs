@@ -6,8 +6,8 @@ use crate::{
     ToolTrailState, UserInput,
     alerts::Alerts,
     conversation::{Conversation, Input},
-    features::{calendar, countdowns, home, photos, reminders, timers, weather},
-    view::{self, View},
+    features::{calendar, countdowns, home, photos, registry, reminders, timers, weather},
+    view::View,
 };
 use jiff::Zoned;
 use std::sync::Arc;
@@ -159,17 +159,9 @@ impl Hub {
 
     pub fn on_job(&mut self, event: Internal, store: &Store) -> Vec<Effect> {
         let now = self.now();
-        let seconds = now.timestamp().as_second();
         let (id, result, reply) = match event {
             Internal::JobDone(id, result, reply) => (id, result, reply),
-            Internal::Timeout(id, reply) if id == "weather" => {
-                (id, Err(anyhow::anyhow!("Job timed out")), reply)
-            }
-            Internal::Timeout(id, reply)
-                if id == "photos"
-                    || id.starts_with("home:")
-                    || calendar::Feature::owns_job(&id) =>
-            {
+            Internal::Timeout(id, reply) if registry::screen_for_job(&id).is_some() => {
                 (id, Err(anyhow::anyhow!("Job timed out")), reply)
             }
             Internal::Timeout(_, reply) => {
@@ -188,18 +180,9 @@ impl Hub {
             }
         };
         let tool_name = reply.as_ref().map(|call| call.name.clone());
-        let mut effects = self.track_view(store, |hub| {
-            if id == "weather" {
-                hub.weather.on_job(result, reply, seconds)
-            } else if calendar::Feature::owns_job(&id) {
-                hub.calendar.on_job(&id, result, reply, &mut hub.view, &now)
-            } else if id == "photos" {
-                hub.photos.on_job(result, reply, seconds, &mut hub.view)
-            } else if id.starts_with("home:") {
-                hub.home.on_job(&id, result, reply)
-            } else {
-                Vec::new()
-            }
+        let mut effects = self.track_view(store, |hub| match registry::screen_for_job(&id) {
+            Some(screen) => hub.route_job(screen, &id, result, reply, &now, store),
+            None => Vec::new(),
         });
         if let Some(name) = tool_name
             && let Some(state) = tool_trail::outcome(&effects)
@@ -232,7 +215,7 @@ impl Hub {
                 match state {
                     ToolState::Started => {
                         let (_, started) = hub.tool_trail.start(name.clone());
-                        let mut effects = view::screen_for_server_tool(&name)
+                        let mut effects = registry::screen_for_server_tool(&name)
                             .map(|screen| hub.view.show(screen, seconds))
                             .unwrap_or_default();
                         effects.push(started);

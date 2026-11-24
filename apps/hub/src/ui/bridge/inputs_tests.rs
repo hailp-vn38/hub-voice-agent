@@ -28,19 +28,7 @@ fn app() -> crate::App {
 
 #[test]
 fn every_hub_core_screen_round_trips_through_slint() {
-    let screens = [
-        hub_core::Screen::Center,
-        hub_core::Screen::Menu,
-        hub_core::Screen::Ambient,
-        hub_core::Screen::Weather,
-        hub_core::Screen::Calendar,
-        hub_core::Screen::Home,
-        hub_core::Screen::Timers,
-        hub_core::Screen::Countdowns,
-        hub_core::Screen::Reminders,
-        hub_core::Screen::Photos,
-        hub_core::Screen::Settings,
-    ];
+    let screens = hub_core::Screen::ALL;
 
     for core_screen in screens {
         let slint_screen = to_ui_screen(core_screen);

@@ -136,12 +136,5 @@ pub use sources::{GeoPlace, GoogleCalendar, HomeAssistant, HttpImageFetcher, Ope
 pub use store::Store;
 
 pub fn tool_definitions() -> Vec<voice_client::ToolDef> {
-    let mut tools = features::timers::tools::definitions();
-    tools.extend(features::countdowns::tools::definitions());
-    tools.extend(features::reminders::tools::definitions());
-    tools.extend(features::calendar::tools::definitions());
-    tools.extend(features::weather::tools::definitions());
-    tools.extend(features::home::tools::definitions());
-    tools.extend(features::photos::tools::definitions());
-    tools
+    features::registry::tool_definitions()
 }

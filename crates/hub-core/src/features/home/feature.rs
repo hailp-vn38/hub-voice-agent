@@ -151,7 +151,7 @@ impl Feature {
         let source = self.source.clone();
         let mut effects = vec![self.snapshot()];
         effects.push(Effect::Spawn {
-            job: format!("home:{entity_id}"),
+            job: format!("{}{entity_id}", super::JOB_PREFIX),
             work: Box::pin(async move {
                 source.call_service(entity_id, service).await?;
                 Ok(Box::new(()) as Box<dyn std::any::Any + Send>)
@@ -164,7 +164,7 @@ impl Feature {
     pub fn on_job(&mut self, id: &str, result: JobResult, reply: Option<ToolCall>) -> Vec<Effect> {
         let mut effects = Vec::new();
         if result.is_err()
-            && let Some(entity_id) = id.strip_prefix("home:")
+            && let Some(entity_id) = id.strip_prefix(super::JOB_PREFIX)
             && self.pending.remove(entity_id)
         {
             effects.push(self.snapshot());

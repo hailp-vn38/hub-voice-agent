@@ -16,6 +16,23 @@ pub enum Screen {
     Settings,
 }
 
+impl Screen {
+    /// Every screen; the UI bridge tests round-trip each one through Slint.
+    pub const ALL: [Screen; 11] = [
+        Screen::Center,
+        Screen::Menu,
+        Screen::Ambient,
+        Screen::Weather,
+        Screen::Calendar,
+        Screen::Home,
+        Screen::Timers,
+        Screen::Countdowns,
+        Screen::Reminders,
+        Screen::Photos,
+        Screen::Settings,
+    ];
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Focus {
     Timer(i64),
@@ -156,47 +173,6 @@ impl View {
             view_changed || focus_event
         }))]
     }
-}
-
-/// The screen a Device MCP tool drives (ADR 0008).
-pub(crate) fn screen_for_hub_tool(name: &str) -> Option<Screen> {
-    const PREFIXES: [(&str, Screen); 8] = [
-        ("hub_calendar_", Screen::Calendar),
-        ("hub_timer_", Screen::Timers),
-        ("hub_countdown_", Screen::Countdowns),
-        ("hub_reminder_", Screen::Reminders),
-        ("hub_weather_", Screen::Weather),
-        ("hub_home_", Screen::Home),
-        ("hub_image_", Screen::Photos),
-        ("hub_show_image", Screen::Photos),
-    ];
-    PREFIXES
-        .iter()
-        .find(|(prefix, _)| name.starts_with(prefix))
-        .map(|(_, screen)| *screen)
-}
-
-/// The screen a server-side tool opens. The hub only learns the tool's name, and
-/// names come from the server's configuration, so they are matched by keyword;
-/// an unknown name leaves the view as it is.
-pub(crate) fn screen_for_server_tool(name: &str) -> Option<Screen> {
-    const KEYWORDS: [(&str, Screen); 10] = [
-        ("calendar", Screen::Calendar),
-        ("event", Screen::Calendar),
-        ("weather", Screen::Weather),
-        ("forecast", Screen::Weather),
-        ("hass", Screen::Home),
-        ("home", Screen::Home),
-        ("light", Screen::Home),
-        ("switch", Screen::Home),
-        ("image", Screen::Photos),
-        ("photo", Screen::Photos),
-    ];
-    let name = name.to_ascii_lowercase();
-    KEYWORDS
-        .iter()
-        .find(|(keyword, _)| name.contains(keyword))
-        .map(|(_, screen)| *screen)
 }
 
 #[cfg(test)]
