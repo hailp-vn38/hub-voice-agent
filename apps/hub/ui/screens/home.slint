@@ -10,10 +10,10 @@ export component Home inherits Rectangle {
     private property <length> u: Theme.unit;
     private property <float> cw: self.width / root.u;
     private property <float> ch: self.height / root.u;
-    private property <float> left: 130;
-    private property <float> right: root.cw - 30;
-    private property <float> top: 96;
-    private property <float> bottom: root.ch - 92;
+    private property <float> left: Theme.content-left;
+    private property <float> right: root.cw - Theme.pad;
+    private property <float> top: Theme.content-top;
+    private property <float> bottom: root.ch - Theme.pad;
     private property <float> gap: 12;
     private property <int> cols: max(1, floor((root.right - root.left + root.gap) / (170 + root.gap)));
     private property <float> tw: (root.right - root.left - (root.cols - 1) * root.gap) / root.cols;
@@ -25,7 +25,7 @@ export component Home inherits Rectangle {
     // Đầu màn.
     HorizontalLayout {
         x: root.left * root.u;
-        y: 42 * root.u;
+        y: Theme.frame-top * root.u;
         width: (root.right - root.left) * root.u;
         height: 40 * root.u;
         spacing: 16 * root.u;

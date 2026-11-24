@@ -36,6 +36,16 @@ export global Theme {
     out property <length> radius-card: 20 * unit;
     out property <length> radius-panel: 24 * unit;
 
+    // Khung màn (số đơn vị canvas, nhân `unit` khi dùng). `pad`: lề màn, khe giữa các khối
+    // và padding gốc của thẻ chính lẫn khối Voice, một giá trị cho tất cả.
+    out property <float> pad: 12;
+    out property <length> pad-len: pad * unit;
+    out property <float> frame-top: 34;    // dưới thanh trạng thái: đỉnh rail và tiêu đề màn
+    out property <float> title-h: 40;
+    out property <float> rail-w: 76;
+    out property <float> content-left: pad + rail-w + pad;
+    out property <float> content-top: frame-top + title-h + pad;
+
     // Khoảng cách, bo góc, vùng chạm (px tuyệt đối, màn cũ)
     out property <length> space-s: 12px;
     out property <length> space-m: 24px;

@@ -1,0 +1,64 @@
+import { Theme } from "../theme.slint";
+import { Voice, VoiceState } from "../contract/voice.slint";
+import { Response } from "../contract/response.slint";
+import { ToolTrail } from "../contract/tool-trail.slint";
+import { ResponseText } from "response-text.slint";
+import { ToolTrailView } from "tool-trail.slint";
+
+// Phụ đề Voice: thẻ kính nổi cạnh khối Voice, chỉ hiện khi đang hội thoại hoặc có trạng thái
+// cần báo (mất kết nối, tắt mic). Co theo bề rộng chữ, tối đa `limit-width`; ẩn thì trượt về orb.
+export component VoiceCaption inherits Rectangle {
+    in property <length> u: 1px;
+    in property <bool> disabled;
+    in property <length> limit-width;
+    private property <VoiceState> st: Voice.state;
+    private property <bool> offline: root.st == VoiceState.offline;
+    private property <bool> muted: Voice.mic-muted && !root.offline;
+    private property <bool> has-words: Response.words.length > 0 && !Response.fading;
+    private property <bool> has-trail: ToolTrail.steps.length > 0;
+    private property <string> status: root.offline ? "Mất kết nối với trợ lý"
+        : root.muted ? "Mic đang tắt · chạm orb để bật"
+        : root.has-words ? ""
+        : root.st == VoiceState.listening ? "Đang nghe…"
+        : root.st == VoiceState.thinking ? "Đang nghĩ…" : "";
+    private property <bool> shown: !root.disabled && (root.status != "" || root.has-words);
+    private property <length> trail-w: root.has-trail ? 64 * root.u + Theme.pad-len : 0px;
+    private property <length> body-w: root.status != "" ? status-text.preferred-width : words.text-width;
+
+    width: clamp(root.body-w + root.trail-w + 2 * Theme.pad-len, 120 * root.u, root.limit-width);
+    animate width { duration: Theme.anim-state; easing: ease-out; }
+    border-radius: Theme.radius-card;
+    background: Theme.background.with-alpha(0.9);
+    border-width: 1 * root.u;
+    border-color: root.offline ? Theme.error.with-alpha(0.45) : root.muted ? Theme.warm.with-alpha(0.4) : Theme.accent-cyan.with-alpha(0.3);
+    clip: true;
+    opacity: root.shown ? 1 : 0;
+    animate opacity { duration: Theme.anim-state; }
+    transform-scale: root.shown ? 1 : 0.96;
+    animate transform-scale { duration: Theme.anim-state; easing: ease-out; }
+    visible: self.opacity > 0;
+
+    status-text := Text {
+        x: Theme.pad-len;
+        width: parent.width - 2 * Theme.pad-len - root.trail-w;
+        height: parent.height;
+        text: root.status;
+        font-size: Theme.type-card-title;
+        color: Theme.text-dim;
+        vertical-alignment: center;
+        overflow: elide;
+        visible: root.status != "";
+    }
+    words := ResponseText {
+        x: Theme.pad-len;
+        width: parent.width - 2 * Theme.pad-len - root.trail-w;
+        height: parent.height;
+        font-size: Theme.type-card-title;
+        visible: root.status == "";
+    }
+    if root.has-trail: ToolTrailView {
+        x: parent.width - Theme.pad-len - 64 * root.u;
+        width: 64 * root.u;
+        y: (parent.height - self.height) / 2;
+    }
+}

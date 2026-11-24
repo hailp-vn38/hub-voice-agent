@@ -85,11 +85,11 @@ export component Countdowns inherits Rectangle {
     private property <length> u: Theme.unit;
     private property <float> cw: self.width / root.u;
     private property <float> ch: self.height / root.u;
-    private property <float> left: 130;
-    private property <float> right: root.cw - 30;
-    private property <float> top: 96;
-    private property <float> bottom: root.ch - 92;
-    private property <float> main-w: (root.right - root.left - 16) * 0.57;
+    private property <float> left: Theme.content-left;
+    private property <float> right: root.cw - Theme.pad;
+    private property <float> top: Theme.content-top;
+    private property <float> bottom: root.ch - Theme.pad;
+    private property <float> main-w: (root.right - root.left - Theme.pad) * 0.57;
     private property <duration> now: animation-tick();
     private property <duration> promote-t0: -10000ms;
     private property <length> from-x;
@@ -101,7 +101,7 @@ export component Countdowns inherits Rectangle {
 
     Text {
         x: root.left * root.u;
-        y: 42 * root.u;
+        y: Theme.frame-top * root.u;
         width: (root.right - root.left) * root.u;
         height: 40 * root.u;
         text: CountdownsData.title;
@@ -147,7 +147,7 @@ export component Countdowns inherits Rectangle {
             border-width: 1 * root.u;
             border-color: Theme.accent.with-alpha(0.65);
             VerticalLayout {
-                padding: 28 * root.u;
+                padding: Theme.pad-len;
                 spacing: 12 * root.u;
                 Text { text: "MỐC ĐẾM NGƯỢC"; color: Theme.accent-cyan; font-size: Theme.type-caption; font-weight: 600; }
                 Text { text: CountdownsData.main.label; color: Theme.text; font-size: Theme.type-section; font-weight: 600; overflow: elide; }
@@ -178,9 +178,9 @@ export component Countdowns inherits Rectangle {
     }
 
     if CountdownsData.has-main: Rectangle {
-        x: (root.left + root.main-w + 16) * root.u;
+        x: (root.left + root.main-w + Theme.pad) * root.u;
         y: root.top * root.u;
-        width: (root.right - root.left - root.main-w - 16) * root.u;
+        width: (root.right - root.left - root.main-w - Theme.pad) * root.u;
         height: (root.bottom - root.top) * root.u;
         border-radius: Theme.radius-panel;
         background: Theme.glass;
@@ -188,7 +188,7 @@ export component Countdowns inherits Rectangle {
         border-color: Theme.border;
         clip: true;
         VerticalLayout {
-            padding: 18 * root.u;
+            padding: Theme.pad-len;
             spacing: 12 * root.u;
             Text { text: "Các mốc khác"; color: Theme.text; font-size: Theme.type-card-title; font-weight: 600; }
             if CountdownsData.others.length == 0: Text {

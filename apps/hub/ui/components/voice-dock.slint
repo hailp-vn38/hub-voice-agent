@@ -1,0 +1,97 @@
+import { Theme } from "../theme.slint";
+import { Voice, VoiceState, VoiceLevels } from "../contract/voice.slint";
+import { Orb } from "orb.slint";
+
+// Khối Voice ở đáy cột trái, ngay dưới thanh điều hướng. Orb nằm đáy khối; hiệu ứng lan lên
+// phần trống phía trên: nghe = vòng sóng bay lên theo mức mic, nói = hai dải chấm uốn theo TTS,
+// nghĩ = vệt sáng quét dọc hai mép. Viền khối đổi màu theo trạng thái.
+export component VoiceDock inherits Rectangle {
+    in property <length> u: 1px;
+    in property <bool> disabled;
+    private property <duration> now: animation-tick();
+    private property <VoiceState> st: Voice.state;
+    private property <bool> live: !root.disabled && !Voice.mic-muted && root.st != VoiceState.offline;
+    private property <bool> listening: root.live && root.st == VoiceState.listening;
+    private property <bool> speaking: root.live && root.st == VoiceState.speaking;
+    private property <bool> thinking: root.live && root.st == VoiceState.thinking;
+    private property <float> mic: VoiceLevels.mic;
+    private property <float> tts: VoiceLevels.tts;
+    animate mic, tts { duration: 90ms; }
+
+    // Vùng hiệu ứng: từ đỉnh khối tới ngay trên orb.
+    private property <length> cx: root.width / 2;
+    private property <length> cy: root.height - Theme.pad-len - orb.height / 2;
+    private property <length> fx-top: Theme.pad-len;
+    private property <length> fx-h: root.cy - orb.height / 2 - root.fx-top;
+
+    border-radius: Theme.radius-panel;
+    background: Theme.background.with-alpha(0.74);
+    border-width: 1 * root.u;
+    border-color: root.disabled ? Theme.border.with-alpha(0.5)
+        : Voice.state == VoiceState.offline ? Theme.error.with-alpha(0.55)
+        : Voice.mic-muted ? Theme.warm.with-alpha(0.45)
+        : root.listening ? Theme.accent-cyan.with-alpha(0.55)
+        : root.thinking ? Theme.accent-cyan.with-alpha(0.3)
+        : root.speaking ? Theme.text.with-alpha(0.3)
+        : Theme.border.with-alpha(0.5);
+    animate border-color { duration: Theme.anim-screen; }
+    clip: true;
+
+    // Nghe: 5 vòng (nửa elip) bay lên từ orb, rộng và đậm theo mức mic.
+    if root.listening: Rectangle {
+        for i in 5: Path {
+            private property <float> p: mod(root.now / 1500ms + i / 5, 1);
+            width: (26 + self.p * 18 + root.mic * 14) * root.u;
+            height: (6 + self.p * 4) * root.u;
+            x: root.cx - self.width / 2;
+            y: root.cy - orb.height / 2 - self.p * root.fx-h;
+            viewbox-width: 100;
+            viewbox-height: 20;
+            stroke: Theme.accent-cyan;
+            stroke-width: 1.5 * root.u;
+            opacity: (1 - self.p) * (0.25 + 0.6 * root.mic);
+            commands: "M 2 19 A 48 18 0 0 1 98 19";
+        }
+    }
+
+    // Nói: hai dải chấm uốn sin chảy lên, biên độ theo TTS, nhỏ dần lên cao.
+    if root.speaking: Rectangle {
+        for i in 24: Rectangle {
+            private property <int> strand: i >= 12 ? 1 : 0;
+            private property <float> j: mod(i, 12) / 12;
+            private property <float> amp: (3 + root.tts * 12) * (1 - self.j * 0.6);
+            width: (self.strand == 0 ? 4 : 3) * root.u;
+            height: self.width;
+            border-radius: self.width / 2;
+            x: root.cx - self.width / 2 + self.amp * sin(self.j * 1.6turn - root.now / 900ms * 1turn + self.strand * 0.35turn) * root.u;
+            y: root.cy - orb.height / 2 - 6 * root.u - self.j * root.fx-h * 0.95;
+            background: Theme.text.mix(Theme.accent-cyan, 0.8);
+            opacity: (1 - self.j) * (self.strand == 0 ? 0.85 : 0.4);
+        }
+    }
+
+    // Nghĩ: vệt sáng quét lên xuống dọc hai mép khối.
+    if root.thinking: Rectangle {
+        private property <float> p: 0.5 + 0.5 * sin(root.now / 2400ms * 1turn);
+        for side in 2: Rectangle {
+            x: side == 0 ? 1 * root.u : root.width - 3 * root.u;
+            width: 2 * root.u;
+            height: 48 * root.u;
+            y: root.fx-top + parent.p * (root.fx-h - self.height);
+            border-radius: 1 * root.u;
+            background: @linear-gradient(180deg, Theme.accent-cyan.with-alpha(0) 0%, Theme.accent-cyan 50%, Theme.accent-cyan.with-alpha(0) 100%);
+        }
+    }
+
+    orb := Orb {
+        x: root.cx - self.width / 2;
+        y: root.cy - self.height / 2;
+        u: root.u;
+        disabled: root.disabled;
+    }
+
+    TouchArea {
+        enabled: !root.disabled;
+        clicked => { Voice.orb-tapped(); }
+    }
+}

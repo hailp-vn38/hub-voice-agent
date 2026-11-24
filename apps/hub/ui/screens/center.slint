@@ -18,10 +18,10 @@ export component CenterScreen inherits Rectangle {
     private property <float> gap: 12;
     private property <int> extra: (Center.timer.visible ? 1 : 0) + (Center.countdown.visible ? 1 : 0);
     private property <int> tiles: max(1, root.extra + Center.home.length);
-    private property <float> row-x: 130;
-    private property <float> row-w: root.cw - 244 - root.gap - root.row-x;
+    private property <float> row-x: Theme.content-left;
+    private property <float> row-w: root.cw - Theme.pad - 213 - root.gap - root.row-x;
     private property <float> tw: min(160, (root.row-w - root.gap * (root.tiles - 1)) / root.tiles);
-    private property <float> row-y: 360 + root.dy;
+    private property <float> row-y: root.ch - Theme.pad - 130;
     private property <float> hour: StatusBar.day-phase * 24;
     private property <CenterCard> zoom-card: CenterCard.none;
     private property <int> serial: Center.focus-serial;
@@ -45,7 +45,7 @@ export component CenterScreen inherits Rectangle {
 
     // Đồng hồ + thời tiết: chạm mở màn Thời tiết. Cụm thời tiết đi theo bề rộng đồng hồ.
     Rectangle {
-        x: 140 * root.u;
+        x: (Theme.content-left + 10) * root.u;
         y: (52 + root.dy * 0.2) * root.u;
         width: 660 * root.u;
         height: 130 * root.u;
@@ -100,7 +100,7 @@ export component CenterScreen inherits Rectangle {
 
     // Lời chào + mascot.
     Text {
-        x: 150 * root.u;
+        x: (Theme.content-left + 20) * root.u;
         y: (238 + root.dy * 0.5) * root.u;
         width: 380 * root.u;
         text: root.hour < 11 ? "Chào buổi sáng!" : root.hour < 18 ? "Chào buổi chiều!" : "Chào buổi tối!";
@@ -110,7 +110,7 @@ export component CenterScreen inherits Rectangle {
         overflow: elide;
     }
     Text {
-        x: 152 * root.u;
+        x: (Theme.content-left + 22) * root.u;
         y: (292 + root.dy * 0.5) * root.u;
         width: 360 * root.u;
         text: "Chúc bạn một ngày thật tuyệt vời!";
@@ -119,7 +119,7 @@ export component CenterScreen inherits Rectangle {
         overflow: elide;
     }
     Image {
-        x: 500 * root.u;
+        x: (Theme.content-left + 370) * root.u;
         y: (188 + root.dy * 0.5) * root.u;
         width: 240 * root.u;
         height: 190 * root.u;
@@ -129,8 +129,8 @@ export component CenterScreen inherits Rectangle {
 
     // Cột phải: lịch hôm nay, Reminder tiếp theo.
     AgendaCard {
-        x: (root.cw - 460) * root.u;
-        y: (42 + root.dy * 0.2) * root.u;
+        x: (root.cw - Theme.pad - 430) * root.u;
+        y: (Theme.frame-top + root.dy * 0.2) * root.u;
         width: 430 * root.u;
         height: 182 * root.u;
         u: root.u;
@@ -138,7 +138,7 @@ export component CenterScreen inherits Rectangle {
         tapped => { Center.open(Screen.calendar); }
     }
     NextCard {
-        x: (root.cw - 460) * root.u;
+        x: (root.cw - Theme.pad - 430) * root.u;
         y: (238 + root.dy * 0.5) * root.u;
         width: 430 * root.u;
         height: 110 * root.u;
@@ -190,7 +190,7 @@ export component CenterScreen inherits Rectangle {
         toggle(k) => { Center.toggle-home(k); }
     }
     HomeSafeCard {
-        x: (root.cw - 244) * root.u;
+        x: (root.cw - Theme.pad - 213) * root.u;
         y: root.row-y * root.u;
         width: 213 * root.u;
         height: 130 * root.u;

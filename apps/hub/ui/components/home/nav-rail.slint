@@ -19,16 +19,16 @@ component NavButton inherits Rectangle {
     animate background { duration: Theme.anim-state; }
 
     Image {
-        y: 16 * root.u;
-        width: 30 * root.u;
-        height: 30 * root.u;
+        y: 10 * root.u;
+        width: 24 * root.u;
+        height: 24 * root.u;
         source: root.icon;
         colorize: root.active ? Theme.text : Theme.text-dim;
     }
     Text {
-        y: 54 * root.u;
+        y: 38 * root.u;
         width: parent.width - 4 * root.u;
-        height: 24 * root.u;
+        height: 18 * root.u;
         text: root.label;
         color: root.active ? Theme.text : Theme.text-dim;
         font-size: Theme.type-caption;
@@ -44,20 +44,19 @@ component NavButton inherits Rectangle {
 export component NavRail inherits Rectangle {
     in property <length> u: 1px;
     in property <Screen> current;
-    width: 100 * root.u;
+    width: Theme.rail-w * root.u;
+    height: self.preferred-height;
     background: Theme.background.with-alpha(0.74);
     border-color: Theme.border.with-alpha(0.5);
     border-width: 1 * root.u;
     border-radius: Theme.radius-panel;
 
     VerticalLayout {
-        padding-top: 27 * root.u;
-        padding-left: 17 * root.u;
-        padding-right: 17 * root.u;
-        spacing: 16 * root.u;
+        padding: 8 * root.u;
+        spacing: 8 * root.u;
         alignment: start;
         NavButton {
-            height: 90 * root.u;
+            height: 62 * root.u;
             u: root.u;
             icon: @image-url("../../../assets/home/icons/home.png");
             label: "Home";
@@ -65,7 +64,7 @@ export component NavRail inherits Rectangle {
             activated => { Nav.navigate(Screen.center); }
         }
         NavButton {
-            height: 90 * root.u;
+            height: 62 * root.u;
             u: root.u;
             icon: @image-url("../../../assets/home/icons/devices.png");
             label: "Ứng dụng";
@@ -75,7 +74,7 @@ export component NavRail inherits Rectangle {
             activated => { Nav.navigate(Screen.menu); }
         }
         NavButton {
-            height: 90 * root.u;
+            height: 62 * root.u;
             u: root.u;
             icon: @image-url("../../../assets/home/icons/chart.png");
             label: "Thống kê";
@@ -83,7 +82,7 @@ export component NavRail inherits Rectangle {
             activated => { Nav.navigate(Screen.home); }
         }
         NavButton {
-            height: 90 * root.u;
+            height: 62 * root.u;
             u: root.u;
             icon: @image-url("../../../assets/home/icons/settings.png");
             label: "Cài đặt";

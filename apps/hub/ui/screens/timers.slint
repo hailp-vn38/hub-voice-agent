@@ -36,14 +36,14 @@ export component Timers inherits Rectangle {
     private property <length> u: Theme.unit;
     private property <float> cvw: self.width / root.u;
     private property <float> cvh: self.height / root.u;
-    private property <float> left: 130;
-    private property <float> right: root.cvw - 30;
-    private property <float> top: 96;
-    private property <float> bottom: root.cvh - 92 - 62;
+    private property <float> left: Theme.content-left;
+    private property <float> right: root.cvw - Theme.pad;
+    private property <float> top: Theme.content-top;
+    private property <float> bottom: root.cvh - Theme.pad - 48 - Theme.pad;
     private property <int> n: TimersData.timers.length;
     private property <int> cols: root.n <= 2 ? max(root.n, 1) : 2;
     private property <int> rows: root.n <= 2 ? 1 : ceil(root.n / 2);
-    private property <float> gap: 16;
+    private property <float> gap: Theme.pad;
     private property <float> cw: (root.right - root.left - (root.cols - 1) * root.gap) / root.cols;
     private property <float> ch: (root.bottom - root.top - (root.rows - 1) * root.gap) / root.rows;
 
@@ -52,7 +52,7 @@ export component Timers inherits Rectangle {
     // Đầu màn.
     HorizontalLayout {
         x: root.left * root.u;
-        y: 42 * root.u;
+        y: Theme.frame-top * root.u;
         width: (root.right - root.left) * root.u;
         height: 40 * root.u;
         spacing: 16 * root.u;
@@ -121,7 +121,7 @@ export component Timers inherits Rectangle {
     // Hàng hẹn giờ nhanh.
     HorizontalLayout {
         x: root.left * root.u;
-        y: (root.bottom + 14) * root.u;
+        y: (root.bottom + Theme.pad) * root.u;
         width: (root.right - root.left) * root.u;
         height: 48 * root.u;
         spacing: 12 * root.u;

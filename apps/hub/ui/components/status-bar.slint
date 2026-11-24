@@ -1,47 +1,58 @@
 import { Theme } from "../theme.slint";
 import { StatusBar } from "../contract/status.slint";
-import { Icon } from "icon.slint";
 
-// Thanh trạng thái mép trên: giờ, Wi-Fi, mic tắt, badge offline.
+// Thanh trạng thái mép trên: giờ bên trái; Wi-Fi, Bluetooth, điện thoại, badge offline bên phải.
 export component StatusBarView inherits Rectangle {
-    height: 64px;
+    private property <length> u: Theme.unit;
+    height: Theme.frame-top * root.u;
     Text {
-        x: Theme.space-m;
+        x: Theme.pad-len;
+        height: parent.height;
         text: StatusBar.time;
         color: Theme.text-dim;
-        font-size: Theme.font-small;
+        font-size: Theme.type-body;
         vertical-alignment: center;
     }
     HorizontalLayout {
-        x: parent.width - self.width - Theme.space-m;
-        spacing: Theme.space-m;
+        x: parent.width - self.width - Theme.pad-len;
+        height: parent.height;
+        spacing: 16 * root.u;
         alignment: end;
         if StatusBar.offline: Rectangle {
-            width: label.preferred-width + 24px;
-            height: 36px;
+            width: label.preferred-width + 16 * root.u;
+            height: 20 * root.u;
             y: (parent.height - self.height) / 2;
-            border-radius: 18px;
+            border-radius: self.height / 2;
             background: Theme.warm;
             label := Text {
                 text: "Offline";
                 color: Theme.background;
-                font-size: 20px;
+                font-size: Theme.type-caption;
                 horizontal-alignment: center;
                 vertical-alignment: center;
             }
         }
-        if StatusBar.mic-muted: Icon { name: "microphone"; color: Theme.error; size: 32px; y: (parent.height - self.height) / 2; }
-        HorizontalLayout {
-            spacing: 4px;
-            alignment: end;
-            for i in 3: Rectangle {
-                width: 8px;
-                height: 10px + 8px * i;
-                y: (parent.height - self.height) / 2;
-                border-radius: 2px;
-                background: StatusBar.wifi-strength > i ? Theme.text : Theme.text-dim;
-                opacity: StatusBar.wifi-strength > i ? 1 : 0.3;
-            }
+        Image {
+            y: (parent.height - self.height) / 2;
+            width: 18 * root.u;
+            height: 18 * root.u;
+            source: @image-url("../../assets/home/icons/wifi.png");
+            colorize: StatusBar.offline || StatusBar.wifi-strength == 0 ? Theme.error : Theme.text-dim;
+            opacity: StatusBar.wifi-strength >= 2 || StatusBar.offline ? 1 : 0.6;
+        }
+        Image {
+            y: (parent.height - self.height) / 2;
+            width: 18 * root.u;
+            height: 18 * root.u;
+            source: @image-url("../../assets/home/icons/bluetooth.png");
+            colorize: Theme.text-dim;
+        }
+        Image {
+            y: (parent.height - self.height) / 2;
+            width: 14 * root.u;
+            height: 18 * root.u;
+            source: @image-url("../../assets/home/icons/phone.png");
+            colorize: Theme.text-dim;
         }
     }
 }

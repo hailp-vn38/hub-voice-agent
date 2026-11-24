@@ -1,9 +1,7 @@
 import { Theme } from "../theme.slint";
-import { Screen } from "../contract/nav.slint";
 import { PhotosData, PhotoState } from "../contract/photos.slint";
 import { Icon } from "../components/icon.slint";
 import { Backdrop } from "../components/home/backdrop.slint";
-import { NavRail } from "../components/home/nav-rail.slint";
 import { PhotoViewer } from "photo-viewer.slint";
 
 // Màn Ảnh (Aurora): Thanh điều hướng trái; lưới ảnh bo góc viền kính, chú thích trên gradient tối.
@@ -12,29 +10,22 @@ export component Photos inherits Rectangle {
     private property <length> u: Theme.unit;
     private property <float> cw: self.width / root.u;
     private property <float> ch: self.height / root.u;
-    private property <float> left: 130;
-    private property <float> right: root.cw - 30;
-    private property <float> top: 96;
-    private property <float> bottom: root.ch - 92;
-    private property <float> gap: 12;
+    private property <float> left: Theme.content-left;
+    private property <float> right: root.cw - Theme.pad;
+    private property <float> top: Theme.content-top;
+    private property <float> bottom: root.ch - Theme.pad;
+    private property <float> gap: Theme.pad;
     private property <int> cols: max(2, floor((root.right - root.left + root.gap) / (240 + root.gap)));
     private property <float> tw: (root.right - root.left - (root.cols - 1) * root.gap) / root.cols;
     private property <float> th: (root.bottom - root.top - root.gap) / 2;
     private property <int> rows: ceil(PhotosData.photos.length / root.cols);
 
     Backdrop { dim: 0.35; }
-    NavRail {
-        x: 14 * root.u;
-        y: 42 * root.u;
-        height: (root.ch - 152) * root.u;
-        u: root.u;
-        current: Screen.photos;
-    }
 
     // Đầu màn.
     HorizontalLayout {
         x: root.left * root.u;
-        y: 42 * root.u;
+        y: Theme.frame-top * root.u;
         width: (root.right - root.left) * root.u;
         height: 40 * root.u;
         spacing: 16 * root.u;

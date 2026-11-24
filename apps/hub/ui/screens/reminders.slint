@@ -9,10 +9,10 @@ export component Reminders inherits Rectangle {
     private property <length> u: Theme.unit;
     private property <float> cw: self.width / root.u;
     private property <float> ch: self.height / root.u;
-    private property <float> left: 130;
-    private property <float> right: root.cw - 30;
-    private property <float> top: 96;
-    private property <float> bottom: root.ch - 92;
+    private property <float> left: Theme.content-left;
+    private property <float> right: root.cw - Theme.pad;
+    private property <float> top: Theme.content-top;
+    private property <float> bottom: root.ch - Theme.pad;
     private property <float> lcol: (root.right - root.left) * 0.36;
     private property <bool> empty: !RemindersData.has-next && RemindersData.groups.length == 0;
     private property <bool> has-recent: RemindersData.recent.length > 0;
@@ -23,7 +23,7 @@ export component Reminders inherits Rectangle {
     // Đầu màn.
     HorizontalLayout {
         x: root.left * root.u;
-        y: 42 * root.u;
+        y: Theme.frame-top * root.u;
         width: (root.right - root.left) * root.u;
         height: 40 * root.u;
         spacing: 16 * root.u;
@@ -50,7 +50,7 @@ export component Reminders inherits Rectangle {
         x: root.left * root.u;
         y: root.top * root.u;
         width: (root.right - root.left) * root.u;
-        height: (root.bottom - root.top - (root.has-recent ? root.recent-h + 16 : 0)) * root.u;
+        height: (root.bottom - root.top - (root.has-recent ? root.recent-h + Theme.pad : 0)) * root.u;
         border-radius: Theme.radius-panel;
         background: Theme.glass;
         border-width: 1 * root.u;
@@ -73,7 +73,7 @@ export component Reminders inherits Rectangle {
         x: root.left * root.u;
         y: root.top * root.u;
         width: root.lcol * root.u;
-        height: (root.bottom - root.top - (root.has-recent ? root.recent-h + 16 : 0)) * root.u;
+        height: (root.bottom - root.top - (root.has-recent ? root.recent-h + Theme.pad : 0)) * root.u;
         border-radius: Theme.radius-panel;
         background: RemindersData.has-next ? @linear-gradient(135deg, Theme.warm.darker(0.45) 0%, Theme.warm 85%) : Theme.glass;
         border-width: 1 * root.u;
@@ -86,7 +86,7 @@ export component Reminders inherits Rectangle {
             font-size: Theme.type-body;
         }
         if RemindersData.has-next: VerticalLayout {
-            padding: 22 * root.u;
+            padding: Theme.pad-len;
             spacing: 6 * root.u;
             alignment: center;
             HorizontalLayout {
@@ -119,9 +119,9 @@ export component Reminders inherits Rectangle {
 
     // Danh sách theo nhóm ngày.
     if !root.empty: Rectangle {
-        x: (root.left + root.lcol + 16) * root.u;
+        x: (root.left + root.lcol + Theme.pad) * root.u;
         y: root.top * root.u;
-        width: (root.right - root.left - root.lcol - 16) * root.u;
+        width: (root.right - root.left - root.lcol - Theme.pad) * root.u;
         height: (root.bottom - root.top) * root.u;
         border-radius: Theme.radius-panel;
         background: Theme.glass;

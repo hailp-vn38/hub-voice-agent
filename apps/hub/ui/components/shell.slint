@@ -5,7 +5,8 @@ import { StatusBarView } from "status-bar.slint";
 import { Alert } from "../overlays/alert.slint";
 import { VoiceSliderOverlay } from "../overlays/voice-slider.slint";
 import { Dock } from "orb.slint";
-import { VoiceBar } from "voice-bar.slint";
+import { VoiceDock } from "voice-dock.slint";
+import { VoiceCaption } from "voice-caption.slint";
 import { SettingsData } from "../contract/settings.slint";
 import { PhotosData } from "../contract/photos.slint";
 import { FloatingCardsView } from "floating-cards.slint";
@@ -21,14 +22,15 @@ export component Shell inherits Rectangle {
     private property <length> u: 1px * min(self.width / 1280px, self.height / 600px);
     private property <float> cw: self.width / root.u;
     private property <float> ch: self.height / root.u;
-    // Chiều cao hàng Voice (thanh Voice + lề) theo cùng đơn vị.
-    private property <length> dock-height: 88 * root.u;
+    // Phần đáy chừa cho phụ đề Voice (thẻ nổi, overlay báo đặt phía trên).
+    private property <length> dock-height: (3 * Theme.pad + root.caption-h) * root.u;
+    private property <float> caption-h: 44;
     // Màn đang hiển thị: theo Nav.screen.
     private property <Screen> shown: Nav.screen;
     private property <bool> is-feature: shown != Screen.center && shown != Screen.menu;
     // Thanh điều hướng trái dùng chung: hiện/ẩn mờ dần, vị trí không đổi.
     private property <bool> has-rail: shown == Screen.center || shown == Screen.menu || shown == Screen.timers || shown == Screen.countdowns || shown == Screen.reminders || shown == Screen.calendar
-        || shown == Screen.home || shown == Screen.settings || shown == Screen.weather;
+        || shown == Screen.home || shown == Screen.settings || shown == Screen.weather || (shown == Screen.photos && !PhotosData.viewing);
     private property <float> rail-p: has-rail ? 1 : 0;
     animate rail-p { duration: Theme.anim-screen; easing: ease-out; }
     // Chấm trang và độ đậm chấm theo màn, cũng mờ dần.
@@ -37,7 +39,7 @@ export component Shell inherits Rectangle {
     private property <float> feat-p: is-feature ? 1 : 0;
     animate feat-p { duration: Theme.anim-screen; easing: ease-out; }
 
-    // Màn tính năng đọc Dock.height để chừa hàng Voice ở đáy.
+    // Thẻ nổi, overlay báo, màn khởi động đọc Dock.height để chừa phụ đề Voice ở đáy.
     init => {
         Dock.height = root.dock-height;
         Theme.unit = root.u;
@@ -80,11 +82,11 @@ export component Shell inherits Rectangle {
     }
 
     // Thanh điều hướng: nằm trên tầng nội dung, không tham gia chuyển màn.
-    if root.rail-p > 0: NavRail {
-        x: 14 * root.u;
-        y: 42 * root.u;
-        height: (root.ch - 152) * root.u;
+    rail := NavRail {
+        x: Theme.pad-len;
+        y: Theme.frame-top * root.u;
         u: root.u;
+        visible: root.rail-p > 0;
         current: root.shown;
         opacity: root.rail-p;
     }
@@ -99,17 +101,27 @@ export component Shell inherits Rectangle {
     }
     VoiceSliderOverlay { }
     Alert { dock-height: root.dock-height; }
-    // Thanh Voice neo đáy, trải ngang, đứng yên khi chuyển màn. Lần đầu khởi động: mic xám, không chạm được.
-    VoiceBar {
-        x: 20 * root.u;
-        y: (root.ch - 80) * root.u;
-        width: (root.cw - 40) * root.u;
-        height: 54 * root.u;
+    // Khối Voice ở đáy cột trái, dưới thanh điều hướng; phụ đề nổi trong góc dưới trái
+    // vùng nội dung, cách mép thẻ đúng một `pad`.
+    // Đứng yên khi chuyển màn. Lần đầu khởi động: orb xám, không chạm được. Ambient: mờ đi.
+    private property <length> dock-top: (Theme.frame-top + Theme.pad) * root.u + rail.height;
+    VoiceDock {
+        x: Theme.pad-len;
+        y: root.dock-top;
+        width: Theme.rail-w * root.u;
+        height: root.height - root.dock-top - Theme.pad-len;
         u: root.u;
         disabled: root.shown == Screen.first-boot;
-        // Ambient: thanh mờ đi.
         opacity: root.shown == Screen.ambient ? 0.35 : 1;
         animate opacity { duration: Theme.anim-screen; easing: ease-out; }
+    }
+    VoiceCaption {
+        x: (Theme.content-left + Theme.pad) * root.u;
+        y: (root.ch - 2 * Theme.pad - root.caption-h) * root.u;
+        height: root.caption-h * root.u;
+        limit-width: (root.cw - Theme.content-left - 3 * Theme.pad) * 0.62 * root.u;
+        u: root.u;
+        disabled: root.shown == Screen.first-boot;
     }
     FloatingCardsView { dock-height: root.dock-height; }
     SpawnClock { }

@@ -2,24 +2,23 @@ import { Theme } from "../theme.slint";
 import { AlertData, AlertKind } from "../contract/alert.slint";
 import { Voice, VoiceState, VoiceLevels } from "../contract/voice.slint";
 
-// Hình học Voice dock: tâm Orb (toạ độ cửa sổ, điểm xuất phát ticket 06) và chiều cao hàng dock.
+// Hình học Voice: tâm Orb (toạ độ cửa sổ, điểm xuất phát ticket 06) và chiều cao chừa ở đáy
+// cho thẻ nổi, overlay báo.
 export global Dock {
     in-out property <length> orb-x;
     in-out property <length> orb-y;
-    // Chiều cao hàng Voice ở đáy (Shell ghi theo cỡ cửa sổ).
     in-out property <length> height: 240px;
 }
 
-// Nút mic ở đầu thanh Voice (thiết kế smart-hub-home): viên gradient xanh–tím,
-// icon mic + 3 vạch sóng theo mức âm. Giữ mọi trạng thái của Orb cũ.
+// Orb Voice: lõi tròn + viền blob dao động theo VoiceLevels, cung xoay khi nghĩ,
+// vòng nét đứt khi mất kết nối, vòng hổ phách khi tắt mic. Vẽ trong viewbox 40×40.
 export component Orb inherits Rectangle {
-    // Xám và không chạm được (vd. lần đầu khởi động, voice chưa cấu hình).
     in property <bool> disabled;
-    // Đơn vị thiết kế (1 px của canvas 1280×600).
     in property <length> u: 1px;
-    width: 60 * root.u;
-    height: 44 * root.u;
+    width: 52 * root.u;
+    height: self.width;
     private property <duration> now: animation-tick();
+    private property <float> t: root.now / 1000ms;
     private property <int> wake: Voice.wake-serial;
     private property <int> tool: Voice.tool-serial;
     private property <int> err: Voice.error-serial;
@@ -29,87 +28,134 @@ export component Orb inherits Rectangle {
     changed wake => { root.wake-t = animation-tick(); }
     changed tool => { root.tool-t = animation-tick(); }
     changed err => { root.err-t = animation-tick(); }
-
-    private property <bool> grey: root.disabled || Voice.state == VoiceState.offline || Voice.mic-muted;
-    private property <float> level: Voice.state == VoiceState.listening ? VoiceLevels.mic
-        : Voice.state == VoiceState.speaking ? VoiceLevels.tts : 0;
-    private property <bool> active: Voice.state != VoiceState.idle && Voice.state != VoiceState.offline;
-    private property <float> breath: sin(root.now / 4000ms * 1turn);
     private property <float> wp: clamp((root.now - root.wake-t) / 700ms, 0, 1);
     private property <float> tp: clamp((root.now - root.tool-t) / 600ms, 0, 1);
     private property <float> ep: clamp((root.now - root.err-t) / 450ms, 0, 1);
-    private property <bool> thinking: Voice.state == VoiceState.thinking;
+
+    private property <VoiceState> st: Voice.state;
+    private property <bool> muted: Voice.mic-muted && root.st != VoiceState.offline;
+    private property <bool> off: root.disabled || root.st == VoiceState.offline;
+    private property <bool> listening: !root.off && !root.muted && root.st == VoiceState.listening;
+    private property <bool> speaking: !root.off && !root.muted && root.st == VoiceState.speaking;
+    private property <bool> thinking: !root.off && !root.muted && root.st == VoiceState.thinking;
+    private property <bool> idle: !root.listening && !root.speaking && !root.thinking && !root.off && !root.muted;
+    private property <float> level: root.listening ? VoiceLevels.mic : root.speaking ? VoiceLevels.tts : 0;
+    private property <float> lv: root.level;
+    animate lv { duration: 90ms; }
+    private property <float> breath: 0.5 + 0.5 * sin(root.now / 3200ms * 1turn);
+
+    // Blob: 4 điểm quanh tâm, bán kính lệch theo hai sóng sin, nối bằng cubic gần tròn.
+    private property <float> br: root.speaking ? 13 + root.lv * 2 : 14 + root.lv * 3;
+    private property <float> ba: root.speaking ? 0.6 + root.lv * 2.2 : 0.6 + root.lv * 3;
+    private property <float> r0: root.br + root.ba * sin(root.t * 3 * 1rad);
+    private property <float> r1: root.br + root.ba * sin((root.t * 4 + 1.7) * 1rad);
+    private property <float> r2: root.br + root.ba * sin((root.t * 3.5 + 3.1) * 1rad);
+    private property <float> r3: root.br + root.ba * sin((root.t * 4.5 + 4.6) * 1rad);
+    private property <float> k: 0.5523;
+    // Cung xoay khi nghĩ.
+    private property <angle> arc-a: root.now / 1600ms * 1turn;
 
     // Sóng lan khi wake.
     Rectangle {
-        border-radius: Theme.radius-s;
-        border-width: 2 * root.u;
+        border-radius: self.width / 2;
+        border-width: 1.5 * root.u;
         border-color: Theme.accent-cyan;
         opacity: root.wp < 1 ? 1 - root.wp : 0;
-        transform-scale: 1 + root.wp * 0.6;
-    }
-    // Quầng sáng theo tiếng nói.
-    Rectangle {
-        border-radius: Theme.radius-s;
-        background: Theme.accent;
-        opacity: root.active ? 0.2 + 0.3 * root.level : 0;
-        transform-scale: 1.1 + 0.35 * root.level;
-        animate opacity { duration: 150ms; }
-    }
-    // Lõi (rung ngang một lần khi có lỗi).
-    Rectangle {
-        x: sin(root.ep * 3turn) * 8 * root.u * (1 - root.ep);
-        border-radius: Theme.radius-s;
-        border-width: 1 * root.u;
-        border-color: root.grey ? Theme.border : Theme.accent.brighter(0.4);
-        background: root.grey ? Theme.card
-            : @linear-gradient(125deg, Theme.accent 0%, Theme.accent-cyan.mix(Theme.accent, 0.3) 100%);
-        opacity: AlertData.kind != AlertKind.none ? 0.7 + 0.3 * sin(root.now / 1200ms * 1turn)
-            : root.active ? 1 : 0.9 + 0.1 * root.breath;
-        Image {
-            x: 10 * root.u;
-            y: (parent.height - self.height) / 2;
-            width: 24 * root.u;
-            height: 24 * root.u;
-            source: @image-url("../../assets/home/icons/mic.png");
-            colorize: Theme.text;
-        }
-        // 3 vạch sóng: theo mức âm; nhấp lần lượt khi đang nghĩ.
-        for i in 3: Rectangle {
-            x: (38 + i * 6) * root.u;
-            width: 3 * root.u;
-            height: (6 + 14 * (root.thinking ? 0.5 + 0.5 * sin(root.now / 600ms * 1turn - i * 0.25turn)
-                : root.active ? root.level * (i == 1 ? 1 : 0.7) : 0.15)) * root.u;
-            y: (parent.height - self.height) / 2;
-            border-radius: 1.5 * root.u;
-            background: Theme.text;
-            opacity: root.grey ? 0.4 : 0.9;
-        }
-        // Tắt mic: gạch chéo.
-        Rectangle {
-            width: 34 * root.u;
-            height: 3 * root.u;
-            background: Theme.text;
-            opacity: Voice.mic-muted ? 1 : 0;
-            transform-rotation: -35deg;
-            animate opacity { duration: 200ms; }
-        }
-    }
-    // Hạt bắn lên khi tool chạy.
-    Rectangle {
-        width: 10 * root.u;
-        height: 10 * root.u;
-        border-radius: 5 * root.u;
-        background: Theme.warm;
-        opacity: root.tp < 1 ? 1 - root.tp : 0;
-        y: (parent.height - self.height) / 2 - root.tp * 120 * root.u;
+        transform-scale: 0.6 + root.wp * 0.8;
     }
 
-    TouchArea {
-        enabled: !root.disabled;
-        width: max(parent.width, Theme.touch-min);
-        height: max(parent.height, Theme.touch-min);
-        clicked => { Voice.orb-tapped(); }
+    // Vòng nền mờ (chờ, nghĩ) / hổ phách (tắt mic).
+    Rectangle {
+        width: 30 / 40 * parent.width;
+        height: self.width;
+        border-radius: self.width / 2;
+        border-width: 1.5 * root.u;
+        border-color: root.muted ? Theme.warm.with-alpha(0.55) : root.thinking ? Theme.accent-cyan.with-alpha(0.18) : Theme.text-dim.with-alpha(0.16);
+        opacity: root.idle || root.thinking || root.muted ? 1 : 0;
+        animate opacity { duration: Theme.anim-state; }
+    }
+
+    // Viền blob khi nghe / nói.
+    Path {
+        width: 100%;
+        height: 100%;
+        viewbox-width: 40;
+        viewbox-height: 40;
+        stroke: root.speaking ? Theme.text.with-alpha(0.5) : Theme.accent-cyan.with-alpha(0.5);
+        stroke-width: 1.5 * root.u;
+        opacity: root.listening || root.speaking ? 1 : 0;
+        animate opacity { duration: Theme.anim-state; }
+        commands: "M \{20 + root.r0} 20 C \{20 + root.r0} \{20 + root.k * root.r1} \{20 + root.k * root.r0} \{20 + root.r1} 20 \{20 + root.r1} C \{20 - root.k * root.r2} \{20 + root.r1} \{20 - root.r2} \{20 + root.k * root.r1} \{20 - root.r2} 20 C \{20 - root.r2} \{20 - root.k * root.r3} \{20 - root.k * root.r2} \{20 - root.r3} 20 \{20 - root.r3} C \{20 + root.k * root.r0} \{20 - root.r3} \{20 + root.r0} \{20 - root.k * root.r3} \{20 + root.r0} 20 Z";
+    }
+
+    // Cung xoay khi nghĩ.
+    if root.thinking: Path {
+        width: 100%;
+        height: 100%;
+        viewbox-width: 40;
+        viewbox-height: 40;
+        stroke: Theme.accent-cyan;
+        stroke-width: 2 * root.u;
+        commands: "M \{20 + 15 * cos(root.arc-a)} \{20 + 15 * sin(root.arc-a)} A 15 15 0 0 1 \{20 + 15 * cos(root.arc-a + 95deg)} \{20 + 15 * sin(root.arc-a + 95deg)}";
+    }
+
+    // Mất kết nối: vòng nét đứt đỏ + gạch chéo.
+    if root.off && !root.disabled: Rectangle {
+        for i in 10: Path {
+            width: 100%;
+            height: 100%;
+            viewbox-width: 40;
+            viewbox-height: 40;
+            stroke: Theme.error.with-alpha(0.75);
+            stroke-width: 1.5 * root.u;
+            commands: "M \{20 + 14 * cos(i * 36deg)} \{20 + 14 * sin(i * 36deg)} A 14 14 0 0 1 \{20 + 14 * cos(i * 36deg + 20deg)} \{20 + 14 * sin(i * 36deg + 20deg)}";
+        }
+        Rectangle {
+            width: 20 / 40 * parent.width;
+            height: 1.5 * root.u;
+            background: Theme.error.with-alpha(0.8);
+            transform-rotation: -45deg;
+        }
+    }
+
+    // Lõi (rung ngang một lần khi có lỗi).
+    Rectangle {
+        x: (parent.width - self.width) / 2 + sin(root.ep * 3turn) * 6 * root.u * (1 - root.ep);
+        width: (root.listening ? 16 + root.lv * 5 : root.speaking ? 13 + root.lv * 4 : root.thinking ? 10 : root.idle || root.disabled ? 8 + root.breath * 2 : 0) * root.u;
+        height: self.width;
+        border-radius: self.width / 2;
+        animate width { duration: 120ms; easing: ease-out; }
+        background: root.listening ? @linear-gradient(135deg, Theme.accent-cyan 0%, Theme.accent 100%)
+            : root.speaking ? Theme.text.mix(Theme.accent-cyan, 0.85)
+            : root.thinking ? Theme.accent-cyan.with-alpha(0.45)
+            : Theme.text-dim.with-alpha(0.35 + 0.3 * root.breath);
+        opacity: AlertData.kind != AlertKind.none ? 0.6 + 0.4 * sin(root.now / 1200ms * 1turn) : 1;
+    }
+
+    // Tắt mic: icon mic gạch.
+    if root.muted: Rectangle {
+        Image {
+            width: 16 * root.u;
+            height: 16 * root.u;
+            source: @image-url("../../assets/home/icons/mic.png");
+            colorize: Theme.warm;
+        }
+        Rectangle {
+            width: 20 * root.u;
+            height: 1.5 * root.u;
+            background: Theme.warm;
+            transform-rotation: -45deg;
+        }
+    }
+
+    // Hạt bắn lên khi tool chạy.
+    Rectangle {
+        width: 6 * root.u;
+        height: 6 * root.u;
+        border-radius: 3 * root.u;
+        background: Theme.warm;
+        opacity: root.tp < 1 ? 1 - root.tp : 0;
+        y: (parent.height - self.height) / 2 - root.tp * 90 * root.u;
     }
 
     private property <length> ax: self.absolute-position.x;

@@ -11,10 +11,10 @@ export component Weather inherits Rectangle {
     private property <length> u: Theme.unit;
     private property <float> cw: self.width / root.u;
     private property <float> ch: self.height / root.u;
-    private property <float> left: 130;
-    private property <float> right: root.cw - 30;
-    private property <float> top: 96;
-    private property <float> bottom: root.ch - 92;
+    private property <float> left: Theme.content-left;
+    private property <float> right: root.cw - Theme.pad;
+    private property <float> top: Theme.content-top;
+    private property <float> bottom: root.ch - Theme.pad;
     private property <float> cur-w: 280;
     private property <float> days-w: 330;
     private property <int> serial: WeatherData.focus-serial;
@@ -28,7 +28,7 @@ export component Weather inherits Rectangle {
     // Đầu màn: tiêu đề + nơi, nhãn "tạm xem", trạng thái cập nhật (chấm + chữ).
     HorizontalLayout {
         x: root.left * root.u;
-        y: 42 * root.u;
+        y: Theme.frame-top * root.u;
         width: (root.right - root.left) * root.u;
         height: 40 * root.u;
         spacing: 16 * root.u;
@@ -76,9 +76,9 @@ export component Weather inherits Rectangle {
     }
 
     Rectangle {
-        x: (root.left + root.cur-w + 16) * root.u;
+        x: (root.left + root.cur-w + Theme.pad) * root.u;
         y: root.top * root.u;
-        width: (root.right - root.left - root.cur-w - root.days-w - 32) * root.u;
+        width: (root.right - root.left - root.cur-w - root.days-w - 2 * Theme.pad) * root.u;
         height: (root.bottom - root.top) * root.u;
         border-radius: Theme.radius-panel;
         background: Theme.glass;

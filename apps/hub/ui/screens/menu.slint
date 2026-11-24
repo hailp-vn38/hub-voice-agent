@@ -51,11 +51,11 @@ export component MenuScreen inherits Rectangle {
     in property <length> u: 1px;
     in property <float> cw: 1280;
     in property <float> ch: 600;
-    private property <float> gap: 16;
-    private property <float> gx: 130;
-    private property <float> gy: 96;
-    private property <float> tw: (root.cw - 30 - root.gx - root.gap * 3) / 4;
-    private property <float> th: (root.ch - 92 - root.gy - root.gap) / 2;
+    private property <float> gap: Theme.pad;
+    private property <float> gx: Theme.content-left;
+    private property <float> gy: Theme.content-top;
+    private property <float> tw: (root.cw - Theme.pad - root.gx - root.gap * 3) / 4;
+    private property <float> th: (root.ch - Theme.pad - root.gy - root.gap) / 2;
     private property <[AppTile]> apps: [
         { icon: @image-url("../../assets/home/icons/sun.png"), name: "Thời tiết", info: Menu.weather, screen: Screen.weather },
         { icon: @image-url("../../assets/home/icons/calendar.png"), name: "Lịch", info: Menu.calendar, screen: Screen.calendar },
@@ -70,7 +70,7 @@ export component MenuScreen inherits Rectangle {
     Backdrop { dim: 0.35; }
     Text {
         x: root.gx * root.u;
-        y: 42 * root.u;
+        y: Theme.frame-top * root.u;
         height: 40 * root.u;
         text: "Ứng dụng";
         color: Theme.text;
