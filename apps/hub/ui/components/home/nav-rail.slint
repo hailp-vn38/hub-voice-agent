@@ -40,16 +40,12 @@ component NavButton inherits Rectangle {
     touch := TouchArea { clicked => { root.activated(); } }
 }
 
-// Thanh điều hướng trái: Home (Màn trung tâm), Ứng dụng (Menu tính năng), Thống kê (màn Nhà), Cài đặt.
+// Các nút điều hướng trái (khung nền do SideBar vẽ): Home (Màn trung tâm), Ứng dụng (Menu tính năng), Thống kê (màn Nhà), Cài đặt.
 export component NavRail inherits Rectangle {
     in property <length> u: 1px;
     in property <Screen> current;
     width: Theme.rail-w * root.u;
     height: self.preferred-height;
-    background: Theme.background.with-alpha(0.74);
-    border-color: Theme.border.with-alpha(0.5);
-    border-width: 1 * root.u;
-    border-radius: Theme.radius-panel;
 
     VerticalLayout {
         padding: 8 * root.u;

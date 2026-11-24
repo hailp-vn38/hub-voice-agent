@@ -5,14 +5,13 @@ import { StatusBarView } from "status-bar.slint";
 import { Alert } from "../overlays/alert.slint";
 import { VoiceSliderOverlay } from "../overlays/voice-slider.slint";
 import { Dock } from "orb.slint";
-import { VoiceDock } from "voice-dock.slint";
+import { SideBar } from "side-bar.slint";
 import { VoiceCaption } from "voice-caption.slint";
 import { SettingsData } from "../contract/settings.slint";
 import { PhotosData } from "../contract/photos.slint";
 import { FloatingCardsView } from "floating-cards.slint";
 import { BackNav } from "back-nav.slint";
 import { SpawnClock } from "spawn.slint";
-import { NavRail } from "home/nav-rail.slint";
 import { ScreenFade } from "screen-fade.slint";
 
 // Khung app: mọi chuyển màn đều mờ dần (ScreenFade). Thanh điều hướng, trạng thái, Voice đứng yên.
@@ -81,16 +80,6 @@ export component Shell inherits Rectangle {
         }
     }
 
-    // Thanh điều hướng: nằm trên tầng nội dung, không tham gia chuyển màn.
-    rail := NavRail {
-        x: Theme.pad-len;
-        y: Theme.frame-top * root.u;
-        u: root.u;
-        visible: root.rail-p > 0;
-        current: root.shown;
-        opacity: root.rail-p;
-    }
-
     // Lớp trên cùng cố định: thanh trạng thái, chấm trang. Không nhận chuột.
     StatusBarView { y: 0; width: parent.width; }
     PageDots {
@@ -101,16 +90,16 @@ export component Shell inherits Rectangle {
     }
     VoiceSliderOverlay { }
     Alert { dock-height: root.dock-height; }
-    // Khối Voice ở đáy cột trái, dưới thanh điều hướng; phụ đề nổi trong góc dưới trái
-    // vùng nội dung, cách mép thẻ đúng một `pad`.
-    // Đứng yên khi chuyển màn. Lần đầu khởi động: orb xám, không chạm được. Ambient: mờ đi.
-    private property <length> dock-top: (Theme.frame-top + Theme.pad) * root.u + rail.height;
-    VoiceDock {
+    // Cột trái một khối: điều hướng ở trên, Voice luôn ở đáy; đứng yên khi chuyển màn.
+    // Màn không có điều hướng thì co còn vùng Voice. Lần đầu khởi động: orb xám, không chạm được.
+    // Ambient: mờ đi. Phụ đề Voice nổi trong góc dưới trái vùng nội dung, cách mép thẻ đúng một `pad`.
+    SideBar {
         x: Theme.pad-len;
-        y: root.dock-top;
-        width: Theme.rail-w * root.u;
-        height: root.height - root.dock-top - Theme.pad-len;
+        y: root.height - Theme.pad-len - self.height;
+        full-height: root.height - (Theme.frame-top + Theme.pad) * root.u;
         u: root.u;
+        current: root.shown;
+        rail-p: root.rail-p;
         disabled: root.shown == Screen.first-boot;
         opacity: root.shown == Screen.ambient ? 0.35 : 1;
         animate opacity { duration: Theme.anim-screen; easing: ease-out; }

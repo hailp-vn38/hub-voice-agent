@@ -31,7 +31,8 @@ export component FirstBoot inherits Rectangle {
     background: Theme.background;
     VerticalLayout {
         padding: Theme.space-l;
-        padding-bottom: Dock.height; // chừa Voice dock
+        padding-left: (Theme.content-left + Theme.pad) * Theme.unit; // chừa cột Voice bên trái
+        padding-bottom: Dock.height; // chừa phụ đề Voice
         spacing: Theme.space-m;
         Text {
             text: FirstBootData.step == BootStep.access-point ? "Cài đặt lần đầu"

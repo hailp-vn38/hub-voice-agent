@@ -1,0 +1,57 @@
+import { Theme } from "../theme.slint";
+import { Screen } from "../contract/nav.slint";
+import { Voice, VoiceState } from "../contract/voice.slint";
+import { NavRail } from "home/nav-rail.slint";
+import { VoiceDock } from "voice-dock.slint";
+
+// Cột trái một khối: nút điều hướng ở trên, vùng Voice ở đáy. Viền khối đổi màu theo trạng thái Voice.
+// `rail-p` 1 = đủ cột; 0 = màn không có điều hướng (khởi động, ambient, xem ảnh): khối co lại
+// chỉ còn vùng Voice, vẫn neo đáy. Shell đặt y theo đáy.
+export component SideBar inherits Rectangle {
+    in property <length> u: 1px;
+    in property <Screen> current;
+    in property <float> rail-p: 1;
+    in property <bool> disabled;
+    // Chiều cao khi đủ cột (từ dưới thanh trạng thái tới đáy).
+    in property <length> full-height;
+    private property <length> voice-min: 132 * root.u;
+    private property <length> voice-h: max(root.voice-min, root.full-height - nav.height - Theme.pad-len);
+
+    width: Theme.rail-w * root.u;
+    height: root.voice-min + root.rail-p * (root.full-height - root.voice-min);
+    border-radius: Theme.radius-panel;
+    background: Theme.background.with-alpha(0.74);
+    border-width: 1 * root.u;
+    border-color: root.disabled ? Theme.border.with-alpha(0.5)
+        : Voice.state == VoiceState.offline ? Theme.error.with-alpha(0.55)
+        : Voice.mic-muted ? Theme.warm.with-alpha(0.45)
+        : Voice.state == VoiceState.listening ? Theme.accent-cyan.with-alpha(0.55)
+        : Voice.state == VoiceState.thinking ? Theme.accent-cyan.with-alpha(0.3)
+        : Voice.state == VoiceState.speaking ? Theme.text.with-alpha(0.3)
+        : Theme.border.with-alpha(0.5);
+    animate border-color { duration: Theme.anim-screen; }
+    clip: true;
+
+    nav := NavRail {
+        y: 0;
+        u: root.u;
+        current: root.current;
+        opacity: root.rail-p;
+        visible: root.rail-p > 0;
+    }
+    Rectangle {
+        x: 12 * root.u;
+        y: nav.height;
+        width: parent.width - 24 * root.u;
+        height: 1 * root.u;
+        background: Theme.border.with-alpha(0.4);
+        opacity: root.rail-p;
+    }
+    VoiceDock {
+        y: parent.height - self.height;
+        width: parent.width;
+        height: root.voice-h;
+        u: root.u;
+        disabled: root.disabled;
+    }
+}
