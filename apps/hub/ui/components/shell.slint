@@ -9,22 +9,14 @@ import { Dock } from "orb.slint";
 import { VoiceBar } from "voice-bar.slint";
 import { Ambient } from "../screens/ambient.slint";
 import { MenuScreen } from "../screens/menu.slint";
-import { Home } from "../screens/home.slint";
-import { Weather } from "../screens/weather.slint";
-import { FirstBoot } from "../screens/first-boot.slint";
-import { Settings } from "../screens/settings.slint";
-import { Calendar } from "../screens/calendar.slint";
 import { SettingsData } from "../contract/settings.slint";
-import { Photos } from "../screens/photos.slint";
 import { PhotosData } from "../contract/photos.slint";
-import { Countdowns } from "../screens/countdowns.slint";
-import { Reminders } from "../screens/reminders.slint";
 import { FloatingCardsView } from "floating-cards.slint";
-import { BackNav } from "back-nav.slint";
+import { BackNav, ZoomOrigin } from "back-nav.slint";
 import { SpawnClock } from "spawn.slint";
 import { CenterScreen } from "../screens/center.slint";
-import { Timers } from "../screens/timers.slint";
 import { NavRail } from "home/nav-rail.slint";
+import { FeatureView } from "feature-view.slint";
 
 // Khung app: tầng trung tâm ⇄ menu (vuốt theo ngón tay), tầng màn tính năng,
 // lớp phủ ở trên cùng. Màn phủ kín cửa sổ; thanh Voice (nút mic trái, chữ phản hồi) nổi trên đáy màn.
@@ -60,8 +52,31 @@ export component Shell inherits Rectangle {
     changed dock-height => { Dock.height = root.dock-height; }
     changed u => { Theme.unit = root.u; }
 
+    // Màn tính năng đang vẽ: giữ màn vừa rời cho tới khi trượt ra xong. Chuyển thẳng giữa hai màn
+    // tính năng thì fade chéo từ `from-view` sang `view` trong anim-screen.
+    private property <Screen> view: Screen.home;
+    private property <Screen> from-view: Screen.home;
+    private property <duration> now: animation-tick();
+    private property <duration> sw-t0: -10000ms;
+    private property <float> sw-p: clamp((root.now - root.sw-t0) / Theme.anim-state, 0, 1);
+    private property <length> zx: self.width / 2;
+    private property <length> zy: self.height / 2;
+    private property <bool> was-feature: false;
     changed shown => {
         if (!root.is-feature) { BackNav.origin = root.shown; }
+        else {
+            if (!root.was-feature) {
+                // Mở từ Menu: nở ra từ ô vừa chạm; từ nơi khác: nở từ giữa màn.
+                root.zx = BackNav.origin == Screen.menu && ZoomOrigin.x >= 0px ? ZoomOrigin.x - root.absolute-position.x : root.width / 2;
+                root.zy = BackNav.origin == Screen.menu && ZoomOrigin.y >= 0px ? ZoomOrigin.y - root.absolute-position.y : root.height / 2;
+            }
+            if (root.feat-p > 0 && root.view != root.shown) {
+                root.from-view = root.view;
+                root.sw-t0 = animation-tick();
+            }
+            root.view = root.shown;
+        }
+        root.was-feature = root.is-feature;
     }
     private property <Screen> nav-screen: Nav.screen;
     changed nav-screen => { root.shown = root.nav-screen; }
@@ -94,27 +109,24 @@ export component Shell inherits Rectangle {
             }
             Rectangle {
                 x: (1 - root.menu-p) * root.w;
-                opacity: root.menu-p;
+                // Đặc sớm (trước nửa đường) để màn bên dưới không lộ qua khi đang trượt.
+                opacity: clamp(root.menu-p * 2, 0, 1);
                 background: Theme.background;
                 // Chặn chạm xuyên xuống màn trung tâm bên dưới (opacity 0 vẫn nhận chuột).
                 TouchArea { }
                 MenuScreen { u: root.u; cw: root.cw; ch: root.ch; }
             }
-            if root.feat-p > 0 && root.shown != Screen.ambient: Rectangle {
-                x: (1 - root.feat-p) * root.w;
-                opacity: root.feat-p;
+            if root.feat-p > 0 && root.view != Screen.ambient: Rectangle {
+                // Nở ra từ ô Menu vừa chạm (zx, zy), đóng thì thu về đúng chỗ đó.
+                transform-origin: { x: root.zx, y: root.zy };
+                transform-scale: 0.3 + 0.7 * root.feat-p;
+                opacity: clamp(root.feat-p * 2, 0, 1);
                 background: Theme.background;
                 // Chặn chạm xuyên xuống menu / màn trung tâm bên dưới.
                 TouchArea { }
-                if root.shown == Screen.home: Home { }
-                if root.shown == Screen.weather: Weather { }
-                if root.shown == Screen.settings: Settings { }
-                if root.shown == Screen.reminders: Reminders { }
-                if root.shown == Screen.timers: Timers { }
-                if root.shown == Screen.photos: Photos { }
-                if root.shown == Screen.calendar: Calendar { }
-                if root.shown == Screen.countdowns: Countdowns { }
-                if root.shown == Screen.first-boot: FirstBoot { }
+                if root.sw-p < 1: FeatureView { screen: root.from-view; opacity: 1 - root.sw-p; }
+                // Chuyển giữa hai màn tính năng: fade chéo, màn mới nâng nhẹ lên.
+                FeatureView { screen: root.view; opacity: root.sw-p; y: (1 - root.sw-p) * 16 * root.u; }
             }
         }
     }
