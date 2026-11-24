@@ -17,6 +17,7 @@ use voice_client::{ToolState, VoiceEvent};
 /// to execute.
 pub(super) struct Hub {
     clock: Arc<dyn Clock>,
+    timezone: Option<jiff::tz::TimeZone>,
     system: Arc<dyn System>,
     pub(super) timers: timers::Feature,
     pub(super) countdowns: countdowns::Feature,
@@ -37,6 +38,7 @@ impl Hub {
         let now = ports.clock.now().timestamp().as_second();
         Ok(Self {
             clock: ports.clock.clone(),
+            timezone: None,
             system: ports.system.clone(),
             timers: timers::Feature::load(store, now)?,
             countdowns: countdowns::Feature::load(store)?,
@@ -58,7 +60,22 @@ impl Hub {
     }
 
     pub fn now(&self) -> Zoned {
-        self.clock.now()
+        let now = self.clock.now();
+        match &self.timezone {
+            Some(zone) => now.with_time_zone(zone.clone()),
+            None => now,
+        }
+    }
+
+    /// Đặt múi giờ hiển thị; `false` nếu tên không có trong cơ sở dữ liệu múi giờ.
+    pub fn set_timezone(&mut self, name: &str) -> bool {
+        match jiff::tz::TimeZone::get(name) {
+            Ok(zone) => {
+                self.timezone = Some(zone);
+                true
+            }
+            Err(_) => false,
+        }
     }
 
     /// The first UI snapshot from the loaded state.

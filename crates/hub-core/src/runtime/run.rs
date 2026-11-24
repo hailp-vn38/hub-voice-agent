@@ -21,6 +21,9 @@ pub async fn run(
 ) -> anyhow::Result<()> {
     effects::execute_settings(SettingsEffect::Initialize, &mut config, &io);
     let mut hub = Hub::load(config.get(), &mut store, &ports)?;
+    if let Some(name) = &config.get().device.timezone {
+        hub.set_timezone(name);
+    }
     let mut display = Display::new(ports.device.clone());
     display.init(&config.get().device, &io);
     display.brightness(&config.get().device, &hub.now());
@@ -90,6 +93,16 @@ pub async fn run(
                 UserInput::OrbTapped if config.get().device.mic_muted => Vec::new(),
                 UserInput::KeepResolution => {
                     display.keep(&mut config, &io);
+                    Vec::new()
+                }
+                UserInput::Setting(SettingChange::Timezone(name)) if !hub.set_timezone(&name) => {
+                    eprintln!("múi giờ không hợp lệ: {name}");
+                    Vec::new()
+                }
+                UserInput::Power(action) => {
+                    if let Err(error) = ports.device.power(action) {
+                        eprintln!("không thực hiện được {action:?}: {error}");
+                    }
                     Vec::new()
                 }
                 UserInput::Setting(change) => {

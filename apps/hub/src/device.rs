@@ -32,6 +32,20 @@ impl hub_core::Device for HostDevice {
             eprintln!("không đặt được độ sáng: {error}");
         }
     }
+    fn power(&self, action: hub_core::PowerAction) -> anyhow::Result<()> {
+        use hub_core::PowerAction;
+        let command = match action {
+            // Thoát tiến trình; trình giám sát (systemd) khởi động lại app.
+            PowerAction::RestartApp => std::process::exit(0),
+            PowerAction::Reboot => "reboot",
+            PowerAction::Shutdown => "poweroff",
+        };
+        let status = std::process::Command::new("systemctl")
+            .arg(command)
+            .status()?;
+        anyhow::ensure!(status.success(), "systemctl {command} thất bại: {status}");
+        Ok(())
+    }
     fn resolutions(&self) -> Vec<String> {
         Vec::new()
     }

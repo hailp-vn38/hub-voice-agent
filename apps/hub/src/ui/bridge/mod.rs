@@ -8,6 +8,7 @@ mod inputs;
 mod location;
 mod network;
 mod photos;
+mod qr;
 mod reminders;
 mod settings;
 mod timers;

@@ -1,10 +1,10 @@
 use crate::{
-    App, AudioSettings, DisplaySettings, HomeEntity, HomeSettings, SettingsData, Theme,
-    VoiceSettingsView,
+    App, AudioSettings, DisplaySettings, HomeEntity, HomeSettings, SettingsData, SystemSettings,
+    Theme, VoiceSettingsView,
 };
 use hub_core::{
     AmbientAfter, DataKind, DeviceSettings, DisplayState, HomeEntity as CoreHomeEntity,
-    SOUND_NAMES, Sensitivity, SettingChange, TextSize, UserInput,
+    PowerAction, SOUND_NAMES, Sensitivity, SettingChange, TextSize, UserInput,
 };
 use slint::{ComponentHandle, ModelRc, SharedString, VecModel};
 use std::{cell::RefCell, rc::Rc};
@@ -14,6 +14,21 @@ use super::inputs::Inputs;
 #[cfg(test)]
 #[path = "settings_tests.rs"]
 mod tests;
+
+const TIMEZONES: [&str; 12] = [
+    "Asia/Ho_Chi_Minh",
+    "Asia/Bangkok",
+    "Asia/Singapore",
+    "Asia/Shanghai",
+    "Asia/Tokyo",
+    "Asia/Seoul",
+    "Australia/Sydney",
+    "Europe/London",
+    "Europe/Paris",
+    "America/New_York",
+    "America/Los_Angeles",
+    "UTC",
+];
 
 const NIGHT_RANGES: [&str; 3] = ["22:00–06:00", "21:00–07:00", "23:00–05:00"];
 
@@ -122,6 +137,25 @@ pub(super) fn text_scale(size: TextSize) -> f32 {
     }
 }
 
+/// Khoá `system-action(...)` của màn Hệ thống → thao tác nguồn.
+pub(super) fn power(key: &str) -> Option<PowerAction> {
+    Some(match key {
+        "restart-app" => PowerAction::RestartApp,
+        "reboot" => PowerAction::Reboot,
+        "shutdown" => PowerAction::Shutdown,
+        _ => return None,
+    })
+}
+
+/// Múi giờ chọn được; múi giờ đang dùng được thêm vào đầu nếu chưa có trong danh sách.
+fn timezones(current: &str) -> Vec<&str> {
+    let mut zones = TIMEZONES.to_vec();
+    if !current.is_empty() && !zones.contains(&current) {
+        zones.insert(0, current);
+    }
+    zones
+}
+
 /// Khoá `clear(...)` của màn Dữ liệu → loại dữ liệu.
 pub(super) fn data_kind(key: &str) -> Option<DataKind> {
     Some(match key {
@@ -153,6 +187,7 @@ pub(super) fn apply(
     settings: &DeviceSettings,
     state: &DisplayState,
     entities: &[CoreHomeEntity],
+    system_zone: &str,
 ) {
     app.global::<Theme>()
         .set_text_scale(text_scale(settings.text_size));
@@ -167,9 +202,12 @@ pub(super) fn apply(
         mic_muted: settings.mic_muted,
         ..data.get_voice()
     });
-    let mut system = data.get_system();
-    system.timezone = settings.timezone.as_deref().unwrap_or("").into();
-    data.set_system(system);
+    let zone = settings.timezone.as_deref().unwrap_or(system_zone);
+    data.set_system(SystemSettings {
+        version: env!("CARGO_PKG_VERSION").into(),
+        timezone: zone.into(),
+        timezones: strings(timezones(zone)),
+    });
 }
 
 pub(super) fn connect_inputs(app: &App, inputs: Rc<RefCell<Inputs>>) {
@@ -202,6 +240,8 @@ pub(super) fn connect_inputs(app: &App, inputs: Rc<RefCell<Inputs>>) {
     });
     let clear = send.clone();
     data.on_clear(move |key| clear(data_kind(&key).map(UserInput::Clear)));
+    let system = send.clone();
+    data.on_system_action(move |key| system(power(&key).map(UserInput::Power)));
     data.on_keep_resolution(move || {
         let mut input = keep.borrow_mut();
         input.activity();

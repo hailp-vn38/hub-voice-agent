@@ -109,6 +109,7 @@ impl View {
             | UserInput::KeepResolution
             | UserInput::PreviewSound(_)
             | UserInput::Clear(_)
+            | UserInput::Power(_)
             | UserInput::ReminderSpeech(_)
             | UserInput::OrbTapped
             | UserInput::Setup(_, _)

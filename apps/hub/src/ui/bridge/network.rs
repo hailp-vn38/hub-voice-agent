@@ -1,6 +1,6 @@
 //! IP LAN của hub, để mở Setup web từ máy khác cùng mạng Wi-Fi.
 use crate::{App, ConnectionSettings, SettingsData};
-use slint::{ComponentHandle, Weak};
+use slint::{ComponentHandle, Image, Rgba8Pixel, SharedPixelBuffer, Weak};
 use std::{
     net::{IpAddr, UdpSocket},
     time::Duration,
@@ -19,8 +19,10 @@ fn setup_url(ip: Option<IpAddr>, port: u16) -> String {
         .unwrap_or_default()
 }
 
-fn apply(app: &App, ip: Option<IpAddr>, port: u16) {
+fn apply(app: &App, ip: Option<IpAddr>, port: u16, qr: Option<SharedPixelBuffer<Rgba8Pixel>>) {
     let settings = app.global::<SettingsData>();
+    settings.set_setup_url(setup_url(ip, port).into());
+    settings.set_setup_qr(qr.map(Image::from_rgba8).unwrap_or_default());
     settings.set_connection(ConnectionSettings {
         wifi_ip: ip.map(|ip| ip.to_string()).unwrap_or_default().into(),
         setup_url: setup_url(ip, port).into(),
@@ -37,9 +39,10 @@ pub fn spawn_network(app: Weak<App>, setup_port: u16) {
             if shown != Some(ip) {
                 shown = Some(ip);
                 let app = app.clone();
+                let qr = super::qr::render(&setup_url(ip, setup_port));
                 if slint::invoke_from_event_loop(move || {
                     if let Some(app) = app.upgrade() {
-                        apply(&app, ip, setup_port);
+                        apply(&app, ip, setup_port, qr);
                     }
                 })
                 .is_err()

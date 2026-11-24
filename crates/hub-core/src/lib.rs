@@ -27,7 +27,7 @@ pub use audio::{AudioCommand, AudioEvent, SOUND_NAMES, Sensitivity, Sound, Tone}
 pub use config::{
     CalendarSettings, Config, ConfigStore, HomeSettings, VoiceSettings, WeatherSettings,
 };
-pub use device::{Device, NoDevice};
+pub use device::{Device, NoDevice, PowerAction};
 pub use device_settings::{
     AmbientAfter, DeviceSettings, MAX_CENTER_ENTITIES, SettingChange, TextSize,
 };
@@ -87,6 +87,7 @@ pub enum UserInput {
     KeepResolution,
     PreviewSound(String),
     Clear(DataKind),
+    Power(PowerAction),
     ReminderSpeech(bool),
     VoiceConnect,
     Setup(

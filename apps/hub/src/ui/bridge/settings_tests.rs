@@ -67,3 +67,13 @@ fn entity_toggles_and_data_keys_map_to_typed_inputs() {
     assert_eq!(data_kind("cache"), Some(DataKind::Cache));
     assert_eq!(data_kind("bogus"), None);
 }
+
+#[test]
+fn power_keys_and_timezone_list() {
+    assert_eq!(power("reboot"), Some(PowerAction::Reboot));
+    assert_eq!(power("restart-app"), Some(PowerAction::RestartApp));
+    assert_eq!(power("sleep"), None);
+    assert_eq!(timezones("UTC").len(), TIMEZONES.len());
+    assert_eq!(timezones("Africa/Cairo")[0], "Africa/Cairo");
+    assert!(timezones("").iter().all(|zone| !zone.is_empty()));
+}

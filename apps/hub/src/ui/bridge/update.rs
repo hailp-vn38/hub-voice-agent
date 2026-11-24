@@ -122,7 +122,8 @@ pub fn spawn_bridge(
     tokio::spawn(async move {
         let mut shown: Option<HubView> = None;
         let mut shown_voice_settings: Option<VoiceSettingsState> = None;
-        let mut shown_device: Option<(DeviceSettings, DisplayState, Vec<HomeEntity>)> = None;
+        let mut shown_device: Option<(DeviceSettings, DisplayState, Vec<HomeEntity>, String)> =
+            None;
         while rx.changed().await.is_ok() {
             let state = rx.borrow_and_update().clone();
             let view = hub_core::present(&state);
@@ -138,11 +139,17 @@ pub fn spawn_bridge(
                 state.settings.clone(),
                 state.display.clone(),
                 state.home.clone(),
+                state
+                    .now
+                    .time_zone()
+                    .iana_name()
+                    .unwrap_or_default()
+                    .to_string(),
             );
             if shown_device.as_ref() != Some(&device) {
                 shown_device = Some(device.clone());
                 updates.push(Box::new(move |app| {
-                    settings::apply(app, &device.0, &device.1, &device.2)
+                    settings::apply(app, &device.0, &device.1, &device.2, &device.3)
                 }));
             }
             shown = Some(view);
