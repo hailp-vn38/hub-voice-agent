@@ -43,7 +43,7 @@ impl Feature {
                     .adjust(&args.label, args.delta_seconds, args.paused, now)
             }
             TimerTool::Cancel(args) => self.timers.cancel(&args.label),
-            TimerTool::List => return vec![self.reply(call)],
+            TimerTool::List => return vec![self.reply(call, now)],
         };
         if let Err(err) = result {
             return vec![Effect::Reply(call, Err(tool_args::error(&err)))];
@@ -52,7 +52,7 @@ impl Feature {
         if is_start && let Some(timer) = self.timers.items.last() {
             effects.extend(view.open(Screen::Timers, Some(Focus::Timer(timer.id)), now));
         }
-        effects.push(self.reply(call));
+        effects.push(self.reply(call, now));
         effects
     }
     pub fn due(&self, now: i64) -> Vec<Timer> {
@@ -89,8 +89,27 @@ impl Feature {
         self.timers.items.retain(|timer| timer.id != id);
         self.changed()
     }
-    fn reply(&self, call: ToolCall) -> Effect {
-        Effect::Reply(call, Ok(serde_json::json!({"timers": self.timers.items})))
+    fn reply(&self, call: ToolCall, now: i64) -> Effect {
+        let timers: Vec<_> = self
+            .timers
+            .items
+            .iter()
+            .map(|t| {
+                let remaining = t
+                    .paused_seconds
+                    .unwrap_or_else(|| t.end_seconds.saturating_sub(now))
+                    .max(0);
+                serde_json::json!({
+                    "id": t.id,
+                    "label": t.label,
+                    "duration_seconds": t.duration_seconds,
+                    "remaining_seconds": remaining,
+                    "paused": t.paused_seconds.is_some(),
+                    "finished": t.paused_seconds.is_none() && remaining == 0,
+                })
+            })
+            .collect();
+        Effect::Reply(call, Ok(serde_json::json!({"timers": timers})))
     }
     fn changed(&self) -> Vec<Effect> {
         let items = self.timers.items.clone();

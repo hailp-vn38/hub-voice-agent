@@ -155,10 +155,8 @@ export component CenterScreen inherits Rectangle {
         height: 130 * root.u;
         u: root.u;
         timer: Center.timer;
-        opacity: Center.timer.visible ? 1 : 0;
-        visible: self.opacity > 0;
+        visible: Center.timer.visible;
         zoomed: root.zoom-card == CenterCard.timer;
-        animate opacity { duration: Theme.anim-state; }
         tapped => { Center.open(Screen.timers); }
     }
     QuickTile {

@@ -81,6 +81,15 @@ impl Feature {
             stale,
         };
     }
+    /// Adds the location name to a reply so the model knows which place it is.
+    fn named(&self, mut data: Value) -> Value {
+        if data.get("location").is_none()
+            && let (Some(map), Some(name)) = (data.as_object_mut(), self.view.location.clone())
+        {
+            map.insert("location".into(), Value::String(name));
+        }
+        data
+    }
     pub fn snapshot(&self) -> Effect {
         let weather = self.view.clone();
         Effect::Ui(Box::new(move |ui| {
@@ -160,7 +169,7 @@ impl Feature {
         {
             self.pending = false;
             effects.push(Effect::CancelJob("weather".into()));
-            effects.push(Effect::Reply(call, Ok(data)));
+            effects.push(Effect::Reply(call, Ok(self.named(data))));
             return effects;
         }
         let location = city.map(WeatherLocation::City).or_else(|| {
@@ -205,7 +214,7 @@ impl Feature {
                             effects.push(self.snapshot());
                         }
                         if let Some(call) = reply {
-                            effects.push(Effect::Reply(call, Ok(data)));
+                            effects.push(Effect::Reply(call, Ok(self.named(data))));
                         }
                         effects
                     }
