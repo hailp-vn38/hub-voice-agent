@@ -30,11 +30,17 @@ component WordView inherits Rectangle {
 export component ResponseText inherits Rectangle {
     in property <length> font-size: Theme.font-title;
     clip: true;
-    private property <duration> line-t: animation-tick();
     private property <int> serial: Response.line-serial;
-    changed serial => { root.line-t = animation-tick(); }
-    // Nhịp hiện từ cố định: 170 ms/từ.
-    private property <int> shown: min(Response.words.length, floor((animation-tick() - root.line-t) / 170ms) + 1);
+    // Số từ đã hiện. Tăng bằng Timer, không dựa animation-tick(): khi không có animation nào chạy,
+    // binding đó không được tính lại và chữ bị kẹt ở các từ đầu. Câu mới đặt lại về 0.
+    private property <int> shown: 0;
+    changed serial => { root.shown = 0; }
+    // Nhịp hiện từ cố định: 170 ms/từ; chạy tới khi hết từ, các từ mới thêm vào vẫn được hiện.
+    Timer {
+        interval: 170ms;
+        running: root.shown < Response.words.length;
+        triggered => { root.shown += 1; }
+    }
     // Bề rộng hàng chữ đang hiện, để phụ đề co theo.
     out property <length> text-width: row.preferred-width;
 
