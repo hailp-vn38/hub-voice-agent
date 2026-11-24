@@ -15,8 +15,6 @@ Ticket hub-mac 01–10 đã map xong: bridge ghi mọi màn từ hub-core, chuy�
 | Chưa kiểm tay: nói chuyện, chuông, wake word, Orb nhịp theo giọng, CPU lúc rảnh | Có thể còn lỗi chỉ lộ ra trên máy thật | Nghiệm thu tay hub-mac 01–10 |
 | Không mở được thiết bị âm thanh thì app chạy **không tiếng** (log `Chạy không có âm thanh: …`) | Màn hình vẫn dùng được; không nói chuyện, chuông không kêu | Cắm loa/mic rồi mở lại app |
 
-Xem toàn bộ giao diện với dữ liệu giả: `scripts/run.sh run --features demo`.
-
 ## 2. Còn lại sau spec hub-mac (Mac)
 
 ### Giọng nói và âm thanh

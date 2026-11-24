@@ -15,7 +15,6 @@ import { FirstBoot } from "../screens/first-boot.slint";
 import { Settings } from "../screens/settings.slint";
 import { Calendar } from "../screens/calendar.slint";
 import { SettingsData } from "../contract/settings.slint";
-import { SpawnDemo, SpawnDemoScreen } from "../demo/spawn-demo.slint";
 import { Photos } from "../screens/photos.slint";
 import { PhotosData } from "../contract/photos.slint";
 import { Countdowns } from "../screens/countdowns.slint";
@@ -153,7 +152,6 @@ export component Shell inherits Rectangle {
         opacity: root.shown == Screen.ambient ? 0.35 : 1;
         animate opacity { duration: Theme.anim-screen; easing: ease-out; }
     }
-    if SpawnDemo.show: SpawnDemoScreen { height: parent.height - root.dock-height; }
     FloatingCardsView { dock-height: root.dock-height; }
     SpawnClock { }
 }

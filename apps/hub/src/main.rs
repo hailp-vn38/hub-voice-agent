@@ -5,29 +5,15 @@ compile_error!(
 #[cfg(not(any(feature = "desktop", feature = "pi")))]
 compile_error!("enable exactly one backend feature: `desktop` (default) or `pi`");
 
-#[cfg(not(feature = "demo"))]
 mod audio;
 mod ui;
-#[cfg(not(feature = "demo"))]
 use hub_core::{ConfigStore, Io, Ports, SystemClock, UiState};
 use slint::ComponentHandle;
-#[cfg(not(feature = "demo"))]
 use std::{path::PathBuf, sync::Arc, thread};
-#[cfg(not(feature = "demo"))]
 use tokio::sync::{mpsc, oneshot, watch};
 slint::include_modules!();
 
-#[cfg(feature = "demo")]
-fn main() -> anyhow::Result<()> {
-    let app = App::new()?;
-    let _demo = ui::demo::start(&app)?;
-    app.run()?;
-    Ok(())
-}
-
-#[cfg(not(feature = "demo"))]
 struct HostSystem;
-#[cfg(not(feature = "demo"))]
 impl hub_core::System for HostSystem {
     /// The desktop clock is trusted. On the Pi, systemd-timesyncd creates this
     /// file once NTP has synchronized the clock.
@@ -37,7 +23,6 @@ impl hub_core::System for HostSystem {
     }
 }
 
-#[cfg(not(feature = "demo"))]
 fn main() -> anyhow::Result<()> {
     let app = App::new()?;
     let data_dir = std::env::var_os("AI_HUB_DATA_DIR")

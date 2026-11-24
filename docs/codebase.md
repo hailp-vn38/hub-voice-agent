@@ -94,18 +94,12 @@ ai-hub/
 │   ├── src/
 │   │   ├── main.rs               # nối dây (xem 3.3)
 │   │   ├── ui/
-│   │   │   ├── mod.rs            # chọn adapter: demo (feature `demo`) hoặc bridge
+│   │   │   ├── mod.rs            # re-export adapter bridge
 │   │   │   ├── bridge/           # adapter thật: watch<UiState> → global hợp đồng; callback → UserInput
 │   │   │   │   ├── mod.rs        # khai báo module, re-export spawn_bridge / connect_inputs
 │   │   │   │   ├── update.rs     # diff HubView, chỉ ghi phần đổi; chuyển Levels lên VoiceLevels
 │   │   │   │   ├── inputs.rs     # Inputs (Activity ≤ 1/s) và callback chung
 │   │   │   │   └── <feature>.rs  # voice, timers, countdowns, reminders, weather, calendar, home, photos, images, center
-│   │   │   └── demo/             # feature `demo`, không biên dịch cho Pi
-│   │   │       ├── mod.rs        # khai báo module, re-export start()
-│   │   │       ├── start.rs      # Nav cục bộ, tick 1 Hz, Demo panel
-│   │   │       ├── scenarios.rs  # bảng kịch bản của Demo panel
-│   │   │       ├── clock.rs, levels.rs, qr.rs   # giờ, mức mic/TTS giả, sinh QR
-│   │   │       └── fixtures/     # một module mỗi tính năng (fixture + kịch bản); wiring.rs nạp/tick tất cả
 │   │   ├── audio/
 │   │   │   ├── mod.rs            # AudioHandle { commands, events, levels }; re-export spawn() / disabled()
 │   │   │   ├── worker.rs         # thread audio: mở stream, vòng lặp lệnh → Mixer, mic → Capture
@@ -121,7 +115,7 @@ ai-hub/
 │   │       ├── pi.rs             # backlight sysfs, nmcli, systemctl
 │   │       └── desktop.rs        # no-op + log
 │   ├── ui/                       # file .slint
-│   │   ├── app.slint             # cửa sổ gốc: Shell (hoặc bảng mẫu theme trong demo)
+│   │   ├── app.slint             # cửa sổ gốc: Shell
 │   │   ├── theme.slint           # màu, font, cỡ theo scale-factor
 │   │   ├── contract/             # hợp đồng mỗi tính năng: struct + global <Feature>Data
 │   │   ├── components/           # shell, orb, spawn, response-text, tool-trail, card, slider,
@@ -129,8 +123,7 @@ ai-hub/
 │   │   ├── screens/              # center, menu, weather, calendar, home, timers, countdowns,
 │   │   │                         # reminders, photos, photo-viewer, settings (+ settings/), ambient,
 │   │   │                         # first-boot
-│   │   ├── overlays/             # alert, voice-slider, confirm
-│   │   └── demo/                 # chỉ dùng trong demo: panel, sample, spawn-demo
+│   │   └── overlays/             # alert, voice-slider, confirm
 │   └── assets/
 │       ├── fonts/                # Be Vietnam Pro / Inter, 2 độ đậm
 │       ├── icons/                # SVG outline

@@ -1,5 +1,4 @@
 import { Theme } from "theme.slint";
-import { Sample } from "demo/sample.slint";
 import { Shell } from "components/shell.slint";
 export { StatusBar } from "contract/status.slint";
 import "../assets/fonts/BeVietnamPro-Regular.ttf";
@@ -15,9 +14,7 @@ export { Dock } from "components/orb.slint";
 export { SettingsData, DisplaySettings, AudioSettings, VoiceSettingsView, HomeEntity, HomeSettings, ConnectionSettings, SystemSettings } from "contract/settings.slint";
 export { Spawn, PendingState, FloatingCard, FloatingCards } from "contract/spawn.slint";
 export { CountdownsData, Countdown, CountdownUnit } from "contract/countdowns.slint";
-export { SpawnDemo } from "demo/spawn-demo.slint";
 export { CalendarData, CalKind, CalDay, CalBlock, CalUpcoming, CalMonthDay, CalDetail } from "contract/calendar.slint";
-export { DemoPanel } from "demo/panel.slint";
 export { PhotosData, Photo, PhotoState } from "contract/photos.slint";
 export { RemindersData, ReminderItem, ReminderGroup, ReminderNext, ReminderPast } from "contract/reminders.slint";
 export { TimersData, TimerCard, TimerPhase } from "contract/timers.slint";
@@ -28,12 +25,10 @@ export { BootStep, FirstBootData } from "contract/first-boot.slint";
 export { Center, CenterCard, CenterWeather, CenterEvent, CenterReminder, CenterTimer, CenterCountdown } from "contract/center.slint";
 
 export component App inherits Window {
-    in property <bool> show-sample; // chỉ demo: bảng mẫu theme thay cho Shell
     preferred-width: 1920px;
     preferred-height: 1080px;
     background: Theme.background;
     default-font-family: "Be Vietnam Pro";
 
-    if root.show-sample: Sample { }
-    if !root.show-sample: Shell { }
+    Shell { }
 }
