@@ -58,7 +58,12 @@ export component VoiceDock inherits Rectangle {
         disabled: root.disabled;
     }
 
+    // Chỉ icon orb nhận chạm (kết nối/ngắt); phần còn lại của khối không bắt sự kiện.
     TouchArea {
+        x: orb.x;
+        y: orb.y;
+        width: orb.width;
+        height: orb.height;
         enabled: !root.disabled;
         clicked => { Voice.orb-tapped(); }
     }
